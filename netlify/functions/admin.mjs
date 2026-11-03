@@ -255,9 +255,13 @@ export default async (req) => {
 
     return response({ error: "Invalid action" }, 400);
 
+  
   } catch (error) {
+    console.error("ADMIN FUNCTION ERROR:", error);
+
     return response({
-      error: "Admin service failed. Check server configuration."
+      error: error.message || "Unknown admin service error"
     }, 500);
   }
+
 };
