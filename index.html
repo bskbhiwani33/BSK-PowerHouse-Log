@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,17 +9,27 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header class="topbar"><div class="brand">BSK</div><div>Power House Feeder Log</div></header>
+  <header class="topbar">
+    <div class="brand">BSK</div>
+    <div>Power House Feeder Log</div>
+  </header>
+
   <main class="wrap">
+
     <section id="loginCard" class="card">
       <h1>BSK Login</h1>
       <p class="muted">Sign in with your User ID and 4-digit PIN.</p>
+
       <form id="loginForm">
         <label for="userId">User ID</label>
-        <input id="userId" autocomplete="username" required maxlength="40" placeholder="Enter User ID">
+        <input id="userId" autocomplete="username" required maxlength="40"
+          placeholder="Enter User ID">
+
         <label for="pin">4-digit PIN</label>
-        <input id="pin" type="password" inputmode="numeric" autocomplete="current-password"
-               pattern="[0-9]{4}" maxlength="4" required placeholder="••••">
+        <input id="pin" type="password" inputmode="numeric"
+          autocomplete="current-password" pattern="[0-9]{4}"
+          maxlength="4" required placeholder="••••">
+
         <button type="submit">Login</button>
         <p id="loginMessage" class="message" role="status"></p>
       </form>
@@ -26,46 +37,196 @@
     </section>
 
     <section id="appPanel" class="hidden">
+
       <div class="row between">
-        <div><h1>Dashboard</h1><p id="welcome" class="muted"></p></div>
+        <div>
+          <h1>Dashboard</h1>
+          <p id="welcome" class="muted"></p>
+        </div>
         <button id="logoutBtn" class="secondary">Logout</button>
       </div>
 
+      <!-- STAFF PANEL -->
       <section id="staffPanel" class="card hidden">
         <h2>Daily Feeder Report</h2>
+
         <form id="reportForm">
           <label for="reportDate">Report date</label>
           <input id="reportDate" type="date" required>
+
           <label for="feederName">Feeder</label>
           <input id="feederName" required placeholder="Feeder name">
+
           <label for="breakerStatus">Breaker status</label>
           <select id="breakerStatus" required>
-            <option value="">Select status</option><option>ON</option><option>OFF</option><option>TRIPPED</option><option>UNDER MAINTENANCE</option>
+            <option value="">Select status</option>
+            <option>ON</option>
+            <option>OFF</option>
+            <option>TRIPPED</option>
+            <option>UNDER MAINTENANCE</option>
           </select>
+
           <label for="eventType">Event type</label>
           <select id="eventType" required>
-            <option value="">Select event</option><option>Normal</option><option>Tripping</option><option>Breakdown</option><option>Shutdown</option>
+            <option value="">Select event</option>
+            <option>Normal</option>
+            <option>Tripping</option>
+            <option>Breakdown</option>
+            <option>Shutdown</option>
           </select>
+
           <label for="faultDetails">Fault details</label>
-          <textarea id="faultDetails" rows="3" placeholder="Enter fault details"></textarea>
+          <textarea id="faultDetails" rows="3"></textarea>
+
           <label for="duration">Duration</label>
           <input id="duration" placeholder="e.g. 45 minutes">
+
           <label for="restorationTime">Restoration time</label>
           <input id="restorationTime" type="time">
+
           <label for="remarks">Remarks</label>
           <textarea id="remarks" rows="3"></textarea>
+
           <button type="submit">Submit report</button>
           <p id="reportMessage" class="message" role="status"></p>
         </form>
       </section>
 
-      <section id="adminPanel" class="card hidden">
-        <h2>Admin area</h2>
-        <p>Admin dashboard, Power House/Feeder management, report filters and Excel export will be connected in the next setup step.</p>
-        <p class="muted">Reports and user-management actions must go through the secured backend.</p>
+      <!-- ADMIN PANEL -->
+      <section id="adminPanel" class="hidden">
+
+        <div class="card">
+          <h2>Admin Dashboard</h2>
+          <p class="muted">Power House Feeder Log Management</p>
+          <button type="button" id="refreshDashboard">Refresh Dashboard</button>
+          <p id="adminMessage" class="message" role="status"></p>
+        </div>
+
+        <!-- STATISTICS -->
+        <div class="card">
+          <h2>Summary</h2>
+          <div class="row" style="justify-content:space-around;flex-wrap:wrap">
+            <div>
+              <h3 id="houseCount">0</h3>
+              <p class="muted">Power Houses</p>
+            </div>
+            <div>
+              <h3 id="feederCount">0</h3>
+              <p class="muted">Feeders</p>
+            </div>
+            <div>
+              <h3 id="staffCount">0</h3>
+              <p class="muted">Staff</p>
+            </div>
+            <div>
+              <h3 id="reportCount">0</h3>
+              <p class="muted">Reports Loaded</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADD POWER HOUSE -->
+        <div class="card">
+          <h2>Add Power House</h2>
+          <form id="houseForm">
+            <label for="houseName">Power House Name</label>
+            <input id="houseName" required maxlength="80"
+              placeholder="Enter Power House name">
+            <button type="submit">Add Power House</button>
+          </form>
+          <p id="houseMessage" class="message" role="status"></p>
+        </div>
+
+        <!-- ADD FEEDER -->
+        <div class="card">
+          <h2>Add Feeder</h2>
+          <form id="feederForm">
+            <label for="feederHouse">Select Power House</label>
+            <select id="feederHouse" required>
+              <option value="">Select Power House</option>
+            </select>
+
+            <label for="newFeederName">Feeder Name</label>
+            <input id="newFeederName" required maxlength="80"
+              placeholder="Enter Feeder name">
+
+            <button type="submit">Add Feeder</button>
+          </form>
+          <p id="feederMessage" class="message" role="status"></p>
+        </div>
+
+        <!-- CREATE STAFF -->
+        <div class="card">
+          <h2>Create Staff Account</h2>
+          <form id="staffForm">
+            <label for="staffHouse">Select Power House</label>
+            <select id="staffHouse" required>
+              <option value="">Select Power House</option>
+            </select>
+
+            <label for="newStaffId">Staff User ID</label>
+            <input id="newStaffId" required maxlength="40"
+              pattern="[A-Za-z0-9_-]{3,40}"
+              placeholder="Example: Staff001">
+
+            <label for="newStaffPin">4-digit PIN</label>
+            <input id="newStaffPin" type="password" required
+              inputmode="numeric" pattern="[0-9]{4}" maxlength="4"
+              placeholder="Enter 4-digit PIN">
+
+            <button type="submit">Create Staff Account</button>
+          </form>
+          <p id="staffMessage" class="message" role="status"></p>
+        </div>
+
+        <!-- POWER HOUSE LIST -->
+        <div class="card">
+          <h2>Power House List</h2>
+          <div id="houseList">No data loaded.</div>
+        </div>
+
+        <!-- FEEDER LIST -->
+        <div class="card">
+          <h2>Feeder List</h2>
+          <div id="feederList">No data loaded.</div>
+        </div>
+
+        <!-- STAFF LIST -->
+        <div class="card">
+          <h2>Staff List</h2>
+          <div id="staffList">No data loaded.</div>
+        </div>
+
+        <!-- REPORT FILTER -->
+        <div class="card">
+          <h2>Daily Reports</h2>
+
+          <label for="filterHouse">Power House Filter</label>
+          <select id="filterHouse">
+            <option value="">All Power Houses</option>
+          </select>
+
+          <label for="filterDate">Report Date Filter</label>
+          <input id="filterDate" type="date">
+
+          <button type="button" id="applyReportFilter">Apply Filter</button>
+          <button type="button" id="clearReportFilter" class="secondary">
+            Clear Filter
+          </button>
+
+          <div id="reportList">No reports loaded.</div>
+        </div>
+
+        <!-- EDIT REQUESTS -->
+        <div class="card">
+          <h2>Staff Edit Requests</h2>
+          <div id="editRequestList">No requests loaded.</div>
+        </div>
+
       </section>
     </section>
   </main>
+
   <footer>BSK · Power House Feeder Log</footer>
   <script type="module" src="/app.js"></script>
 </body>
