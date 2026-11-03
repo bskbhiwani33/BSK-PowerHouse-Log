@@ -1,0 +1,14 @@
+
+{
+  "background_color": "#150fee",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "BSK Power House Feeder Log",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "BSK",
+  "start_url": "/",
+  "theme_color": "#da1919",
+  "id": "/",
+  "description": "Power House Feeder Log Management App"
+}
