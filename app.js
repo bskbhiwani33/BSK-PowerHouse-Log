@@ -1,20 +1,18 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-
 import {
   getAuth,
   signInWithCustomToken,
   signOut
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-
 import {
   getFirestore,
   collection,
   addDoc,
-  serverTimestamp,
   getDocs,
   query,
-  where
+  where,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -30,7 +28,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
 const $ = id => document.getElementById(id);
 
 let currentProfile = null;
@@ -42,9 +39,29 @@ let dashboardData = {
   editRequests: []
 };
 
-$("reportDate").valueAsDate = new Date();
+function message(id, text, error = false) {
+  if ($(id)) {
+    $(id).textContent = text;
+    $(id).style.color = error ? "#dc2626" : "#15803d";
+  }
+}
 
-// ---------------- ADMIN API ----------------
+function safe(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function setToday() {
+  if ($("reportDate")) {
+    $("reportDate").value =
+      new Date().toLocaleDateString("en-CA");
+  }
+}
 
 async function adminRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
@@ -55,7 +72,7 @@ async function adminRequest(action, data = {}) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer " + token
+      "Authorization": `Bearer ${token}`
     },
     body: JSON.stringify({ action, ...data })
   });
@@ -63,18 +80,17 @@ async function adminRequest(action, data = {}) {
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.error || "Request failed");
+    throw new Error(result.error || "Admin request failed");
   }
 
   return result;
 }
 
-// ---------------- LOGIN ----------------
-
-$("loginForm").addEventListener("submit", async event => {
+// Login
+$("loginForm")?.addEventListener("submit", async event => {
   event.preventDefault();
 
-  $("loginMessage").textContent = "Signing in...";
+  message("loginMessage", "Signing in...");
 
   const userId = $("userId").value.trim();
   const pin = $("pin").value.trim();
@@ -93,7 +109,6 @@ $("loginForm").addEventListener("submit", async event => {
     }
 
     await signInWithCustomToken(auth, result.token);
-
     currentProfile = result.profile;
 
     $("loginCard").classList.add("hidden");
@@ -101,7 +116,9 @@ $("loginForm").addEventListener("submit", async event => {
 
     $("welcome").textContent =
       `${currentProfile.userId} · ${currentProfile.role}` +
-      (currentProfile.houseName ? " · " + currentProfile.houseName : "");
+      (currentProfile.houseName
+        ? ` · ${currentProfile.houseName}`
+        : "");
 
     $("staffPanel").classList.toggle(
       "hidden", currentProfile.role !== "staff"
@@ -111,61 +128,107 @@ $("loginForm").addEventListener("submit", async event => {
       "hidden", currentProfile.role !== "admin"
     );
 
-    $("loginMessage").textContent = "";
+    message("loginMessage", "");
+
+    if (currentProfile.role === "staff") {
+      await loadStaffFeeders();
+    }
 
     if (currentProfile.role === "admin") {
-      await loadDashboard();
+      await refreshDashboard();
     }
 
   } catch (error) {
-    $("loginMessage").textContent = error.message;
+    message("loginMessage", error.message, true);
   }
 });
 
-// ---------------- LOGOUT ----------------
-
-$("logoutBtn").addEventListener("click", async () => {
+// Logout
+$("logoutBtn")?.addEventListener("click", async () => {
   await signOut(auth);
-
   currentProfile = null;
 
   $("appPanel").classList.add("hidden");
   $("loginCard").classList.remove("hidden");
 
   $("pin").value = "";
-  $("userId").value = "";
 });
 
-// ---------------- STAFF REPORT ----------------
-
-$("reportForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  if (!auth.currentUser || currentProfile?.role !== "staff") return;
-
-  $("reportMessage").textContent = "Submitting report...";
+// Staff: Load assigned Power House feeders
+async function loadStaffFeeders() {
+  const feederField = $("feederName");
+  if (!feederField || !currentProfile?.houseId) return;
 
   try {
-    const feederName = $("feederName").value.trim();
-
     const feederQuery = query(
       collection(db, "feeders"),
       where("houseId", "==", currentProfile.houseId),
-      where("name", "==", feederName),
       where("active", "==", true)
     );
 
-    const feederSnap = await getDocs(feederQuery);
+    const snapshot = await getDocs(feederQuery);
 
-    if (feederSnap.empty) {
-      throw new Error("Feeder not found. Contact Admin.");
+    // Convert the existing feeder input into a dropdown.
+    const select = document.createElement("select");
+    select.id = "feederName";
+    select.name = "feederName";
+    select.required = true;
+    select.className = feederField.className;
+
+    select.innerHTML = '<option value="">Select Feeder</option>';
+
+    snapshot.forEach(doc => {
+      const feeder = doc.data();
+      const option = document.createElement("option");
+      option.value = doc.id;
+      option.textContent = feeder.name;
+      option.dataset.name = feeder.name;
+      select.appendChild(option);
+    });
+
+    feederField.replaceWith(select);
+
+    if (snapshot.empty) {
+      message(
+        "reportMessage",
+        "No active feeder found. Contact Admin.",
+        true
+      );
     }
 
-    const feederId = feederSnap.docs[0].id;
+  } catch (error) {
+    message(
+      "reportMessage",
+      "Could not load feeders. Check database rules.",
+      true
+    );
+  }
+}
+
+// Staff: Submit daily report
+$("reportForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  if (!auth.currentUser || currentProfile?.role !== "staff") {
+    return;
+  }
+
+  message("reportMessage", "Submitting report...");
+
+  try {
+    const feederSelect = $("feederName");
+    const selectedOption =
+      feederSelect.options[feederSelect.selectedIndex];
+
+    if (!selectedOption || !selectedOption.value) {
+      throw new Error("Please select a Feeder.");
+    }
 
     await addDoc(collection(db, "daily_reports"), {
       houseId: currentProfile.houseId,
-      feederId,
+      houseName: currentProfile.houseName || "",
+      feederId: selectedOption.value,
+      feederName: selectedOption.dataset.name || selectedOption.textContent,
       reportDate: $("reportDate").value,
       breakerStatus: $("breakerStatus").value,
       eventType: $("eventType").value,
@@ -178,105 +241,100 @@ $("reportForm").addEventListener("submit", async event => {
     });
 
     $("reportForm").reset();
-    $("reportDate").valueAsDate = new Date();
+    setToday();
 
-    $("reportMessage").textContent = "Report submitted successfully.";
+    message("reportMessage", "Report submitted successfully.");
 
   } catch (error) {
-    $("reportMessage").textContent = error.message ||
-      "Report could not be submitted.";
+    message("reportMessage", error.message, true);
   }
 });
 
-// ---------------- SAFE DISPLAY HELPERS ----------------
-
-function addText(parent, text) {
-  const span = document.createElement("span");
-  span.textContent = text ?? "";
-  parent.appendChild(span);
-  return span;
-}
-
-function addLine(parent, text) {
-  const div = document.createElement("div");
-  div.style.padding = "7px 0";
-  div.style.borderBottom = "1px solid #e5e7eb";
-  div.textContent = text;
-  parent.appendChild(div);
-}
-
-function houseName(houseId) {
-  return dashboardData.houses.find(h => h.id === houseId)?.name || "Unknown";
-}
-
-function feederName(feederId) {
-  return dashboardData.feeders.find(f => f.id === feederId)?.name || "Unknown";
-}
-
-// ---------------- LOAD DASHBOARD ----------------
-
-async function loadDashboard() {
-  $("adminMessage").textContent = "Loading dashboard...";
+// Admin: Refresh dashboard
+async function refreshDashboard() {
+  message("houseMessage", "Loading dashboard...");
 
   try {
     dashboardData = await adminRequest("getDashboardData");
 
-    $("houseCount").textContent = dashboardData.houses.length;
-    $("feederCount").textContent = dashboardData.feeders.length;
-
-    $("staffCount").textContent =
-      dashboardData.users.filter(u => u.role === "staff" && u.active).length;
-
-    $("reportCount").textContent = dashboardData.reports.length;
-
-    fillHouseDropdowns();
-    renderHouseList();
-    renderFeederList();
-    renderStaffList();
-    renderReports();
-    renderEditRequests();
-
-    $("adminMessage").textContent = "Dashboard updated successfully.";
+    renderDashboard();
+    message("houseMessage", "Dashboard updated.");
 
   } catch (error) {
-    $("adminMessage").textContent = error.message;
+    message("houseMessage", error.message, true);
   }
 }
 
-$("refreshDashboard").addEventListener("click", loadDashboard);
+$("refreshDashboard")?.addEventListener("click", refreshDashboard);
 
-// ---------------- HOUSE DROPDOWNS ----------------
+// Admin: Render dashboard
+function renderDashboard() {
+  const {
+    houses, feeders, users, reports, editRequests
+  } = dashboardData;
 
+  if ($("houseCount")) $("houseCount").textContent = houses.length;
+  if ($("feederCount")) $("feederCount").textContent = feeders.length;
+  if ($("staffCount")) {
+    $("staffCount").textContent =
+      users.filter(user => user.role === "staff" && user.active).length;
+  }
+  if ($("reportCount")) $("reportCount").textContent = reports.length;
+
+  if ($("houseList")) {
+    $("houseList").innerHTML = houses.length
+      ? houses.map(h => `<p>${safe(h.name)} — ${h.active ? "Active" : "Inactive"}</p>`).join("")
+      : "<p>No Power Houses added.</p>";
+  }
+
+  if ($("feederList")) {
+    $("feederList").innerHTML = feeders.length
+      ? feeders.map(f => `<p>${safe(f.name)} — ${safe(f.houseName || "")}</p>`).join("")
+      : "<p>No Feeders added.</p>";
+  }
+
+  if ($("staffList")) {
+    const staff = users.filter(u => u.role === "staff");
+
+    $("staffList").innerHTML = staff.length
+      ? staff.map(u =>
+          `<p>${safe(u.userId)} — ${safe(u.houseName)} — ${u.active ? "Active" : "Inactive"}</p>`
+        ).join("")
+      : "<p>No Staff accounts added.</p>";
+  }
+
+  fillHouseDropdowns();
+  renderReports();
+  renderEditRequests();
+}
+
+// Admin: Fill Power House dropdowns
 function fillHouseDropdowns() {
-  const dropdowns = [
+  const dropdownIds = [
     "feederHouse",
     "staffHouse",
     "filterHouse"
   ];
 
-  dropdowns.forEach(id => {
+  dropdownIds.forEach(id => {
     const select = $(id);
+    if (!select) return;
+
     const oldValue = select.value;
+    const includeAll = id === "filterHouse";
 
-    select.replaceChildren();
+    select.innerHTML = includeAll
+      ? '<option value="">All Power Houses</option>'
+      : '<option value="">Select Power House</option>';
 
-    const first = document.createElement("option");
-    first.value = "";
+    dashboardData.houses.forEach(house => {
+      if (house.active !== true) return;
 
-    first.textContent = id === "filterHouse"
-      ? "All Power Houses"
-      : "Select Power House";
-
-    select.appendChild(first);
-
-    dashboardData.houses
-      .filter(h => h.active === true)
-      .forEach(house => {
-        const option = document.createElement("option");
-        option.value = house.id;
-        option.textContent = house.name;
-        select.appendChild(option);
-      });
+      const option = document.createElement("option");
+      option.value = house.id;
+      option.textContent = house.name;
+      select.appendChild(option);
+    });
 
     if ([...select.options].some(o => o.value === oldValue)) {
       select.value = oldValue;
@@ -284,208 +342,141 @@ function fillHouseDropdowns() {
   });
 }
 
-// ---------------- CREATE HOUSE ----------------
-
-$("houseForm").addEventListener("submit", async event => {
+// Admin: Create Power House
+$("houseForm")?.addEventListener("submit", async event => {
   event.preventDefault();
 
-  $("houseMessage").textContent = "Adding Power House...";
-
   try {
+    message("houseMessage", "Creating Power House...");
+
     await adminRequest("createHouse", {
       houseName: $("houseName").value.trim()
     });
 
     $("houseForm").reset();
-    $("houseMessage").textContent = "Power House added.";
+    await refreshDashboard();
 
-    await loadDashboard();
+    message("houseMessage", "Power House created successfully.");
 
   } catch (error) {
-    $("houseMessage").textContent = error.message;
+    message("houseMessage", error.message, true);
   }
 });
 
-// ---------------- CREATE FEEDER ----------------
-
-$("feederForm").addEventListener("submit", async event => {
+// Admin: Create Feeder
+$("feederForm")?.addEventListener("submit", async event => {
   event.preventDefault();
 
-  $("feederMessage").textContent = "Adding Feeder...";
-
   try {
+    message("feederMessage", "Creating Feeder...");
+
     await adminRequest("createFeeder", {
       houseId: $("feederHouse").value,
       feederName: $("newFeederName").value.trim()
     });
 
     $("feederForm").reset();
-    $("feederMessage").textContent = "Feeder added.";
+    await refreshDashboard();
 
-    await loadDashboard();
+    message("feederMessage", "Feeder created successfully.");
 
   } catch (error) {
-    $("feederMessage").textContent = error.message;
+    message("feederMessage", error.message, true);
   }
 });
 
-// ---------------- CREATE STAFF ----------------
-
-$("staffForm").addEventListener("submit", async event => {
+// Admin: Create Staff
+$("staffForm")?.addEventListener("submit", async event => {
   event.preventDefault();
 
-  $("staffMessage").textContent = "Creating Staff account...";
-
   try {
+    message("staffMessage", "Creating Staff account...");
+
     await adminRequest("createStaff", {
-      houseId: $("staffHouse").value,
       userId: $("newStaffId").value.trim(),
-      pin: $("newStaffPin").value
+      pin: $("newStaffPin").value.trim(),
+      houseId: $("staffHouse").value
     });
 
     $("staffForm").reset();
+    await refreshDashboard();
 
-    $("staffMessage").textContent =
-      "Staff account created successfully.";
-
-    await loadDashboard();
+    message("staffMessage", "Staff account created successfully.");
 
   } catch (error) {
-    $("staffMessage").textContent = error.message;
+    message("staffMessage", error.message, true);
   }
 });
 
-// ---------------- HOUSE LIST ----------------
+// Admin: Reports filter
+$("applyReportFilter")?.addEventListener("click", renderReports);
 
-function renderHouseList() {
-  const box = $("houseList");
-  box.replaceChildren();
-
-  if (!dashboardData.houses.length) {
-    addText(box, "No Power Houses added yet.");
-    return;
-  }
-
-  dashboardData.houses.forEach(h => {
-    addLine(box, h.name + (h.active ? " · Active" : " · Inactive"));
-  });
-}
-
-// ---------------- FEEDER LIST ----------------
-
-function renderFeederList() {
-  const box = $("feederList");
-  box.replaceChildren();
-
-  if (!dashboardData.feeders.length) {
-    addText(box, "No Feeders added yet.");
-    return;
-  }
-
-  dashboardData.feeders.forEach(f => {
-    addLine(box, f.name + " · " + houseName(f.houseId));
-  });
-}
-
-// ---------------- STAFF LIST ----------------
-
-function renderStaffList() {
-  const box = $("staffList");
-  box.replaceChildren();
-
-  const staff = dashboardData.users.filter(u => u.role === "staff");
-
-  if (!staff.length) {
-    addText(box, "No Staff accounts created.");
-    return;
-  }
-
-  staff.forEach(u => {
-    addLine(
-      box,
-      u.userId + " · " + u.houseName + " · " +
-      (u.active ? "Active" : "Inactive")
-    );
-  });
-}
-
-// ---------------- REPORT LIST ----------------
-
-function getFilteredReports() {
-  const selectedHouse = $("filterHouse").value;
-  const selectedDate = $("filterDate").value;
-
-  return dashboardData.reports.filter(report => {
-    const houseMatch =
-      !selectedHouse || report.houseId === selectedHouse;
-
-    const dateMatch =
-      !selectedDate || report.reportDate === selectedDate;
-
-    return houseMatch && dateMatch;
-  });
-}
-
-function renderReports() {
-  const box = $("reportList");
-  box.replaceChildren();
-
-  const reports = getFilteredReports();
-
-  const heading = document.createElement("h3");
-  heading.textContent = "Reports: " + reports.length;
-  box.appendChild(heading);
-
-  if (!reports.length) {
-    addText(box, "No reports found.");
-    return;
-  }
-
-  reports.forEach(r => {
-    const card = document.createElement("div");
-    card.style.padding = "12px";
-    card.style.margin = "10px 0";
-    card.style.border = "1px solid #ddd";
-    card.style.borderRadius = "8px";
-
-    const details = [
-      "Date: " + r.reportDate,
-      "Power House: " + houseName(r.houseId),
-      "Feeder: " + feederName(r.feederId),
-      "Breaker: " + r.breakerStatus,
-      "Event: " + r.eventType,
-      "Fault: " + r.faultDetails,
-      "Duration: " + r.duration,
-      "Restoration: " + r.restorationTime,
-      "Remarks: " + r.remarks
-    ];
-
-    details.forEach(detail => addLine(card, detail));
-    box.appendChild(card);
-  });
-}
-
-$("applyReportFilter").addEventListener("click", renderReports);
-
-$("clearReportFilter").addEventListener("click", () => {
-  $("filterHouse").value = "";
-  $("filterDate").value = "";
+$("clearReportFilter")?.addEventListener("click", () => {
+  if ($("filterHouse")) $("filterHouse").value = "";
+  if ($("filterDate")) $("filterDate").value = "";
   renderReports();
 });
 
-// ---------------- CSV / EXCEL EXPORT ----------------
+function getFilteredReports() {
+  let reports = [...dashboardData.reports];
 
-const exportButton = document.createElement("button");
-exportButton.type = "button";
-exportButton.textContent = "Export Reports to Excel";
-exportButton.style.marginBottom = "15px";
+  const houseId = $("filterHouse")?.value || "";
+  const date = $("filterDate")?.value || "";
 
-$("reportList").parentElement.insertBefore(
-  exportButton,
-  $("reportList")
-);
+  if (houseId) {
+    reports = reports.filter(r => r.houseId === houseId);
+  }
 
-exportButton.addEventListener("click", () => {
+  if (date) {
+    reports = reports.filter(r => r.reportDate === date);
+  }
+
+  return reports;
+}
+
+function renderReports() {
+  const list = $("reportList");
+  if (!list) return;
+
+  const reports = getFilteredReports();
+
+  list.innerHTML = reports.length
+    ? reports.map(r => `
+      <div class="report-item">
+        <p><strong>${safe(r.reportDate)}</strong> — ${safe(r.houseName)}</p>
+        <p>Feeder: ${safe(r.feederName)}</p>
+        <p>Breaker: ${safe(r.breakerStatus)} | Event: ${safe(r.eventType)}</p>
+        <p>Fault: ${safe(r.faultDetails)}</p>
+        <p>Duration: ${safe(r.duration)} | Restoration: ${safe(r.restorationTime)}</p>
+        <p>Remarks: ${safe(r.remarks)}</p>
+        <hr>
+      </div>
+    `).join("")
+    : "<p>No reports found.</p>";
+}
+
+// Admin: Edit request list
+function renderEditRequests() {
+  const list = $("editRequestList");
+  if (!list) return;
+
+  const requests = dashboardData.editRequests || [];
+
+  list.innerHTML = requests.length
+    ? requests.map(r => `
+      <div>
+        <p><strong>${safe(r.status || "pending")}</strong></p>
+        <p>Power House: ${safe(r.houseId)}</p>
+        <p>Staff: ${safe(r.submittedBy)}</p>
+        <p>Reason: ${safe(r.reason || r.message || "")}</p>
+        <hr>
+      </div>
+    `).join("")
+    : "<p>No edit requests.</p>";
+}
+
+// Export filtered reports as Excel-compatible CSV
+function exportReportsCSV() {
   const reports = getFilteredReports();
 
   if (!reports.length) {
@@ -507,8 +498,8 @@ exportButton.addEventListener("click", () => {
 
   const rows = reports.map(r => [
     r.reportDate,
-    houseName(r.houseId),
-    feederName(r.feederId),
+    r.houseName,
+    r.feederName,
     r.breakerStatus,
     r.eventType,
     r.faultDetails,
@@ -517,17 +508,16 @@ exportButton.addEventListener("click", () => {
     r.remarks
   ]);
 
-  const escapeCSV = value =>
-    '"' + String(value ?? "").replace(/"/g, '""') + '"';
+  const csv = [columns, ...rows]
+    .map(row => row.map(value =>
+      `"${String(value ?? "").replace(/"/g, '""')}"`
+    ).join(","))
+    .join("\r\n");
 
-  const csv = "\uFEFF" +
-    [columns, ...rows]
-      .map(row => row.map(escapeCSV).join(","))
-      .join("\r\n");
-
-  const blob = new Blob([csv], {
-    type: "text/csv;charset=utf-8;"
-  });
+  const blob = new Blob(
+    ["\uFEFF" + csv],
+    { type: "text/csv;charset=utf-8;" }
+  );
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -537,26 +527,10 @@ exportButton.addEventListener("click", () => {
   link.click();
 
   URL.revokeObjectURL(url);
-});
-
-// ---------------- EDIT REQUESTS ----------------
-
-function renderEditRequests() {
-  const box = $("editRequestList");
-  box.replaceChildren();
-
-  if (!dashboardData.editRequests.length) {
-    addText(box, "No Edit Requests found.");
-    return;
-  }
-
-  dashboardData.editRequests.forEach(request => {
-    const details = [
-      "Status: " + (request.status || "Pending"),
-      "Power House: " + houseName(request.houseId),
-      "Reason: " + (request.reason || request.message || "Not provided")
-    ];
-
-    details.forEach(detail => addLine(box, detail));
-  });
 }
+
+// Export button, if present in HTML
+$("exportReports")?.addEventListener("click", exportReportsCSV);
+
+// Initial setup
+setToday();
