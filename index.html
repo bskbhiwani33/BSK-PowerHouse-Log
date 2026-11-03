@@ -5,6 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#12345a">
+
+  <link rel="manifest" href="/manifest.webmanifest">
+
   <title>BSK</title>
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -46,7 +49,6 @@
         <button id="logoutBtn" class="secondary">Logout</button>
       </div>
 
-      <!-- STAFF PANEL -->
       <section id="staffPanel" class="card hidden">
         <h2>Daily Feeder Report</h2>
 
@@ -92,7 +94,6 @@
         </form>
       </section>
 
-      <!-- ADMIN PANEL -->
       <section id="adminPanel" class="hidden">
 
         <div class="card">
@@ -102,7 +103,6 @@
           <p id="adminMessage" class="message" role="status"></p>
         </div>
 
-        <!-- STATISTICS -->
         <div class="card">
           <h2>Summary</h2>
           <div class="row" style="justify-content:space-around;flex-wrap:wrap">
@@ -125,7 +125,6 @@
           </div>
         </div>
 
-        <!-- ADD POWER HOUSE -->
         <div class="card">
           <h2>Add Power House</h2>
           <form id="houseForm">
@@ -137,7 +136,6 @@
           <p id="houseMessage" class="message" role="status"></p>
         </div>
 
-        <!-- ADD FEEDER -->
         <div class="card">
           <h2>Add Feeder</h2>
           <form id="feederForm">
@@ -155,7 +153,6 @@
           <p id="feederMessage" class="message" role="status"></p>
         </div>
 
-        <!-- CREATE STAFF -->
         <div class="card">
           <h2>Create Staff Account</h2>
           <form id="staffForm">
@@ -179,25 +176,21 @@
           <p id="staffMessage" class="message" role="status"></p>
         </div>
 
-        <!-- POWER HOUSE LIST -->
         <div class="card">
           <h2>Power House List</h2>
           <div id="houseList">No data loaded.</div>
         </div>
 
-        <!-- FEEDER LIST -->
         <div class="card">
           <h2>Feeder List</h2>
           <div id="feederList">No data loaded.</div>
         </div>
 
-        <!-- STAFF LIST -->
         <div class="card">
           <h2>Staff List</h2>
           <div id="staffList">No data loaded.</div>
         </div>
 
-        <!-- REPORT FILTER -->
         <div class="card">
           <h2>Daily Reports</h2>
 
@@ -217,7 +210,6 @@
           <div id="reportList">No reports loaded.</div>
         </div>
 
-        <!-- EDIT REQUESTS -->
         <div class="card">
           <h2>Staff Edit Requests</h2>
           <div id="editRequestList">No requests loaded.</div>
