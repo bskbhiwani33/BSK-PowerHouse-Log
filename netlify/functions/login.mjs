@@ -45,7 +45,12 @@ export default async (req) => {
         houseId: profile.houseId || "", houseName: profile.houseName || ""
       }
     });
+  
   } catch (error) {
-    return Response.json({ error: "Login service is not configured correctly" }, { status: 500 });
+    console.error("LOGIN FUNCTION ERROR:", error);
+    return Response.json({
+      error: error.message || "Unknown login error"
+    }, { status: 500 });
   }
+
 };
