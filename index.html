@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12345a">
+  <title>BSK</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar"><div class="brand">BSK</div><div>Power House Feeder Log</div></header>
+  <main class="wrap">
+    <section id="loginCard" class="card">
+      <h1>BSK Login</h1>
+      <p class="muted">Sign in with your User ID and 4-digit PIN.</p>
+      <form id="loginForm">
+        <label for="userId">User ID</label>
+        <input id="userId" autocomplete="username" required maxlength="40" placeholder="Enter User ID">
+        <label for="pin">4-digit PIN</label>
+        <input id="pin" type="password" inputmode="numeric" autocomplete="current-password"
+               pattern="[0-9]{4}" maxlength="4" required placeholder="••••">
+        <button type="submit">Login</button>
+        <p id="loginMessage" class="message" role="status"></p>
+      </form>
+      <p class="tiny">First-time setup is performed by the project administrator.</p>
+    </section>
+
+    <section id="appPanel" class="hidden">
+      <div class="row between">
+        <div><h1>Dashboard</h1><p id="welcome" class="muted"></p></div>
+        <button id="logoutBtn" class="secondary">Logout</button>
+      </div>
+
+      <section id="staffPanel" class="card hidden">
+        <h2>Daily Feeder Report</h2>
+        <form id="reportForm">
+          <label for="reportDate">Report date</label>
+          <input id="reportDate" type="date" required>
+          <label for="feederName">Feeder</label>
+          <input id="feederName" required placeholder="Feeder name">
+          <label for="breakerStatus">Breaker status</label>
+          <select id="breakerStatus" required>
+            <option value="">Select status</option><option>ON</option><option>OFF</option><option>TRIPPED</option><option>UNDER MAINTENANCE</option>
+          </select>
+          <label for="eventType">Event type</label>
+          <select id="eventType" required>
+            <option value="">Select event</option><option>Normal</option><option>Tripping</option><option>Breakdown</option><option>Shutdown</option>
+          </select>
+          <label for="faultDetails">Fault details</label>
+          <textarea id="faultDetails" rows="3" placeholder="Enter fault details"></textarea>
+          <label for="duration">Duration</label>
+          <input id="duration" placeholder="e.g. 45 minutes">
+          <label for="restorationTime">Restoration time</label>
+          <input id="restorationTime" type="time">
+          <label for="remarks">Remarks</label>
+          <textarea id="remarks" rows="3"></textarea>
+          <button type="submit">Submit report</button>
+          <p id="reportMessage" class="message" role="status"></p>
+        </form>
+      </section>
+
+      <section id="adminPanel" class="card hidden">
+        <h2>Admin area</h2>
+        <p>Admin dashboard, Power House/Feeder management, report filters and Excel export will be connected in the next setup step.</p>
+        <p class="muted">Reports and user-management actions must go through the secured backend.</p>
+      </section>
+    </section>
+  </main>
+  <footer>BSK · Power House Feeder Log</footer>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
