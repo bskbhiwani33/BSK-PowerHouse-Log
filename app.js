@@ -1135,7 +1135,8 @@ const hindiWords = {
   "Offline: showing last synced records.":"ऑफलाइन: आखिरी सिंक किए गए रिकॉर्ड दिखाए जा रहे हैं।",
   "Could not load the next history page. Check connection and retry.":"पुराना इतिहास लोड नहीं हुआ। इंटरनेट जाँचकर फिर कोशिश करें।",
   "Complete backup downloaded.":"पूरा बैकअप डाउनलोड हो गया।",
-  "All available records are loaded.":"सभी उपलब्ध रिकॉर्ड लोड हो गए।"
+  "All available records are loaded.":"सभी उपलब्ध रिकॉर्ड लोड हो गए।",
+  "Please click Load All History before downloading a complete report.":"पूरी रिपोर्ट डाउनलोड करने से पहले Load All History पर क्लिक करें।"
 };
 const hindiPlaceholders = {
   "Enter User ID":"यूजर आईडी दर्ज करें","Feeder name":"फीडर का नाम",
