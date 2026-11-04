@@ -24,6 +24,7 @@ self.addEventListener("activate", event => {
 });
 
 function isAppAsset(request) {
+  if (FIREBASE_MODULES.includes(request.url)) return true;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return false;
   if (url.pathname.startsWith("/.netlify/") || url.pathname.startsWith("/api/")) return false;
@@ -38,7 +39,7 @@ self.addEventListener("fetch", event => {
     const cached = await cache.match(request);
     try {
       const fresh = await fetch(request);
-      if (fresh && fresh.status === 200 && fresh.type === "basic") {
+      if (fresh && fresh.status === 200 && (fresh.type === "basic" || (fresh.type === "cors" && FIREBASE_MODULES.includes(request.url)))) {
         cache.put(request, fresh.clone()).catch(() => {});
       }
       return fresh;
