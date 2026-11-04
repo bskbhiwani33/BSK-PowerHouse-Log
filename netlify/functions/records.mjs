@@ -264,7 +264,7 @@ export default async req => {
       case "getRecords": {
         const requestedHouse = clean(body.houseId);
         const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
-        const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports", "notifications", "entry_history"];
+        const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports", "feeder_status", "notifications", "entry_history"];
         const output = {};
         await Promise.all(names.map(async name => {
           let q = db.collection(name);
