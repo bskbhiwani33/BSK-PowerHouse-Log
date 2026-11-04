@@ -449,7 +449,7 @@ setToday();
 
 
 // ---------------- Operational records (direct save; no approval workflow) ----------------
-let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], notifications: [], entry_history: [] };
+let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [] };
 const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports"];
 
 async function recordsRequest(action, data = {}) {
@@ -501,7 +501,7 @@ async function loadOperationalRecords() {
   try {
     const result = await recordsRequest("getRecords");
     const assignedFeeders = operational.feeders || [];
-    operational = Object.fromEntries(recordCollections.concat(["notifications","entry_history"]).map(k => [k, result[k] || []]));
+    operational = Object.fromEntries(recordCollections.concat(["feeder_status","notifications","entry_history"]).map(k => [k, result[k] || []]));
     operational.feeders = assignedFeeders;
     localStorage.setItem(recordsCacheKey(), JSON.stringify(operational));
     renderOperational();
@@ -557,7 +557,7 @@ function renderFeederStatusSearch() {
   output.innerHTML=feeders.map(f=>{
     const breakdowns=operational.breakdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const shutdowns=operational.shutdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-    const status=breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running";
+    const statusRow=(operational.feeder_status||[]).find(x=>x.feederId===f.id);\n    const status=statusRow?.status || (breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running");
     const dailySource=currentProfile?.role==="admin"?(dashboardData.reports||[]):(operational.daily_reports||[]);
     const daily=dailySource.filter(x=>x.feederId===f.id).map(x=>({...x,date:x.reportDate,kind:"Daily Report",reason:x.remarks||x.eventType}));
     const history=[...breakdowns.map(x=>({...x,kind:"Breakdown"})),...shutdowns.map(x=>({...x,kind:"Shutdown"})),...daily].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,15);
