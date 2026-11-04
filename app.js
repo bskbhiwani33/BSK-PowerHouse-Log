@@ -1144,7 +1144,8 @@ const hindiWords = {
   "Could not load the next history page. Check connection and retry.":"पुराना इतिहास लोड नहीं हुआ। इंटरनेट जाँचकर फिर कोशिश करें।",
   "Complete backup downloaded.":"पूरा बैकअप डाउनलोड हो गया।",
   "All available records are loaded.":"सभी उपलब्ध रिकॉर्ड लोड हो गए।",
-  "Please click Load All History before downloading a complete report.":"पूरी रिपोर्ट डाउनलोड करने से पहले Load All History पर क्लिक करें।"
+  "Please click Load All History before downloading a complete report.":"पूरी रिपोर्ट डाउनलोड करने से पहले Load All History पर क्लिक करें।",
+  "Offline storage is full. Connect to internet and sync pending entries before adding more.":"ऑफलाइन स्टोरेज भर गया है। नई एंट्री से पहले इंटरनेट से कनेक्ट करके लंबित एंट्री सिंक करें।"
 };
 const hindiPlaceholders = {
   "Enter User ID":"यूजर आईडी दर्ज करें","Feeder name":"फीडर का नाम",
