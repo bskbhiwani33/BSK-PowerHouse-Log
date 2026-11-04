@@ -23,7 +23,7 @@ Status meanings:
 | 11 | Monthly report | Partial | Monthly entry counts now show category-separated totals; full-history verification remains. |
 | 12 | Date-wise search | Partial | From/to filters apply to record history, feeder history, reports, charts and three dedicated Excel exports; verify all combinations in runtime. |
 | 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. |
-| 14 | PDF report | Partial | Current action opens browser print dialog; it is not a dedicated generated/downloadable PDF report and needs layout/filter testing. |
+| 14 | PDF report | Partial | Print-ready report opens in a separate window so the user can choose Save as PDF; test browser/WebView print support and filtered layout. |
 | 15 | Staff login with individual login ID | Present | User ID + PIN login and Admin provisioning support multiple active staff accounts per Power House; verify login and staff isolation in runtime. |
 | 16 | Staff-wise entry history | Partial | Staff now see their own audit history and can page older house records; Admin sees staff-wise counts. Runtime verification remains. |
 | 17 | Admin dashboard/reporting | Present | Admin dashboard, management forms, report views and operational records are present; end-to-end checks remain. |
@@ -31,14 +31,14 @@ Status meanings:
 | 19 | Staff cannot delete old records | Present | No staff delete UI/API action is exposed; Firestore direct writes are denied. Verify all routes remain protected. |
 | 20 | Ongoing Breakdown alert | Partial | Separate Breakdown long-running alert section now appears at 24+ hours; no push/background notification delivery. |
 | 21 | Ongoing Shutdown alert | Partial | Separate Shutdown long-running alert section now appears at 24+ hours; no push/background notification delivery. |
-| 22 | New entry notification to Admin | Partial | New-entry notifications are saved and shown in Admin dashboard; no push/background notification delivery is implemented. |
+| 22 | New entry notification to Admin | Partial | New-entry notifications are saved transactionally and shown with unread count in Admin dashboard; no push/background delivery. |
 | 23 | Pending Entry Alert = unread notifications, not approval queue | Present | Unread notification count and Mark Read action exist; no approval/reject queue is present. |
-| 24 | Hindi + English toggle | Partial | Translation dictionary extended for new report/history controls; dynamic validation and error messages still need coverage. |
+| 24 | Hindi + English toggle | Partial | New report/history controls and common live status messages are translated; less-common validation/server messages still need coverage. |
 | 25 | Dark Mode | Present | Theme toggle and local preference persistence exist; visual coverage needs device testing. |
 | 26 | Search by Feeder/date | Partial | Feeder-name search and date range filters exist in separate views; consistent combined search across all datasets is incomplete. |
 | 27 | Dashboard charts | Partial | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
-| 28 | Backup system | Partial | Admin can export paginated JSON backup; restore workflow and backup integrity/coverage tests are not present. PIN hashes/salts are intentionally excluded. |
-| 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable client entry IDs, retry on online/visibility and periodic sync exist; test offline reload, storage limits, and all form types. |
+| 28 | Backup system | Partial | Admin can export paginated JSON backup across operational collections; pagination loop guards added. Restore workflow and backup integrity tests remain. PIN hashes/salts are excluded. |
+| 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable IDs, transactional idempotency, online/visibility/periodic retry and storage-quota warning exist; offline reload and device testing remain. |
 | 30 | Three separate Excel downloads with date filtering | Present | Separate Breakdown, Shutdown and Consumption Excel exports use From/To date filters. |
  
 ## Important project constraints
