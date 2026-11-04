@@ -657,9 +657,23 @@ function renderRecordHistory() {
   ).join("") : "<p>No records in selected date range.</p>";
   if ($("recordsInsights")) {
     const outageRows = [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))].filter(inside);
-    const byFeeder = {};
-    operational.breakdowns.filter(inside).forEach(x => { const k=x.feederName||"Unknown"; byFeeder[k]=(byFeeder[k]||0)+1; });
-    const repeats = Object.entries(byFeeder).filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]);
+    const breakdownCounts = new Map();
+    operational.breakdowns.filter(inside).forEach(x => {
+      const key = x.feederId || x.feederName || "unknown";
+      const current = breakdownCounts.get(key) || { name:x.feederName || "Unknown feeder", count:0 };
+      current.count += 1;
+      breakdownCounts.set(key, current);
+    });
+    const repeats = [...breakdownCounts.values()].filter(x=>x.count>=2).sort((a,b)=>b.count-a.count);
+    const feederSummary = new Map();
+    [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))]
+      .filter(inside).forEach(x=>{
+        const key=x.feederId||x.feederName||"unknown";
+        const current=feederSummary.get(key)||{name:x.feederName||"Unknown feeder",breakdowns:0,shutdowns:0};
+        if(x.kind==="Breakdown") current.breakdowns+=1; else current.shutdowns+=1;
+        feederSummary.set(key,current);
+      });
+    const feederRows=[...feederSummary.values()].sort((a,b)=>(b.breakdowns+b.shutdowns)-(a.breakdowns+a.shutdowns));
     const daily = {};
     const monthly = {};
     const dailyReportRows = (operational.daily_reports||[]).filter(r=>(!from||r.reportDate>=from)&&(!to||r.reportDate<=to)&&(!search||[r.feederName,r.createdByUserId,r.houseName].some(v=>String(v||"").toLowerCase().includes(search)))).map(r=>({...r,date:r.reportDate}));
@@ -668,11 +682,13 @@ function renderRecordHistory() {
     const staffCounts = {};
     operational.entry_history.forEach(x=>{ const who=x.actorUserId||"Unknown"; staffCounts[who]=(staffCounts[who]||0)+1; });
     $("recordsInsights").innerHTML =
-      "<h3>Repeat Breakdown / Feeder-wise Report</h3>" +
-      (repeats.length ? repeats.map(([name,n])=>`<p>${safe(name)} · ${n} outage events</p>`).join("") : "<p>No repeat outage found in selected dates.</p>") +
-      "<h3>Daily Outage Summary</h3>" +
+      "<h3>Repeat Breakdown Report</h3>" +
+      (repeats.length ? repeats.map(x=>`<p>${safe(x.name)} · ${x.count} breakdowns</p>`).join("") : "<p>No repeat breakdown found in selected dates.</p>") +
+      "<h3>Feeder-wise Report</h3>" +
+      (feederRows.length ? feederRows.map(x=>`<p>${safe(x.name)} · Breakdown: ${x.breakdowns} · Shutdown: ${x.shutdowns} · Total: ${x.breakdowns+x.shutdowns}</p>`).join("") : "<p>No feeder outage records in selected dates.</p>") +
+      "<h3>Daily Entry Summary</h3>" +
       (Object.keys(daily).length ? Object.entries(daily).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,n])=>`<p>${safe(d)} · ${n} events</p>`).join("") : "<p>No daily records.</p>") +
-      "<h3>Monthly Outage Summary</h3>" +
+      "<h3>Monthly Entry Summary</h3>" +
       (Object.keys(monthly).length ? Object.entries(monthly).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,n])=>`<p>${safe(m)} · ${n} events</p>`).join("") : "<p>No monthly records.</p>") +
       "<h3>Staff-wise Entry History</h3>" +
       (Object.keys(staffCounts).length ? Object.entries(staffCounts).sort((a,b)=>b[1]-a[1]).map(([who,n])=>`<p>${safe(who)} · ${n} entries</p>`).join("") : "<p>No history loaded.</p>");
