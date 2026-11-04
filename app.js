@@ -600,17 +600,20 @@ function renderFeederStatusSearch() {
   const output=$("feederStatusResult");
   if (!output) return;
   const query=($("feederStatusSearch")?.value||"").trim().toLowerCase();
+  const from=$("recordsFrom")?.value||"", to=$("recordsTo")?.value||"";
   if (!query) { output.innerHTML="<p class='muted'>Search a feeder to see its current status and history.</p>"; return; }
   const feeders=(currentProfile?.role==="admin"?(dashboardData.feeders||[]):(operational.feeders||[])).filter(f=>f.active!==false && String(f.name||"").toLowerCase().includes(query));
   if (!feeders.length) { output.textContent="No matching feeder found."; return; }
   output.innerHTML=feeders.map(f=>{
+    const inRange=x=>(!from||x.date>=from)&&(!to||x.date<=to);
     const breakdowns=operational.breakdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const shutdowns=operational.shutdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const statusRow=(operational.feeder_status||[]).find(x=>x.feederId===f.id);
     const status=statusRow?.status || (breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running");
     const dailySource=operational.daily_reports||dashboardData.reports||[];
     const daily=dailySource.filter(x=>x.feederId===f.id).map(x=>({...x,date:x.reportDate,kind:"Daily Report",reason:x.remarks||x.eventType}));
-    const history=[...breakdowns.map(x=>({...x,kind:"Breakdown"})),...shutdowns.map(x=>({...x,kind:"Shutdown"})),...daily].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,15);
+    const history=[...breakdowns.map(x=>({...x,kind:"Breakdown"})),...shutdowns.map(x=>({...x,kind:"Shutdown"})),...daily]
+      .filter(inRange).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     return `<article class="report-item"><strong>${safe(f.name)} — ${status}</strong>${history.map(x=>`<p>${safe(x.kind)} · ${safe(x.date)} · ${safe(x.startTime)}–${safe(x.endTime||"Ongoing")} · ${safe(x.reason)}</p>`).join("") || "<p>No outage history.</p>"}</article>`;
   }).join("");
 }
@@ -779,7 +782,7 @@ submitOperational("consumptionForm", "createConsumption", () => ({
 }), "consumptionMessage");
 
 $("refreshRecords")?.addEventListener("click", refreshOperationalRecordsPreservingHistory);
-["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); }));
+["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); }));
 
 function downloadExcelXml(kind) {
   const from = $("recordsFrom")?.value || "", to = $("recordsTo")?.value || "";
