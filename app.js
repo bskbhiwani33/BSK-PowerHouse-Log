@@ -732,7 +732,11 @@ function readOutbox() {
   try { return JSON.parse(localStorage.getItem(outboxKey()) || "[]"); }
   catch { return []; }
 }
-function writeOutbox(items) { localStorage.setItem(outboxKey(), JSON.stringify(items)); }
+function writeOutbox(items) { localStorage.setItem(outboxKey(), JSON.stringify(items)); renderOfflineQueueStatus(); }
+function renderOfflineQueueStatus() {
+  const count=readOutbox().length;
+  if ($("offlineQueueStatus")) $("offlineQueueStatus").textContent = count ? count+" offline entr"+(count===1?"y":"ies")+" waiting to sync." : "";
+}
 async function queueOffline(action, payload) {
   const item = { clientEntryId: (crypto.randomUUID ? crypto.randomUUID() : "bsk"+Date.now()+Math.random().toString(36).slice(2)), ownerUid:auth.currentUser?.uid, action, payload, queuedAt: new Date().toISOString() };
   const items = readOutbox(); items.push(item); writeOutbox(items);
