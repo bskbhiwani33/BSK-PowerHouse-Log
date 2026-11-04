@@ -557,7 +557,8 @@ function renderFeederStatusSearch() {
   output.innerHTML=feeders.map(f=>{
     const breakdowns=operational.breakdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const shutdowns=operational.shutdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-    const statusRow=(operational.feeder_status||[]).find(x=>x.feederId===f.id);\n    const status=statusRow?.status || (breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running");
+    const statusRow=(operational.feeder_status||[]).find(x=>x.feederId===f.id);
+    const status=statusRow?.status || (breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running");
     const dailySource=currentProfile?.role==="admin"?(dashboardData.reports||[]):(operational.daily_reports||[]);
     const daily=dailySource.filter(x=>x.feederId===f.id).map(x=>({...x,date:x.reportDate,kind:"Daily Report",reason:x.remarks||x.eventType}));
     const history=[...breakdowns.map(x=>({...x,kind:"Breakdown"})),...shutdowns.map(x=>({...x,kind:"Shutdown"})),...daily].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,15);
