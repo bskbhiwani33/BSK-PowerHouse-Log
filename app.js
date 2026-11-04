@@ -576,7 +576,8 @@ function renderRecordHistory() {
     ...operational.breakdowns.filter(inside).map(x => ({...x, kind:"Breakdown"})),
     ...operational.shutdowns.filter(inside).map(x => ({...x, kind:"Shutdown"})),
     ...operational.trippings.filter(inside).map(x => ({...x, kind:"Tripping"})),
-    ...operational.consumption_readings.filter(inside).map(x => ({...x, kind:"Consumption"}))
+    ...operational.consumption_readings.filter(inside).map(x => ({...x, kind:"Consumption"})),
+    ...(operational.daily_reports || []).map(x => ({...x, date:x.reportDate, kind:"Daily Feeder Report", reason:x.remarks || x.eventType})).filter(inside)
   ].sort((a,b) => String(b.date).localeCompare(String(a.date)));
   const durationFor = x => {
     if (!x.startTime) return "";
