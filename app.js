@@ -787,7 +787,7 @@ submitOperational("consumptionForm", "createConsumption", () => ({
 }), "consumptionMessage");
 
 $("refreshRecords")?.addEventListener("click", refreshOperationalRecordsPreservingHistory);
-["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); }));
+["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); renderAlertsAndCharts(); }));
 
 function downloadExcelXml(kind) {
   const from = $("recordsFrom")?.value || "", to = $("recordsTo")?.value || "";
@@ -916,7 +916,7 @@ recordsRequest = async (action, data = {}) => {
   }
 };
 
-$("recordsSearch")?.addEventListener("input", () => { renderRecordHistory(); renderReports(); });
+$("recordsSearch")?.addEventListener("input", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); renderAlertsAndCharts(); });
 
 $("loadMoreStaffHistory")?.addEventListener("click", async () => {
   const button=$("loadMoreStaffHistory");
