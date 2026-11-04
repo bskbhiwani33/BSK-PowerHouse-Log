@@ -936,6 +936,13 @@ const hindiWords = {
   "BSK Login":"बीएसके लॉगिन","User ID":"यूजर आईडी","Login":"लॉगिन",
   "Save offline. It will sync when internet returns.":"ऑफलाइन सेव हुआ। इंटरनेट आने पर अपने आप सिंक होगा."
 };
+const hindiPlaceholders = {
+  "Enter User ID":"यूजर आईडी दर्ज करें","Feeder name":"फीडर का नाम",
+  "e.g. 45 minutes":"जैसे 45 मिनट","Enter Power House name":"पावर हाउस का नाम दर्ज करें",
+  "Enter Feeder name":"फीडर का नाम दर्ज करें","Example: Staff001":"उदाहरण: Staff001",
+  "Enter 4-digit PIN":"4 अंकों का पिन दर्ज करें","Search feeder or staff ID":"फीडर या स्टाफ आईडी खोजें",
+  "Enter feeder name":"फीडर का नाम दर्ज करें"
+};
 function applyLanguage() {
   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
   let node;
@@ -946,6 +953,11 @@ function applyLanguage() {
     if(hindiMode && hindiWords[original]) node.nodeValue=node.__bskEnglish.replace(original,hindiWords[original]);
     else if(!hindiMode) node.nodeValue=node.__bskEnglish;
   }
+  document.querySelectorAll("[placeholder]").forEach(element => {
+    if (!element.dataset.bskEnglishPlaceholder) element.dataset.bskEnglishPlaceholder = element.placeholder;
+    const original = element.dataset.bskEnglishPlaceholder;
+    element.placeholder = hindiMode ? (hindiPlaceholders[original] || original) : original;
+  });
   if ($("languageToggle")) { const label=hindiMode ? "English" : "हिन्दी"; if ($("languageToggle").textContent !== label) $("languageToggle").textContent=label; }
   document.documentElement.lang = hindiMode ? "hi" : "en";
 }
