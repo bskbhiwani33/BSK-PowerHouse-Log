@@ -25,5 +25,7 @@ jobs:
         run: npm install --ignore-scripts
       - name: Verify Netlify function bundles
         run: npx --yes esbuild@0.25.0 netlify/functions/*.mjs --bundle --platform=node --packages=external --outdir=/tmp/bsk-functions
-      - name: Compile Firestore security rules in emulator
-        run: npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-bsk "echo Firestore rules compiled"
+      - name: Install Firestore rules test dependencies
+        run: npm install --no-save firebase @firebase/rules-unit-testing
+      - name: Test Firestore security rules in emulator
+        run: npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-bsk "node tests/firestore-rules.test.mjs"
