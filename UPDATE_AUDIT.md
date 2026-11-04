@@ -1,6 +1,6 @@
 # BSK 30-Update Implementation Audit
 
-Audit basis: source code on branch `bsk-complete-update-prep`, updated through the latest report/history improvements. This remains a source-code review, not a live-system test.
+Audit basis: source code on branch `bsk-complete-update-prep`, updated after report/history improvements. This remains a source-code review, not a live-system test.
 This is a source-code audit only. It does not mean the features have passed end-to-end testing or are live on Netlify.
 
 Status meanings:
@@ -19,13 +19,13 @@ Status meanings:
 | 7 | Automatic Breakdown duration | Present | Duration is calculated from start to end/current time for display; verify date/time edge cases. |
 | 8 | Repeat-Breakdown report | Partial | Repeat counts are grouped by feeder ID and filtered by date/search; complete historical counts require loading all pages first. |
 | 9 | Feeder-wise report | Partial | A dedicated feeder-wise breakdown/shutdown count summary is present; it reflects loaded records until all history pages are loaded. |
-| 10 | Daily summary | Partial | Daily entry counts are shown across loaded record types; category-separated totals and full-history verification remain. |
-| 11 | Monthly report | Partial | Monthly entry counts are shown; detailed month-wise breakdown and full-history verification remain. |
-| 12 | Date-wise search | Partial | From/to filters exist for several views/exports; not consistently applied across every record type and report. |
+| 10 | Daily summary | Partial | Daily entry counts now show category-separated totals across loaded record types; full-history verification remains. |
+| 11 | Monthly report | Partial | Monthly entry counts now show category-separated totals; full-history verification remains. |
+| 12 | Date-wise search | Partial | From/to filters apply to record history, feeder history, reports, charts and three dedicated Excel exports; verify all combinations in runtime. |
 | 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. |
 | 14 | PDF report | Partial | Current action opens browser print dialog; it is not a dedicated generated/downloadable PDF report and needs layout/filter testing. |
 | 15 | Staff login with individual login ID | Partial | User ID + PIN login and staff provisioning exist; provisioning currently blocks a second active staff member for the same Power House. Confirm/adjust this restriction if multiple staff are required. |
-| 16 | Staff-wise entry history | Partial | Staff now see their own recent audit history; Admin sees staff-wise counts. Full-history loading and runtime verification remain. |
+| 16 | Staff-wise entry history | Partial | Staff now see their own audit history and can page older house records; Admin sees staff-wise counts. Runtime verification remains. |
 | 17 | Admin dashboard/reporting | Present | Admin dashboard, management forms, report views and operational records are present; end-to-end checks remain. |
 | 18 | Edit history (who changed record and when) | Present | Update/resolve operations write before/after audit entries with actor and timestamp. |
 | 19 | Staff cannot delete old records | Present | No staff delete UI/API action is exposed; Firestore direct writes are denied. Verify all routes remain protected. |
@@ -36,7 +36,7 @@ Status meanings:
 | 24 | Hindi + English toggle | Partial | Translation dictionary extended for new report/history controls; dynamic validation and error messages still need coverage. |
 | 25 | Dark Mode | Present | Theme toggle and local preference persistence exist; visual coverage needs device testing. |
 | 26 | Search by Feeder/date | Partial | Feeder-name search and date range filters exist in separate views; consistent combined search across all datasets is incomplete. |
-| 27 | Dashboard charts | Partial | Simple record-count and monthly activity bar charts exist; validate filters and date range behavior. |
+| 27 | Dashboard charts | Partial | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
 | 28 | Backup system | Partial | Admin can export paginated JSON backup; restore workflow and backup integrity/coverage tests are not present. PIN hashes/salts are intentionally excluded. |
 | 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable client entry IDs, retry on online/visibility and periodic sync exist; test offline reload, storage limits, and all form types. |
 | 30 | Three separate Excel downloads with date filtering | Present | Separate Breakdown, Shutdown and Consumption Excel exports use From/To date filters. |
