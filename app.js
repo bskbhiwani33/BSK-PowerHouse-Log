@@ -694,6 +694,17 @@ function renderRecordHistory() {
       (Object.keys(staffCounts).length ? Object.entries(staffCounts).sort((a,b)=>b[1]-a[1]).map(([who,n])=>`<p>${safe(who)} · ${n} entries</p>`).join("") : "<p>No history loaded.</p>");
   }
   renderFeederStatusSearch();
+  if ($("staffEntryHistory")) {
+    const ownHistory = operational.entry_history
+      .filter(h => h.actorUserId === currentProfile?.userId)
+      .slice(0, 40);
+    $("staffEntryHistory").innerHTML = "<h3>My Entry History</h3>" +
+      (ownHistory.length ? ownHistory.map(h => {
+        const seconds = h.createdAt?.seconds ?? h.createdAt?._seconds;
+        const when = Number.isFinite(seconds) ? new Date(seconds*1000).toLocaleString("en-IN") : "";
+        return `<p>${safe(h.action)} · ${safe(h.recordCollection)} · ${safe(when)}</p>`;
+      }).join("") : "<p>No entries found in your history.</p>");
+  }
   if ($("historyList")) {
     const timeOf = h => {
       const seconds = h.createdAt?.seconds ?? h.createdAt?._seconds;
@@ -879,8 +890,17 @@ $("loadMoreHistory")?.addEventListener("click", async () => {
   const button = $("loadMoreHistory");
   if (!button || button.disabled) return;
   button.disabled = true;
-  button.textContent = "Loading older records...";
-  await loadOperationalRecords({ append: true });
+  button.textContent = "Loading all history...";
+  let previousCursor = "";
+  while (Object.values(recordPageCursors || {}).some(Boolean)) {
+    const before = JSON.stringify(recordPageCursors || {});
+    if (before === previousCursor) break;
+    previousCursor = before;
+    await loadOperationalRecords({ append: true });
+    const after = JSON.stringify(recordPageCursors || {});
+    if (after === before) break;
+  }
+  if (button && !button.disabled) button.textContent = "All Records Loaded";
 });
 
 $("backupRecords")?.addEventListener("click", async () => {
