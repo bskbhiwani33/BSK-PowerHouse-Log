@@ -169,8 +169,6 @@ async function createDailyReport(db, actor, body) {
   const feeder = await validateFeeder(db, actor, body.feederId);
   const clientId = typeof body.clientEntryId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId) ? body.clientEntryId : "";
   const ref = clientId ? db.collection("daily_reports").doc(clientId) : db.collection("daily_reports").doc();
-  const duplicate = await ref.get();
-  if (duplicate.exists) return { id: ref.id, duplicate: true };
   const data = {
     ...feeder, reportDate: body.reportDate, breakerStatus: body.breakerStatus,
     eventType: body.eventType, faultDetails: clean(body.faultDetails).slice(0,2000),
@@ -178,14 +176,16 @@ async function createDailyReport(db, actor, body) {
     remarks: clean(body.remarks).slice(0,2000), submittedBy: actor.uid,
     createdByUserId: actor.userId, createdAt: admin.firestore.FieldValue.serverTimestamp()
   };
-  const batch = db.batch();
-  batch.set(ref, data);
   const historyRef = db.collection("entry_history").doc();
-  batch.set(historyRef, { recordCollection:"daily_reports", recordId:ref.id, houseId:feeder.houseId, action:"created", before:null, after:{...data,createdAt:null}, actorUid:actor.uid, actorUserId:actor.userId, actorRole:actor.role, createdAt:admin.firestore.FieldValue.serverTimestamp() });
   const notificationRef = db.collection("notifications").doc();
-  batch.set(notificationRef, { houseId:feeder.houseId, type:"new_entry", title:"Daily feeder report", message:feeder.feederName+" · "+body.reportDate, recordCollection:"daily_reports", recordId:ref.id, read:false, createdAt:admin.firestore.FieldValue.serverTimestamp() });
-  await batch.commit();
-  return { id:ref.id };
+  return db.runTransaction(async tx => {
+    const duplicate = await tx.get(ref);
+    if (duplicate.exists) return { id: ref.id, duplicate: true };
+    tx.set(ref, data);
+    tx.set(historyRef, { recordCollection:"daily_reports", recordId:ref.id, houseId:feeder.houseId, action:"created", before:null, after:{...data,createdAt:null}, actorUid:actor.uid, actorUserId:actor.userId, actorRole:actor.role, createdAt:admin.firestore.FieldValue.serverTimestamp() });
+    tx.set(notificationRef, { houseId:feeder.houseId, type:"new_entry", title:"Daily feeder report", message:feeder.feederName+" · "+body.reportDate, recordCollection:"daily_reports", recordId:ref.id, read:false, createdAt:admin.firestore.FieldValue.serverTimestamp() });
+    return { id: ref.id };
+  });
 }
 
 async function createSimpleRecord(db, actor, body, collectionName) {
@@ -215,17 +215,17 @@ async function createSimpleRecord(db, actor, body, collectionName) {
   }
   const clientId = typeof body.clientEntryId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId) ? body.clientEntryId : "";
   const ref = clientId ? db.collection(collectionName).doc(clientId) : db.collection(collectionName).doc();
-  const duplicate = await ref.get();
-  if (duplicate.exists) return { id: ref.id, duplicate: true, total: duplicate.data().total };
   const saved = { ...data, createdBy: actor.uid, createdByUserId: actor.userId, createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() };
-  const batch = db.batch();
-  batch.set(ref, saved);
   const hist = db.collection("entry_history").doc();
-  batch.set(hist, { recordCollection: collectionName, recordId: ref.id, houseId: actor.houseId, action: "created", before: null, after: { ...saved, createdAt: null, updatedAt: null }, actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role, createdAt: admin.firestore.FieldValue.serverTimestamp() });
   const note = db.collection("notifications").doc();
-  batch.set(note, { houseId: actor.houseId, type: "new_entry", title: collectionName === "trippings" ? "Tripping entry" : "Consumption entry", message: data.date, recordCollection: collectionName, recordId: ref.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp() });
-  await batch.commit();
-  return { id: ref.id, total: data.total };
+  return db.runTransaction(async tx => {
+    const duplicate = await tx.get(ref);
+    if (duplicate.exists) return { id: ref.id, duplicate: true, total: duplicate.data().total };
+    tx.set(ref, saved);
+    tx.set(hist, { recordCollection: collectionName, recordId: ref.id, houseId: actor.houseId, action: "created", before: null, after: { ...saved, createdAt: null, updatedAt: null }, actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    tx.set(note, { houseId: actor.houseId, type: "new_entry", title: collectionName === "trippings" ? "Tripping entry" : "Consumption entry", message: data.date, recordCollection: collectionName, recordId: ref.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    return { id: ref.id, total: data.total };
+  });
 }
 
 export default async req => {
