@@ -533,6 +533,11 @@ async function loadOperationalRecords(options = {}) {
         ? "Load Older Records (page " + (recordPagesLoaded + 1) + ")"
         : "All Records Loaded";
     }
+    const staffLoadMore = $("loadMoreStaffHistory");
+    if (staffLoadMore) {
+      staffLoadMore.disabled = !hasMore;
+      staffLoadMore.textContent = hasMore ? "Load Older Records" : "All Records Loaded";
+    }
 
     localStorage.setItem(recordsCacheKey(), JSON.stringify(operational));
     renderOperational();
@@ -913,6 +918,16 @@ recordsRequest = async (action, data = {}) => {
 
 $("recordsSearch")?.addEventListener("input", () => { renderRecordHistory(); renderReports(); });
 
+$("loadMoreStaffHistory")?.addEventListener("click", async () => {
+  const button=$("loadMoreStaffHistory");
+  if(!button||button.disabled)return;
+  button.disabled=true;button.textContent="Loading older records...";
+  const before=JSON.stringify(recordPageCursors||{});
+  await loadOperationalRecords({append:true});
+  const hasMore=Object.values(recordPageCursors||{}).some(Boolean);
+  if(button){button.disabled=!hasMore;button.textContent=hasMore?"Load Older Records":"All Records Loaded";}
+  if(JSON.stringify(recordPageCursors||{})===before && hasMore) message("reportMessage","Could not load older history. Check connection and retry.",true);
+});
 $("loadMoreHistory")?.addEventListener("click", async () => {
   const button = $("loadMoreHistory");
   if (!button || button.disabled) return;
