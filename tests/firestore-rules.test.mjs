@@ -1,0 +1,62 @@
+import { readFile } from "node:fs/promises";
+import {
+  initializeTestEnvironment,
+  assertFails,
+  assertSucceeds
+} from "@firebase/rules-unit-testing";
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+
+const rules = await readFile("firestore.rules", "utf8");
+const env = await initializeTestEnvironment({
+  projectId: "demo-bsk",
+  firestore: { rules }
+});
+
+try {
+  await env.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    await setDoc(doc(db, "powerhouses", "house-1"), { name: "House 1", active: true });
+    await setDoc(doc(db, "powerhouses", "house-2"), { name: "House 2", active: true });
+    await setDoc(doc(db, "feeders", "feeder-1"), { houseId: "house-1", name: "Feeder 1", active: true });
+    await setDoc(doc(db, "feeders", "feeder-2"), { houseId: "house-2", name: "Feeder 2", active: true });
+    await setDoc(doc(db, "daily_reports", "report-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "daily_reports", "report-2"), { houseId: "house-2" });
+    await setDoc(doc(db, "breakdowns", "outage-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "users", "staff-1"), { role: "staff" });
+    await setDoc(doc(db, "edit_requests", "legacy-1"), { houseId: "house-1" });
+  });
+
+  const staffDb = env.authenticatedContext("staff-1", {
+    role: "staff",
+    houseId: "house-1"
+  }).firestore();
+  const adminDb = env.authenticatedContext("admin-1", {
+    role: "admin"
+  }).firestore();
+  const otherStaffDb = env.authenticatedContext("staff-2", {
+    role: "staff",
+    houseId: "house-2"
+  }).firestore();
+  const anonDb = env.unauthenticatedContext().firestore();
+
+  await assertSucceeds(getDoc(doc(staffDb, "powerhouses", "house-1")));
+  await assertFails(getDoc(doc(staffDb, "powerhouses", "house-2")));
+  await assertSucceeds(getDoc(doc(staffDb, "feeders", "feeder-1")));
+  await assertFails(getDoc(doc(staffDb, "feeders", "feeder-2")));
+  await assertSucceeds(getDoc(doc(staffDb, "daily_reports", "report-1")));
+  await assertFails(getDoc(doc(staffDb, "daily_reports", "report-2")));
+  await assertFails(setDoc(doc(staffDb, "daily_reports", "new-report"), { houseId: "house-1" }));
+  await assertFails(setDoc(doc(staffDb, "daily_reports", "report-1"), { houseId: "house-1", changed: true }));
+  await assertFails(deleteDoc(doc(staffDb, "daily_reports", "report-1")));
+  await assertFails(getDoc(doc(staffDb, "breakdowns", "outage-1")));
+  await assertFails(getDoc(doc(staffDb, "users", "staff-1")));
+  await assertFails(getDoc(doc(staffDb, "edit_requests", "legacy-1")));
+  await assertSucceeds(getDoc(doc(otherStaffDb, "daily_reports", "report-2")));
+  await assertSucceeds(getDoc(doc(adminDb, "daily_reports", "report-2")));
+  await assertFails(setDoc(doc(adminDb, "daily_reports", "report-2"), { houseId: "house-2", changed: true }));
+  await assertFails(getDoc(doc(anonDb, "daily_reports", "report-1")));
+
+  console.log("Firestore rules access-control tests passed.");
+} finally {
+  await env.cleanup();
+}
