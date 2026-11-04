@@ -686,9 +686,20 @@ function renderRecordHistory() {
     const feederRows=[...feederSummary.values()].sort((a,b)=>(b.breakdowns+b.shutdowns)-(a.breakdowns+a.shutdowns));
     const daily = {};
     const monthly = {};
-    const dailyReportRows = (operational.daily_reports||[]).filter(r=>(!from||r.reportDate>=from)&&(!to||r.reportDate<=to)&&(!search||[r.feederName,r.createdByUserId,r.houseName].some(v=>String(v||"").toLowerCase().includes(search)))).map(r=>({...r,date:r.reportDate}));
-    const summaryRows = [...outageRows, ...operational.trippings.filter(inside), ...operational.consumption_readings.filter(inside), ...dailyReportRows];
-    summaryRows.forEach(x=>{ daily[x.date]=(daily[x.date]||0)+1; const m=String(x.date||"").slice(0,7); monthly[m]=(monthly[m]||0)+1; });
+    const dailyReportRows = (operational.daily_reports||[]).filter(r=>(!from||r.reportDate>=from)&&(!to||r.reportDate<=to)&&(!search||[r.feederName,r.createdByUserId,r.houseName].some(v=>String(v||"").toLowerCase().includes(search)))).map(r=>({...r,date:r.reportDate,kind:"Daily Report"}));
+    const trippingRows = operational.trippings.filter(inside).map(x=>({...x,kind:"Tripping"}));
+    const consumptionRows = operational.consumption_readings.filter(inside).map(x=>({...x,kind:"Consumption"}));
+    const summaryRows = [...outageRows, ...trippingRows, ...consumptionRows, ...dailyReportRows];
+    summaryRows.forEach(x=>{
+      const month=String(x.date||"").slice(0,7);
+      if(!x.date)return;
+      for(const [bucket,key] of [[daily,x.date],[monthly,month]]) {
+        if(!key)continue;
+        if(!bucket[key])bucket[key]={total:0};
+        bucket[key].total+=1;
+        bucket[key][x.kind]=(bucket[key][x.kind]||0)+1;
+      }
+    });
     const staffCounts = {};
     operational.entry_history.forEach(x=>{ const who=x.actorUserId||"Unknown"; staffCounts[who]=(staffCounts[who]||0)+1; });
     $("recordsInsights").innerHTML =
@@ -697,9 +708,9 @@ function renderRecordHistory() {
       "<h3>Feeder-wise Report</h3>" +
       (feederRows.length ? feederRows.map(x=>`<p>${safe(x.name)} · Breakdown: ${x.breakdowns} · Shutdown: ${x.shutdowns} · Total: ${x.breakdowns+x.shutdowns}</p>`).join("") : "<p>No feeder outage records in selected dates.</p>") +
       "<h3>Daily Entry Summary</h3>" +
-      (Object.keys(daily).length ? Object.entries(daily).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,n])=>`<p>${safe(d)} · ${n} events</p>`).join("") : "<p>No daily records.</p>") +
+      (Object.keys(daily).length ? Object.entries(daily).sort((a,b)=>b[0].localeCompare(a[0])).map(([d,n])=>`<p>${safe(d)} · Total: ${n.total} · Breakdown: ${n.Breakdown||0} · Shutdown: ${n.Shutdown||0} · Tripping: ${n.Tripping||0} · Consumption: ${n.Consumption||0} · Daily Reports: ${n["Daily Report"]||0}</p>`).join("") : "<p>No daily records.</p>") +
       "<h3>Monthly Entry Summary</h3>" +
-      (Object.keys(monthly).length ? Object.entries(monthly).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,n])=>`<p>${safe(m)} · ${n} events</p>`).join("") : "<p>No monthly records.</p>") +
+      (Object.keys(monthly).length ? Object.entries(monthly).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,n])=>`<p>${safe(m)} · Total: ${n.total} · Breakdown: ${n.Breakdown||0} · Shutdown: ${n.Shutdown||0} · Tripping: ${n.Tripping||0} · Consumption: ${n.Consumption||0} · Daily Reports: ${n["Daily Report"]||0}</p>`).join("") : "<p>No monthly records.</p>") +
       "<h3>Staff-wise Entry History</h3>" +
       (Object.keys(staffCounts).length ? Object.entries(staffCounts).sort((a,b)=>b[1]-a[1]).map(([who,n])=>`<p>${safe(who)} · ${n} entries</p>`).join("") : "<p>No history loaded.</p>");
   }
