@@ -615,7 +615,7 @@ function renderRecordHistory() {
     const repeats = Object.entries(byFeeder).filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]);
     const daily = {};
     const monthly = {};
-    const dailyReportRows = (dashboardData.reports||[]).filter(r=>(!from||r.reportDate>=from)&&(!to||r.reportDate<=to)&&(!search||[r.feederName,r.createdByUserId,r.houseName].some(v=>String(v||"").toLowerCase().includes(search)))).map(r=>({...r,date:r.reportDate}));
+    const dailyReportRows = (operational.daily_reports||[]).filter(r=>(!from||r.reportDate>=from)&&(!to||r.reportDate<=to)&&(!search||[r.feederName,r.createdByUserId,r.houseName].some(v=>String(v||"").toLowerCase().includes(search)))).map(r=>({...r,date:r.reportDate}));
     const summaryRows = [...outageRows, ...operational.trippings.filter(inside), ...operational.consumption_readings.filter(inside), ...dailyReportRows];
     summaryRows.forEach(x=>{ daily[x.date]=(daily[x.date]||0)+1; const m=String(x.date||"").slice(0,7); monthly[m]=(monthly[m]||0)+1; });
     const staffCounts = {};
