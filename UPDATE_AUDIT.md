@@ -1,6 +1,6 @@
 # BSK 30-Update Implementation Audit
 
-Audit basis: source code on branch `bsk-complete-update-prep`, commit `54ad79f706a62df378077508964ebca0c5b6900f`.
+Audit basis: source code on branch `bsk-complete-update-prep`, updated through the latest report/history improvements. This remains a source-code review, not a live-system test.
 This is a source-code audit only. It does not mean the features have passed end-to-end testing or are live on Netlify.
 
 Status meanings:
@@ -15,25 +15,25 @@ Status meanings:
 | 3 | Breakdown/Shutdown entry with feeder, date, start, optional end, reason | Present | Separate forms and resolve workflow exist; verify overnight duration and simultaneous outage constraints. |
 | 4 | Five Power House consumption readings, automatic total, history and Excel | Present | Five fields, client/server total calculation, history list and Consumption Excel exist; verify units/rounding and larger datasets. |
 | 5 | Feeder status Running/Breakdown/Shutdown | Present | Canonical `feeder_status` records are written on ongoing outage and reset on resolution. |
-| 6 | Feeder history | Partial | Feeder search shows history but limits displayed entries to 15; report data and history coverage need review. |
+| 6 | Feeder history | Partial | Feeder search now applies the date range and displays all currently loaded history; use Load All History to retrieve older pages. Runtime verification remains. |
 | 7 | Automatic Breakdown duration | Present | Duration is calculated from start to end/current time for display; verify date/time edge cases. |
-| 8 | Repeat-Breakdown report | Partial | Repeat counts are calculated from records currently loaded (up to the API limit); needs complete date-scoped aggregation. |
-| 9 | Feeder-wise report | Partial | Feeder search/history exists, but no complete dedicated feeder-wise report/export. |
-| 10 | Daily summary | Partial | Daily event counts are shown; a fuller daily summary with separate categories/totals needs completion. |
-| 11 | Monthly report | Partial | Monthly activity counts exist; detailed month-wise report and filtering need completion. |
+| 8 | Repeat-Breakdown report | Partial | Repeat counts are grouped by feeder ID and filtered by date/search; complete historical counts require loading all pages first. |
+| 9 | Feeder-wise report | Partial | A dedicated feeder-wise breakdown/shutdown count summary is present; it reflects loaded records until all history pages are loaded. |
+| 10 | Daily summary | Partial | Daily entry counts are shown across loaded record types; category-separated totals and full-history verification remain. |
+| 11 | Monthly report | Partial | Monthly entry counts are shown; detailed month-wise breakdown and full-history verification remain. |
 | 12 | Date-wise search | Partial | From/to filters exist for several views/exports; not consistently applied across every record type and report. |
-| 13 | Excel download (general) | Partial | Daily Feeder Report and separate Breakdown/Shutdown/Consumption spreadsheets exist; a unified general export is not present. |
+| 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. |
 | 14 | PDF report | Partial | Current action opens browser print dialog; it is not a dedicated generated/downloadable PDF report and needs layout/filter testing. |
 | 15 | Staff login with individual login ID | Partial | User ID + PIN login and staff provisioning exist; provisioning currently blocks a second active staff member for the same Power House. Confirm/adjust this restriction if multiple staff are required. |
-| 16 | Staff-wise entry history | Partial | Audit records contain actor IDs and a staff count summary is rendered; a complete staff-filtered entry history view is still needed. |
+| 16 | Staff-wise entry history | Partial | Staff now see their own recent audit history; Admin sees staff-wise counts. Full-history loading and runtime verification remain. |
 | 17 | Admin dashboard/reporting | Present | Admin dashboard, management forms, report views and operational records are present; end-to-end checks remain. |
 | 18 | Edit history (who changed record and when) | Present | Update/resolve operations write before/after audit entries with actor and timestamp. |
 | 19 | Staff cannot delete old records | Present | No staff delete UI/API action is exposed; Firestore direct writes are denied. Verify all routes remain protected. |
-| 20 | Ongoing Breakdown alert | Partial | Admin long-running alert appears at a shared 24-hour threshold; no separate Breakdown alert policy or push notification. |
-| 21 | Ongoing Shutdown alert | Partial | Same shared 24-hour alert; needs separate Shutdown alert presentation/policy. |
+| 20 | Ongoing Breakdown alert | Partial | Separate Breakdown long-running alert section now appears at 24+ hours; no push/background notification delivery. |
+| 21 | Ongoing Shutdown alert | Partial | Separate Shutdown long-running alert section now appears at 24+ hours; no push/background notification delivery. |
 | 22 | New entry notification to Admin | Partial | New-entry notifications are saved and shown in Admin dashboard; no push/background notification delivery is implemented. |
 | 23 | Pending Entry Alert = unread notifications, not approval queue | Present | Unread notification count and Mark Read action exist; no approval/reject queue is present. |
-| 24 | Hindi + English toggle | Partial | Toggle and translation dictionary exist, but many dynamic messages/labels are not translated. |
+| 24 | Hindi + English toggle | Partial | Translation dictionary extended for new report/history controls; dynamic validation and error messages still need coverage. |
 | 25 | Dark Mode | Present | Theme toggle and local preference persistence exist; visual coverage needs device testing. |
 | 26 | Search by Feeder/date | Partial | Feeder-name search and date range filters exist in separate views; consistent combined search across all datasets is incomplete. |
 | 27 | Dashboard charts | Partial | Simple record-count and monthly activity bar charts exist; validate filters and date range behavior. |
@@ -49,7 +49,7 @@ Status meanings:
 - Android WebView changes are deferred until the website's 30 updates are completed and tested.
 
 ## Next implementation order
-1. Complete data/report foundations: full feeder-wise history, repeat breakdown aggregation, daily/monthly summaries and date filters.
+1. Complete data/report foundations: validate full-history pagination and date-filtered repeat/feeder/daily/monthly summaries.
 2. Complete staff/admin reporting: staff-filtered history and export/report consistency.
 3. Complete notifications and separate Breakdown/Shutdown alerts without adding approval workflow.
 4. Complete Hindi translation coverage and PDF/export behavior.
