@@ -902,7 +902,11 @@ async function queueOffline(action, payload) {
   const item = { clientEntryId, ownerUid:auth.currentUser?.uid, action, payload:{...payload, clientEntryId}, queuedAt: new Date().toISOString() };
   const items = readOutbox();
   if (!items.some(x => x.clientEntryId === clientEntryId)) items.push(item);
-  writeOutbox(items);
+  try {
+    writeOutbox(items);
+  } catch {
+    throw new Error("Offline storage is full. Connect to internet and sync pending entries before adding more.");
+  }
   return item;
 }
 async function syncOutbox() {
@@ -992,11 +996,15 @@ $("backupRecords")?.addEventListener("click", async () => {
     const backup = { exportedAt: new Date().toISOString(), collections: {} };
     for (const collection of collections) {
       const rows = [];
+      const seenCursors = new Set();
       let cursor = null;
       do {
         const page = await recordsRequest("exportBackupPage", { collection, cursor });
         rows.push(...(Array.isArray(page.rows) ? page.rows : []));
-        cursor = page.nextCursor || null;
+        const next = page.nextCursor || null;
+        if (next && seenCursors.has(next)) throw new Error("Backup pagination stopped unexpectedly for " + collection);
+        if (next) seenCursors.add(next);
+        cursor = next;
       } while (cursor);
       backup.collections[collection] = rows;
     }
