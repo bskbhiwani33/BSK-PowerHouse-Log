@@ -246,7 +246,7 @@ async function refreshDashboard() {
     dashboardData = await adminRequest("getDashboardData");
 
     renderDashboard();
-    await loadOperationalRecords();
+    await refreshOperationalRecordsPreservingHistory();
     message("houseMessage", "Dashboard updated.");
 
   } catch (error) {
@@ -547,6 +547,16 @@ async function loadOperationalRecords(options = {}) {
       if (cached) { operational = cached; renderOperational(); }
     } catch {}
     if ($("adminMessage")) message("adminMessage", "Offline: showing last synced records.", true);
+  }
+}
+
+async function refreshOperationalRecordsPreservingHistory() {
+  // Keep older pages visible during periodic refreshes and dashboard refreshes.
+  const pagesToRestore = Math.max(1, recordPagesLoaded || 1);
+  await loadOperationalRecords();
+  for (let page = 1; page < pagesToRestore; page += 1) {
+    if (!Object.values(recordPageCursors || {}).some(Boolean)) break;
+    await loadOperationalRecords({ append: true });
   }
 }
 
@@ -1058,7 +1068,7 @@ window.setInterval(() => {
   if (!currentProfile || document.hidden || !navigator.onLine) return;
   syncOutbox();
   if (currentProfile.role === "admin") refreshDashboard();
-  else loadOperationalRecords();
+  else refreshOperationalRecordsPreservingHistory();
 }, 60000);
 
 $("notificationList")?.addEventListener("click", async event => {
