@@ -1061,7 +1061,15 @@ const hindiWords = {
   "Daily Entry Summary":"दैनिक एंट्री सारांश","Monthly Entry Summary":"मासिक एंट्री सारांश",
   "Staff-wise Entry History":"स्टाफ-वार एंट्री इतिहास","No outage history.":"कोई आउटेज इतिहास नहीं।",
   "BSK Login":"बीएसके लॉगिन","User ID":"यूजर आईडी","Login":"लॉगिन",
-  "Save offline. It will sync when internet returns.":"ऑफलाइन सेव हुआ। इंटरनेट आने पर अपने आप सिंक होगा."
+  "Save offline. It will sync when internet returns.":"ऑफलाइन सेव हुआ। इंटरनेट आने पर अपने आप सिंक होगा.",
+  "All Records Excel":"सभी रिकॉर्ड एक्सेल","Load All History":"पूरा इतिहास लोड करें",
+  "All Records Loaded":"सभी रिकॉर्ड लोड हो गए","Retry Loading History":"इतिहास फिर से लोड करें",
+  "Ongoing Breakdown Alert (24+ hours)":"चालू ब्रेकडाउन अलर्ट (24+ घंटे)",
+  "Ongoing Shutdown Alert (24+ hours)":"चालू शटडाउन अलर्ट (24+ घंटे)",
+  "Repeat Breakdown Report":"दोहराए गए ब्रेकडाउन की रिपोर्ट","Feeder-wise Report":"फीडर-वार रिपोर्ट",
+  "Daily Entry Summary":"दैनिक एंट्री सारांश","Monthly Entry Summary":"मासिक एंट्री सारांश",
+  "My Entry History":"मेरी एंट्री का इतिहास","Search a feeder to see its current status and history.":"स्थिति और इतिहास देखने के लिए फीडर खोजें।",
+  "None crossed the 24-hour threshold.":"कोई भी 24 घंटे की सीमा पार नहीं हुआ।"
 };
 const hindiPlaceholders = {
   "Enter User ID":"यूजर आईडी दर्ज करें","Feeder name":"फीडर का नाम",
