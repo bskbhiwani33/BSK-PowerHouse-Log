@@ -902,7 +902,11 @@ $("loadMoreHistory")?.addEventListener("click", async () => {
     const after = JSON.stringify(recordPageCursors || {});
     if (after === before) break;
   }
-  if (button && !button.disabled) button.textContent = "All Records Loaded";
+  const hasMore = Object.values(recordPageCursors || {}).some(Boolean);
+  if (button) {
+    button.disabled = !hasMore;
+    button.textContent = hasMore ? "Retry Loading History" : "All Records Loaded";
+  }
 });
 
 $("backupRecords")?.addEventListener("click", async () => {
