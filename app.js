@@ -999,15 +999,23 @@ function renderAlertsAndCharts() {
   if ($("longRunningAlerts")) $("longRunningAlerts").innerHTML =
     "<h3>Ongoing Breakdown Alert (24+ hours)</h3>"+alertRows(longBreakdowns)+
     "<h3>Ongoing Shutdown Alert (24+ hours)</h3>"+alertRows(longShutdowns);
+  const from=$("recordsFrom")?.value||"",to=$("recordsTo")?.value||"";
+  const search=($("recordsSearch")?.value||"").toLowerCase().trim();
+  const chartFilter=x=>(!from||String(x.date||"")>=from)&&(!to||String(x.date||"")<=to)&&
+    (!search||[x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search)));
+  const breakdownRows=operational.breakdowns.filter(chartFilter);
+  const shutdownRows=operational.shutdowns.filter(chartFilter);
+  const trippingRows=operational.trippings.filter(chartFilter);
+  const consumptionRows=operational.consumption_readings.filter(chartFilter);
   const counts = [
-    {label:"Breakdown",value:operational.breakdowns.length},
-    {label:"Shutdown",value:operational.shutdowns.length},
-    {label:"Tripping",value:operational.trippings.length},
-    {label:"Consumption",value:operational.consumption_readings.length}
+    {label:"Breakdown",value:breakdownRows.length},
+    {label:"Shutdown",value:shutdownRows.length},
+    {label:"Tripping",value:trippingRows.length},
+    {label:"Consumption",value:consumptionRows.length}
   ];
   const max = Math.max(1,...counts.map(x=>x.value));
   const monthCounts = {};
-  [...operational.breakdowns,...operational.shutdowns,...operational.trippings,...operational.consumption_readings].forEach(x=>{
+  [...breakdownRows,...shutdownRows,...trippingRows,...consumptionRows].forEach(x=>{
     const month=String(x.date||"").slice(0,7);
     if(month) monthCounts[month]=(monthCounts[month]||0)+1;
   });
