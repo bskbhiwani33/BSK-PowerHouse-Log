@@ -757,9 +757,15 @@ function renderOfflineQueueStatus() {
   const count=readOutbox().length;
   if ($("offlineQueueStatus")) $("offlineQueueStatus").textContent = count ? count+" offline entr"+(count===1?"y":"ies")+" waiting to sync." : "";
 }
+function newClientEntryId() {
+  return crypto.randomUUID ? crypto.randomUUID() : "bsk"+Date.now()+Math.random().toString(36).slice(2);
+}
 async function queueOffline(action, payload) {
-  const item = { clientEntryId: (crypto.randomUUID ? crypto.randomUUID() : "bsk"+Date.now()+Math.random().toString(36).slice(2)), ownerUid:auth.currentUser?.uid, action, payload, queuedAt: new Date().toISOString() };
-  const items = readOutbox(); items.push(item); writeOutbox(items);
+  const clientEntryId = payload.clientEntryId || newClientEntryId();
+  const item = { clientEntryId, ownerUid:auth.currentUser?.uid, action, payload:{...payload, clientEntryId}, queuedAt: new Date().toISOString() };
+  const items = readOutbox();
+  if (!items.some(x => x.clientEntryId === clientEntryId)) items.push(item);
+  writeOutbox(items);
   return item;
 }
 async function syncOutbox() {
@@ -783,15 +789,20 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) sync
 const originalRecordsRequest = recordsRequest;
 recordsRequest = async (action, data = {}) => {
   const canQueue = ["createDailyReport","createBreakdown","createShutdown","createTripping","createConsumption"].includes(action);
-  if (!navigator.onLine && canQueue) {
-    await queueOffline(action, data);
+  if (!canQueue) return originalRecordsRequest(action, data);
+  const hadClientEntryId = Boolean(data.clientEntryId);
+  const payload = hadClientEntryId ? data : {...data, clientEntryId:newClientEntryId()};
+  if (!navigator.onLine) {
+    if (hadClientEntryId) throw new Error("Offline; queued entry will retry when connection returns.");
+    await queueOffline(action, payload);
     return { success:true, queued:true };
   }
   try {
-    return await originalRecordsRequest(action, data);
+    return await originalRecordsRequest(action, payload);
   } catch (error) {
-    if (canQueue && !error.status) {
-      await queueOffline(action, data);
+    if (!error.status) {
+      if (hadClientEntryId) throw error;
+      await queueOffline(action, payload);
       return { success:true, queued:true };
     }
     throw error;
