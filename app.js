@@ -933,6 +933,7 @@ onAuthStateChanged(auth, async user => {
 
 window.setInterval(() => {
   if (!currentProfile || document.hidden || !navigator.onLine) return;
+  syncOutbox();
   if (currentProfile.role === "admin") refreshDashboard();
   else loadOperationalRecords();
 }, 60000);
