@@ -460,7 +460,7 @@ async function recordsRequest(action, data = {}) {
     body: JSON.stringify({ action, ...data })
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "Request failed");
+  if (!response.ok) { const error = new Error(result.error || "Request failed"); error.status = response.status; throw error; }
   return result;
 }
 
