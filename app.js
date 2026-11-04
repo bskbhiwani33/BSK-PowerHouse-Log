@@ -808,7 +808,16 @@ submitOperational("consumptionForm", "createConsumption", () => ({
 $("refreshRecords")?.addEventListener("click", refreshOperationalRecordsPreservingHistory);
 ["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); renderAlertsAndCharts(); }));
 
+function allHistoryPagesLoaded() {
+  return !Object.values(recordPageCursors || {}).some(Boolean);
+}
+function requireCompleteHistoryForExport() {
+  if (allHistoryPagesLoaded()) return true;
+  message("adminMessage", "Please click Load All History before downloading a complete report.", true);
+  return false;
+}
 function downloadExcelXml(kind) {
+  if (!requireCompleteHistoryForExport()) return;
   const from = $("recordsFrom")?.value || "", to = $("recordsTo")?.value || "";
   const search = ($("recordsSearch")?.value || "").toLowerCase().trim();
   const inRange = x => (!from || x.date >= from) && (!to || x.date <= to) && (!search || [x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search)));
@@ -831,6 +840,7 @@ $("downloadBreakdowns")?.addEventListener("click",()=>downloadExcelXml("breakdow
 $("downloadShutdowns")?.addEventListener("click",()=>downloadExcelXml("shutdowns"));
 $("downloadConsumption")?.addEventListener("click",()=>downloadExcelXml("consumption"));
 $("downloadAllRecords")?.addEventListener("click",()=>{
+  if (!requireCompleteHistoryForExport()) return;
   const from=$("recordsFrom")?.value||"",to=$("recordsTo")?.value||"";
   const search=($("recordsSearch")?.value||"").toLowerCase().trim();
   const xml=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -853,6 +863,7 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
   setTimeout(()=>URL.revokeObjectURL(url),1500);
 });
 $("downloadPdf")?.addEventListener("click",()=>{
+  if (!requireCompleteHistoryForExport()) return;
   const content = ($("recordsInsights")?.innerHTML || "") + ($("recordsChart")?.innerHTML || "") + ($("adminRecordsList")?.innerHTML || "") + ($("reportList")?.innerHTML || "");
   const w=window.open("","_blank");
   if (!w) { alert("Please allow pop-ups to create PDF."); return; }
