@@ -800,11 +800,40 @@ recordsRequest = async (action, data = {}) => {
 
 $("recordsSearch")?.addEventListener("input", () => { renderRecordHistory(); renderReports(); });
 
-$("backupRecords")?.addEventListener("click", () => {
-  const backup = { exportedAt:new Date().toISOString(), profile:{role:currentProfile?.role,houseId:currentProfile?.houseId || null}, powerHouses:dashboardData.houses||[], feeders:dashboardData.feeders||[], staffAccounts:dashboardData.users||[], dailyReports:dashboardData.reports||[], ...operational };
-  const blob = new Blob([JSON.stringify(backup,null,2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob), a=document.createElement("a");
-  a.href=url; a.download="BSK_Backup_"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(url);
+$("backupRecords")?.addEventListener("click", async () => {
+  if (currentProfile?.role !== "admin") {
+    message("adminMessage", "Admin only.", true);
+    return;
+  }
+  const button = $("backupRecords");
+  const label = button?.textContent || "Download Backup JSON";
+  if (button) { button.disabled = true; button.textContent = "Preparing backup..."; }
+  try {
+    const collections = ["powerhouses","feeders","users","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","notifications","entry_history"];
+    const backup = { exportedAt: new Date().toISOString(), collections: {} };
+    for (const collection of collections) {
+      const rows = [];
+      let cursor = null;
+      do {
+        const page = await recordsRequest("exportBackupPage", { collection, cursor });
+        rows.push(...(Array.isArray(page.rows) ? page.rows : []));
+        cursor = page.nextCursor || null;
+      } while (cursor);
+      backup.collections[collection] = rows;
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "BSK_Full_Backup_" + new Date().toISOString().slice(0, 10) + ".json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    message("adminMessage", "Complete backup downloaded.");
+  } catch (error) {
+    message("adminMessage", "Backup failed: " + error.message, true);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = label; }
+  }
 });
 
 function renderAlertsAndCharts() {
