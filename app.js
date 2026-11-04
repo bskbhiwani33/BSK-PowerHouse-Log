@@ -804,8 +804,17 @@ function renderAlertsAndCharts() {
     {label:"Consumption",value:operational.consumption_readings.length}
   ];
   const max = Math.max(1,...counts.map(x=>x.value));
+  const monthCounts = {};
+  [...operational.breakdowns,...operational.shutdowns,...operational.trippings,...operational.consumption_readings].forEach(x=>{
+    const month=String(x.date||"").slice(0,7);
+    if(month) monthCounts[month]=(monthCounts[month]||0)+1;
+  });
+  const recentMonths=Object.entries(monthCounts).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,6).reverse();
+  const monthMax=Math.max(1,...recentMonths.map(x=>x[1]));
   if ($("recordsChart")) $("recordsChart").innerHTML = "<h3>Records Overview</h3>"+counts.map(x=>
     `<div class="chart-row"><span>${x.label}</span><div class="chart-track"><div class="chart-fill" style="width:${Math.round(x.value/max*100)}%"></div></div><strong>${x.value}</strong></div>`
+  ).join("")+"<h3>Monthly Activity</h3>"+recentMonths.map(([month,value])=>
+    `<div class="chart-row"><span>${safe(month)}</span><div class="chart-track"><div class="chart-fill" style="width:${Math.round(value/monthMax*100)}%"></div></div><strong>${value}</strong></div>`
   ).join("");
 }
 const priorRenderOperational = renderOperational;
