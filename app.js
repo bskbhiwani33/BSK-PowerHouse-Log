@@ -957,7 +957,7 @@ $("downloadDailyReports")?.addEventListener("click", () => {
   const table = rows.map(row=>"<Row>"+row.map(v=>"<Cell><Data ss:Type=\"String\">"+esc(v)+"</Data></Cell>").join("")+"</Row>").join("");
   const xml = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Daily Reports"><Table>'+table+'</Table></Worksheet></Workbook>';
   const blob=new Blob([xml],{type:"application/vnd.ms-excel"}), url=URL.createObjectURL(blob), link=document.createElement("a");
-  link.href=url; link.download="BSK_Daily_Feeder_Reports.xls"; link.click(); URL.revokeObjectURL(url);
+  link.href=url; link.download="BSK_Daily_Feeder_Reports.xls"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1500);
 });
 
 onAuthStateChanged(auth, async user => {
