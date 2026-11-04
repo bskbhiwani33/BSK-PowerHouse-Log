@@ -398,7 +398,7 @@ $("clearReportFilter")?.addEventListener("click", () => {
 });
 
 function getFilteredReports() {
-  let reports = [...dashboardData.reports];
+  let reports = [...(operational?.daily_reports || dashboardData.reports || [])];
 
   const houseId = $("filterHouse")?.value || "";
   const date = $("filterDate")?.value || "";
@@ -580,6 +580,7 @@ function renderOperational() {
     });
   }
   renderRecordHistory();
+  renderReports();
 }
 
 
@@ -595,7 +596,7 @@ function renderFeederStatusSearch() {
     const shutdowns=operational.shutdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const statusRow=(operational.feeder_status||[]).find(x=>x.feederId===f.id);
     const status=statusRow?.status || (breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running");
-    const dailySource=currentProfile?.role==="admin"?(dashboardData.reports||[]):(operational.daily_reports||[]);
+    const dailySource=operational.daily_reports||dashboardData.reports||[];
     const daily=dailySource.filter(x=>x.feederId===f.id).map(x=>({...x,date:x.reportDate,kind:"Daily Report",reason:x.remarks||x.eventType}));
     const history=[...breakdowns.map(x=>({...x,kind:"Breakdown"})),...shutdowns.map(x=>({...x,kind:"Shutdown"})),...daily].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,15);
     return `<article class="report-item"><strong>${safe(f.name)} — ${status}</strong>${history.map(x=>`<p>${safe(x.kind)} · ${safe(x.date)} · ${safe(x.startTime)}–${safe(x.endTime||"Ongoing")} · ${safe(x.reason)}</p>`).join("") || "<p>No outage history.</p>"}</article>`;
