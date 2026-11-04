@@ -125,6 +125,39 @@ async function resolveOutage(db, actor, body, type) {
   return outcome;
 }
 
+async function updateRecord(db, actor, body) {
+  requireRole(actor, "admin");
+  const name=clean(body.recordCollection), allowed=["breakdowns","shutdowns","daily_reports","trippings","consumption_readings"];
+  if(!allowed.includes(name)||!validText(body.id,128)||!body.changes||typeof body.changes!=="object")throw Object.assign(new Error("Invalid record details"),{status:400});
+  const ref=db.collection(name).doc(clean(body.id)), snap=await ref.get();
+  if(!snap.exists)throw Object.assign(new Error("Record not found"),{status:404});
+  const old=snap.data(), input=body.changes, next={}, dateKey=name==="daily_reports"?"reportDate":"date";
+  if(input[dateKey]!==undefined){if(!validDate(input[dateKey]))throw Object.assign(new Error("Invalid date"),{status:400});next[dateKey]=input[dateKey];}
+  if(name==="breakdowns"||name==="shutdowns"){
+    if(input.startTime!==undefined){if(!validTime(input.startTime))throw Object.assign(new Error("Invalid start time"),{status:400});next.startTime=input.startTime;}
+    if(input.endTime!==undefined){if(input.endTime&&!validTime(input.endTime))throw Object.assign(new Error("Invalid end time"),{status:400});next.endTime=input.endTime||null;}
+    if(input.reason!==undefined){if(!validText(input.reason,1000))throw Object.assign(new Error("Reason required"),{status:400});next.reason=clean(input.reason);}
+  } else if(name==="trippings"){
+    for(const k of ["trippingCount","feederCount"])if(input[k]!==undefined){const n=Number(input[k]);if(!Number.isInteger(n)||n<0||n>10000)throw Object.assign(new Error("Invalid count"),{status:400});next[k]=n;}
+  } else if(name==="consumption_readings"){
+    const keys=["apFeeder","ruralDomestic","urban","industrial","independent"];
+    for(const k of keys)if(input[k]!==undefined){const n=Number(input[k]);if(!Number.isFinite(n)||n<0||n>1e12)throw Object.assign(new Error("Invalid reading"),{status:400});next[k]=n;}
+    next.total=keys.reduce((sum,k)=>sum+Number(next[k]??old[k]??0),0);
+  } else {
+    if(input.breakerStatus!==undefined){if(!["ON","OFF","TRIPPED","UNDER MAINTENANCE"].includes(input.breakerStatus))throw Object.assign(new Error("Invalid breaker status"),{status:400});next.breakerStatus=input.breakerStatus;}
+    for(const k of ["faultDetails","duration","restorationTime","remarks"])if(input[k]!==undefined)next[k]=clean(input[k]).slice(0,2000);
+  }
+  if(!Object.keys(next).length)throw Object.assign(new Error("No changes supplied"),{status:400});
+  const history=db.collection("entry_history").doc();
+  await db.runTransaction(async tx=>{
+    const current=await tx.get(ref);if(!current.exists)throw Object.assign(new Error("Record not found"),{status:404});
+    const before=current.data(), after={...before,...next};
+    tx.update(ref,{...next,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.uid,updatedByUserId:actor.userId});
+    tx.set(history,{recordCollection:name,recordId:ref.id,houseId:before.houseId,action:"updated",before,after,actorUid:actor.uid,actorUserId:actor.userId,actorRole:actor.role,createdAt:admin.firestore.FieldValue.serverTimestamp()});
+  });
+  return {id:ref.id,updated:true};
+}
+
 async function createDailyReport(db, actor, body) {
   requireRole(actor, "staff");
   if (!validDate(body.reportDate)) throw Object.assign(new Error("Report date zaroori hai"), { status: 400 });
@@ -207,6 +240,7 @@ export default async req => {
       case "createShutdown": return json({ success: true, ...(await createOutage(db, actor, body, "Shutdown")) });
       case "resolveBreakdown": return json({ success: true, ...(await resolveOutage(db, actor, body, "Breakdown")) });
       case "resolveShutdown": return json({ success: true, ...(await resolveOutage(db, actor, body, "Shutdown")) });
+      case "updateRecord": return json({ success: true, ...(await updateRecord(db, actor, body)) });
       case "createDailyReport": return json({ success: true, ...(await createDailyReport(db, actor, body)) });
       case "createTripping": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "trippings")) });
       case "createConsumption": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "consumption_readings")) });

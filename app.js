@@ -566,6 +566,22 @@ function renderFeederStatusSearch() {
 }
 $("feederStatusSearch")?.addEventListener("input",renderFeederStatusSearch);
 
+$("adminRecordsList")?.addEventListener("click", async event => {
+  const button=event.target.closest("[data-edit-record]");
+  if(!button||currentProfile?.role!=="admin")return;
+  const collection=button.dataset.recordCollection,id=button.dataset.editRecord,item=operational[collection]?.find(x=>x.id===id);
+  if(!item)return;
+  const fields=["breakdowns","shutdowns"].includes(collection)?[["date","Date"],["startTime","Start time"],["endTime","End time"],["reason","Reason"]]
+    :collection==="daily_reports"?[["reportDate","Report date"],["breakerStatus","Breaker status"],["faultDetails","Fault details"],["duration","Duration"],["restorationTime","Restoration time"],["remarks","Remarks"]]
+    :collection==="trippings"?[["date","Date"],["trippingCount","Tripping count"],["feederCount","Feeder count"]]
+    :[["date","Date"],["apFeeder","AP Feeder"],["ruralDomestic","Rural Domestic"],["urban","Urban"],["industrial","Industrial"],["independent","Independent"]];
+  const changes={};
+  for(const [key,label] of fields){const value=window.prompt(label+" (blank = unchanged)",item[key]??"");if(value===null)return;if(value!=="")changes[key]=value;}
+  if(!Object.keys(changes).length)return;
+  try{await recordsRequest("updateRecord",{recordCollection:collection,id,changes});await loadOperationalRecords();message("adminMessage","Record updated. Edit history saved.");}
+  catch(error){message("adminMessage",error.message,true);}
+});
+
 function renderRecordHistory() {
   const from = $("recordsFrom")?.value || "";
   const to = $("recordsTo")?.value || "";
@@ -573,11 +589,11 @@ function renderRecordHistory() {
   const inside = x => (!from || x.date >= from) && (!to || x.date <= to) &&
     (!search || [x.feederName,x.createdByUserId,x.houseName].some(v => String(v || "").toLowerCase().includes(search)));
   const rows = [
-    ...operational.breakdowns.filter(inside).map(x => ({...x, kind:"Breakdown"})),
-    ...operational.shutdowns.filter(inside).map(x => ({...x, kind:"Shutdown"})),
-    ...operational.trippings.filter(inside).map(x => ({...x, kind:"Tripping"})),
-    ...operational.consumption_readings.filter(inside).map(x => ({...x, kind:"Consumption"})),
-    ...(operational.daily_reports || []).map(x => ({...x, date:x.reportDate, kind:"Daily Feeder Report", reason:x.remarks || x.eventType})).filter(inside)
+    ...operational.breakdowns.filter(inside).map(x => ({...x, kind:"Breakdown", collection:"breakdowns"})),
+    ...operational.shutdowns.filter(inside).map(x => ({...x, kind:"Shutdown", collection:"shutdowns"})),
+    ...operational.trippings.filter(inside).map(x => ({...x, kind:"Tripping", collection:"trippings"})),
+    ...operational.consumption_readings.filter(inside).map(x => ({...x, kind:"Consumption", collection:"consumption_readings"})),
+    ...(operational.daily_reports || []).map(x => ({...x, date:x.reportDate, kind:"Daily Feeder Report", collection:"daily_reports", reason:x.remarks || x.eventType})).filter(inside)
   ].sort((a,b) => String(b.date).localeCompare(String(a.date)));
   const durationFor = x => {
     if (!x.startTime) return "";
@@ -589,7 +605,7 @@ function renderRecordHistory() {
     return Math.floor(minutes/60)+"h "+(minutes%60)+"m";
   };
   if ($("adminRecordsList")) $("adminRecordsList").innerHTML = rows.length ? rows.map(x =>
-    `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : ""))}</p><p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p></article>`
+    `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : ""))}</p><p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`
   ).join("") : "<p>No records in selected date range.</p>";
   if ($("recordsInsights")) {
     const outageRows = [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))].filter(inside);
