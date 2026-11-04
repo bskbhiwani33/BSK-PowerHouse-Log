@@ -708,7 +708,7 @@ $("downloadBreakdowns")?.addEventListener("click",()=>downloadExcelXml("breakdow
 $("downloadShutdowns")?.addEventListener("click",()=>downloadExcelXml("shutdowns"));
 $("downloadConsumption")?.addEventListener("click",()=>downloadExcelXml("consumption"));
 $("downloadPdf")?.addEventListener("click",()=>{
-  const content = ($("adminRecordsList")?.innerHTML || "") + ($("reportList")?.innerHTML || "");
+  const content = ($("recordsInsights")?.innerHTML || "") + ($("recordsChart")?.innerHTML || "") + ($("adminRecordsList")?.innerHTML || "") + ($("reportList")?.innerHTML || "");
   const w=window.open("","_blank");
   if (!w) { alert("Please allow pop-ups to create PDF."); return; }
   w.document.write("<html><head><title>BSK Report</title><style>body{font:14px Arial;padding:24px}article{border-bottom:1px solid #ccc;padding:10px}</style></head><body><h1>BSK Power House Report</h1>"+content+"</body></html>");
