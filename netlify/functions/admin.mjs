@@ -63,7 +63,7 @@ export default async (req) => {
           db.collection("feeders").get(),
           db.collection("users").get(),
           db.collection("daily_reports")
-            .orderBy("reportDate", "desc").limit(300).get()
+            .orderBy("reportDate", "desc").limit(500).get()
         ]);
 
       const houses = housesSnap.docs.map(doc => ({
