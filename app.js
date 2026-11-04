@@ -507,6 +507,7 @@ function ongoingRecords() {
 
 let recordPageCursors = null;
 let recordPagesLoaded = 0;
+let historyLoadInProgress = false;
 
 async function loadOperationalRecords(options = {}) {
   const append = options.append === true;
@@ -566,6 +567,8 @@ async function loadOperationalRecords(options = {}) {
 }
 
 async function refreshOperationalRecordsPreservingHistory() {
+  // Avoid racing the user's explicit older-history paging request.
+  if (historyLoadInProgress) return;
   // Keep older pages visible during periodic refreshes and dashboard refreshes.
   const pagesToRestore = Math.max(1, recordPagesLoaded || 1);
   await loadOperationalRecords();
@@ -954,32 +957,43 @@ $("recordsSearch")?.addEventListener("input", () => { renderRecordHistory(); ren
 
 $("loadMoreStaffHistory")?.addEventListener("click", async () => {
   const button=$("loadMoreStaffHistory");
-  if(!button||button.disabled)return;
+  if(!button||button.disabled||historyLoadInProgress)return;
+  historyLoadInProgress=true;
   button.disabled=true;button.textContent="Loading older records...";
-  const before=JSON.stringify(recordPageCursors||{});
-  await loadOperationalRecords({append:true});
-  const hasMore=Object.values(recordPageCursors||{}).some(Boolean);
-  if(button){button.disabled=!hasMore;button.textContent=hasMore?"Load Older Records":"All Records Loaded";}
-  if(JSON.stringify(recordPageCursors||{})===before && hasMore) message("reportMessage","Could not load older history. Check connection and retry.",true);
+  try {
+    const before=JSON.stringify(recordPageCursors||{});
+    await loadOperationalRecords({append:true});
+    const hasMore=Object.values(recordPageCursors||{}).some(Boolean);
+    if(button){button.disabled=!hasMore;button.textContent=hasMore?"Load Older Records":"All Records Loaded";}
+    if(JSON.stringify(recordPageCursors||{})===before && hasMore) message("reportMessage","Could not load older history. Check connection and retry.",true);
+  } finally {
+    historyLoadInProgress=false;
+  }
 });
 $("loadMoreHistory")?.addEventListener("click", async () => {
   const button = $("loadMoreHistory");
-  if (!button || button.disabled) return;
+  if (!button || button.disabled || historyLoadInProgress) return;
+  historyLoadInProgress = true;
   button.disabled = true;
   button.textContent = "Loading all history...";
-  let previousCursor = "";
-  while (Object.values(recordPageCursors || {}).some(Boolean)) {
-    const before = JSON.stringify(recordPageCursors || {});
-    if (before === previousCursor) break;
-    previousCursor = before;
-    await loadOperationalRecords({ append: true });
-    const after = JSON.stringify(recordPageCursors || {});
-    if (after === before) break;
-  }
-  const hasMore = Object.values(recordPageCursors || {}).some(Boolean);
-  if (button) {
-    button.disabled = !hasMore;
-    button.textContent = hasMore ? "Retry Loading History" : "All Records Loaded";
+  try {
+    let previousCursor = "";
+    while (Object.values(recordPageCursors || {}).some(Boolean)) {
+      const before = JSON.stringify(recordPageCursors || {});
+      if (before === previousCursor) break;
+      previousCursor = before;
+      await loadOperationalRecords({ append: true });
+      if (button) { button.disabled = true; button.textContent = "Loading all history..."; }
+      const after = JSON.stringify(recordPageCursors || {});
+      if (after === before) break;
+    }
+    const hasMore = Object.values(recordPageCursors || {}).some(Boolean);
+    if (button) {
+      button.disabled = !hasMore;
+      button.textContent = hasMore ? "Retry Loading History" : "All Records Loaded";
+    }
+  } finally {
+    historyLoadInProgress = false;
   }
 });
 
