@@ -213,13 +213,13 @@ export default async req => {
       case "getRecords": {
         const requestedHouse = clean(body.houseId);
         const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
-        const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "notifications", "entry_history"];
+        const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports", "notifications", "entry_history"];
         const output = {};
         await Promise.all(names.map(async name => {
           let q = db.collection(name);
           if (houseId) q = q.where("houseId", "==", houseId);
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
-          else q = q.orderBy("date", "desc");
+          else q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
           const snap = await q.limit(500).get();
           output[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }));

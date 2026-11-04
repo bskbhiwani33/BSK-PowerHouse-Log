@@ -449,8 +449,8 @@ setToday();
 
 
 // ---------------- Operational records (direct save; no approval workflow) ----------------
-let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], notifications: [], entry_history: [] };
-const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_readings"];
+let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], notifications: [], entry_history: [] };
+const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports"];
 
 async function recordsRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
@@ -558,7 +558,8 @@ function renderFeederStatusSearch() {
     const breakdowns=operational.breakdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const shutdowns=operational.shutdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const status=breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running";
-    const daily=(dashboardData.reports||[]).filter(x=>x.feederId===f.id).map(x=>({...x,date:x.reportDate,kind:"Daily Report",reason:x.remarks||x.eventType}));
+    const dailySource=currentProfile?.role==="admin"?(dashboardData.reports||[]):(operational.daily_reports||[]);
+    const daily=dailySource.filter(x=>x.feederId===f.id).map(x=>({...x,date:x.reportDate,kind:"Daily Report",reason:x.remarks||x.eventType}));
     const history=[...breakdowns.map(x=>({...x,kind:"Breakdown"})),...shutdowns.map(x=>({...x,kind:"Shutdown"})),...daily].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,15);
     return `<article class="report-item"><strong>${safe(f.name)} — ${status}</strong>${history.map(x=>`<p>${safe(x.kind)} · ${safe(x.date)} · ${safe(x.startTime)}–${safe(x.endTime||"Ongoing")} · ${safe(x.reason)}</p>`).join("") || "<p>No outage history.</p>"}</article>`;
   }).join("");
