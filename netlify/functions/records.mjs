@@ -244,6 +244,22 @@ export default async req => {
       case "createDailyReport": return json({ success: true, ...(await createDailyReport(db, actor, body)) });
       case "createTripping": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "trippings")) });
       case "createConsumption": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "consumption_readings")) });
+      case "exportBackupPage": {
+        requireRole(actor, "admin");
+        const allowed = ["powerhouses","feeders","users","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","notifications","entry_history"];
+        const name = clean(body.collection);
+        if (!allowed.includes(name)) return json({ error: "Invalid backup collection" }, 400);
+        const pageSize = 400;
+        let q = db.collection(name).orderBy(admin.firestore.FieldPath.documentId()).limit(pageSize);
+        if (validText(body.cursor, 1500)) q = q.startAfter(clean(body.cursor));
+        const snap = await q.get();
+        const rows = snap.docs.map(d => {
+          const data = { id: d.id, ...d.data() };
+          if (name === "users") { delete data.pinSalt; delete data.pinHash; }
+          return data;
+        });
+        return json({ success: true, rows, nextCursor: snap.size === pageSize ? snap.docs[snap.docs.length - 1].id : null });
+      }
       case "getRecords": {
         const requestedHouse = clean(body.houseId);
         const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
