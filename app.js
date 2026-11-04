@@ -806,6 +806,28 @@ function downloadExcelXml(kind) {
 $("downloadBreakdowns")?.addEventListener("click",()=>downloadExcelXml("breakdowns"));
 $("downloadShutdowns")?.addEventListener("click",()=>downloadExcelXml("shutdowns"));
 $("downloadConsumption")?.addEventListener("click",()=>downloadExcelXml("consumption"));
+$("downloadAllRecords")?.addEventListener("click",()=>{
+  const from=$("recordsFrom")?.value||"",to=$("recordsTo")?.value||"";
+  const search=($("recordsSearch")?.value||"").toLowerCase().trim();
+  const xml=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const inRange=(x,dateKey="date")=>(!from||String(x[dateKey]||"")>=from)&&(!to||String(x[dateKey]||"")<=to)&&(!search||[x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search)));
+  const sheets=[
+    {name:"Breakdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.breakdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
+    {name:"Shutdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.shutdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
+    {name:"Tripping",headers:["Date","Power House","Trippings","Feeders","Staff"],rows:operational.trippings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.trippingCount,x.feederCount,x.createdByUserId])},
+    {name:"Consumption",headers:["Date","Power House","AP Feeder","Rural Domestic","Urban","Industrial","Independent","Total"],rows:operational.consumption_readings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.apFeeder,x.ruralDomestic,x.urban,x.industrial,x.independent,x.total])},
+    {name:"Daily Reports",headers:["Date","Power House","Feeder","Breaker","Event","Fault","Duration","Restoration","Remarks","Staff"],rows:operational.daily_reports.filter(x=>inRange(x,"reportDate")).map(x=>[x.reportDate,x.houseName,x.feederName,x.breakerStatus,x.eventType,x.faultDetails,x.duration,x.restorationTime,x.remarks,x.createdByUserId])}
+  ];
+  const worksheets=sheets.map(sheet=>{
+    const rows=[sheet.headers,...sheet.rows];
+    const table=rows.map(row=>"<Row>"+row.map(value=>"<Cell><Data ss:Type=\""+(typeof value==="number"?"Number":"String")+"\">"+xml(value)+"</Data></Cell>").join("")+"</Row>").join("");
+    return "<Worksheet ss:Name=\""+sheet.name+"\"><Table>"+table+"</Table></Worksheet>";
+  }).join("");
+  const workbook='<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+worksheets+"</Workbook>";
+  const url=URL.createObjectURL(new Blob([workbook],{type:"application/vnd.ms-excel"}));
+  const link=document.createElement("a");link.href=url;link.download="BSK_All_Records_"+new Date().toISOString().slice(0,10)+".xls";link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+});
 $("downloadPdf")?.addEventListener("click",()=>{
   const content = ($("recordsInsights")?.innerHTML || "") + ($("recordsChart")?.innerHTML || "") + ($("adminRecordsList")?.innerHTML || "") + ($("reportList")?.innerHTML || "");
   const w=window.open("","_blank");
