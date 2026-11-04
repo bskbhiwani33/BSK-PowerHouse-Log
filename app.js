@@ -915,6 +915,7 @@ onAuthStateChanged(auth, async user => {
     await loadOperationalRecords();
     setOperationalDates();
     await syncOutbox();
+    renderOfflineQueueStatus();
     if (saved.role === "admin") await refreshDashboard();
   } catch (error) {
     console.warn("BSK session restore failed:", error);
