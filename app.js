@@ -571,7 +571,7 @@ $("adminRecordsList")?.addEventListener("click", async event => {
   if(!button||currentProfile?.role!=="admin")return;
   const collection=button.dataset.recordCollection,id=button.dataset.editRecord,item=operational[collection]?.find(x=>x.id===id);
   if(!item)return;
-  const fields=["breakdowns","shutdowns"].includes(collection)?[["date","Date"],["startTime","Start time"],["endTime","End time"],["reason","Reason"]]
+  const fields=["breakdowns","shutdowns"].includes(collection)?[["date","Date"],["startTime","Start time"],["reason","Reason"]]
     :collection==="daily_reports"?[["reportDate","Report date"],["breakerStatus","Breaker status"],["faultDetails","Fault details"],["duration","Duration"],["restorationTime","Restoration time"],["remarks","Remarks"]]
     :collection==="trippings"?[["date","Date"],["trippingCount","Tripping count"],["feederCount","Feeder count"]]
     :[["date","Date"],["apFeeder","AP Feeder"],["ruralDomestic","Rural Domestic"],["urban","Urban"],["industrial","Industrial"],["independent","Independent"]];
@@ -721,7 +721,7 @@ function downloadExcelXml(kind) {
   const workbook = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Report"><Table>'+table+'</Table></Worksheet></Workbook>';
   const blob = new Blob([workbook], {type:"application/vnd.ms-excel"});
   const url = URL.createObjectURL(blob), a=document.createElement("a");
-  a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+  a.href=url; a.download=filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 $("downloadBreakdowns")?.addEventListener("click",()=>downloadExcelXml("breakdowns"));
 $("downloadShutdowns")?.addEventListener("click",()=>downloadExcelXml("shutdowns"));
