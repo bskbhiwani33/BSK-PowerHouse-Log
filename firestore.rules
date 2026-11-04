@@ -50,8 +50,8 @@ service cloud.firestore {
     match /daily_reports/{reportId} {
       allow read: if isAdmin() || myHouse(resource.data.houseId);
       // All new daily reports pass through the audited Netlify API.
-      allow create: if false;
-      allow update, delete: if isAdmin();
+      // Daily report mutations must pass through the audited Netlify API.
+      allow create, update, delete: if false;
     }
 
     // Operational records are written only by validated Netlify Functions
