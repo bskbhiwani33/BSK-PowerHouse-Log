@@ -647,7 +647,7 @@ $("adminRecordsList")?.addEventListener("click", async event => {
   const changes={};
   for(const [key,label] of fields){const value=window.prompt(label+" (blank = unchanged)",item[key]??"");if(value===null)return;if(value!=="")changes[key]=value;}
   if(!Object.keys(changes).length)return;
-  try{await recordsRequest("updateRecord",{recordCollection:collection,id,changes});await loadOperationalRecords();message("adminMessage","Record updated. Edit history saved.");}
+  try{await recordsRequest("updateRecord",{recordCollection:collection,id,changes});await refreshOperationalRecordsPreservingHistory();message("adminMessage","Record updated. Edit history saved.");}
   catch(error){message("adminMessage",error.message,true);}
 });
 
@@ -761,7 +761,7 @@ async function submitOperational(formId, action, payload, messageId) {
       form.reset();
       setOperationalDates();
       updateConsumptionTotal();
-      await loadOperationalRecords();
+      await refreshOperationalRecordsPreservingHistory();
       message(messageId, saved.queued ? "Saved on this device. It will sync when internet returns." : "Entry saved successfully and visible on dashboard.");
     } catch (error) { message(messageId, error.message, true); }
   });
@@ -786,7 +786,7 @@ $("resolveForm")?.addEventListener("submit", async event => {
     if (!id || !kind) throw new Error("Select ongoing event.");
     await recordsRequest(kind === "Breakdown" ? "resolveBreakdown" : "resolveShutdown", { id, endTime:$("resolveEnd").value });
     $("resolveForm").reset();
-    await loadOperationalRecords();
+    await refreshOperationalRecordsPreservingHistory();
     message("resolveMessage", "Event resolved successfully.");
   } catch (error) { message("resolveMessage", error.message, true); }
 });
@@ -924,7 +924,7 @@ async function syncOutbox() {
   }
   writeOutbox(remaining);
   if (remaining.length !== items.length) {
-    await loadOperationalRecords();
+    await refreshOperationalRecordsPreservingHistory();
     if ($("reportMessage")) message("reportMessage", remaining.length ? "Some offline entries are waiting to sync." : "Offline entries synced successfully.");
   }
 }
@@ -1247,6 +1247,6 @@ $("notificationList")?.addEventListener("click", async event => {
   if (!button) return;
   try {
     await recordsRequest("markNotificationRead",{id:button.dataset.notificationId});
-    await loadOperationalRecords();
+    await refreshOperationalRecordsPreservingHistory();
   } catch(error) { alert(error.message); }
 });
