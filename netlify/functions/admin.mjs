@@ -57,15 +57,13 @@ export default async (req) => {
     const body = await req.json();
 
     if (body.action === "getDashboardData") {
-      const [housesSnap, feedersSnap, usersSnap, reportsSnap, requestsSnap] =
+      const [housesSnap, feedersSnap, usersSnap, reportsSnap] =
         await Promise.all([
           db.collection("powerhouses").get(),
           db.collection("feeders").get(),
           db.collection("users").get(),
           db.collection("daily_reports")
-            .orderBy("reportDate", "desc").limit(300).get(),
-          db.collection("edit_requests")
-            .orderBy("createdAt", "desc").limit(200).get()
+            .orderBy("reportDate", "desc").limit(300).get()
         ]);
 
       const houses = housesSnap.docs.map(doc => ({
@@ -106,23 +104,17 @@ export default async (req) => {
           restorationTime: d.restorationTime || "",
           remarks: d.remarks || "",
           submittedBy: d.submittedBy || "",
+          createdByUserId: d.createdByUserId || "",
           createdAt: cleanDate(d.createdAt)
         };
       });
-
-      const editRequests = requestsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: cleanDate(doc.data().createdAt)
-      }));
 
       return response({
         success: true,
         houses,
         feeders,
         users,
-        reports,
-        editRequests
+        reports
       });
     }
 
@@ -259,9 +251,7 @@ export default async (req) => {
   } catch (error) {
     console.error("ADMIN FUNCTION ERROR:", error);
 
-    return response({
-      error: error.message || "Unknown admin service error"
-    }, 500);
+    return response({ error: "Server error. Please try again." }, 500);
   }
 
 };

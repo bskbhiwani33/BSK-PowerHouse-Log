@@ -1,0 +1,242 @@
+import admin from "firebase-admin";
+
+function fbAdmin() {
+  if (!admin.apps.length) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!raw) throw new Error("Server configuration unavailable");
+    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
+  }
+  return admin;
+}
+
+const json = (data, status = 200) => Response.json(data, { status });
+const validText = (v, max = 160) => typeof v === "string" && v.trim().length > 0 && v.trim().length <= max;
+const validDate = v => {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const parsed = new Date(v + "T00:00:00Z");
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10) === v;
+};
+const validTime = v => typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+const clean = v => String(v ?? "").trim();
+
+async function actorFor(req, fb, db) {
+  const h = req.headers.get("authorization") || "";
+  if (!h.startsWith("Bearer ")) throw Object.assign(new Error("Login required"), { status: 401 });
+  const decoded = await fb.auth().verifyIdToken(h.slice(7));
+  const snap = await db.collection("users").doc(decoded.uid).get();
+  if (!snap.exists || snap.data().active !== true) throw Object.assign(new Error("Account inactive"), { status: 403 });
+  const user = snap.data();
+  if (!["admin", "staff"].includes(user.role)) throw Object.assign(new Error("Access denied"), { status: 403 });
+  return { uid: decoded.uid, role: user.role, userId: user.userId || "", houseId: user.houseId || "", houseName: user.houseName || "" };
+}
+
+function requireRole(actor, role) {
+  if (actor.role !== role) throw Object.assign(new Error("Access denied"), { status: 403 });
+}
+
+async function validateFeeder(db, actor, feederId) {
+  if (!validText(feederId, 128)) throw Object.assign(new Error("Feeder select karein"), { status: 400 });
+  const snap = await db.collection("feeders").doc(feederId).get();
+  if (!snap.exists || snap.data().active !== true) throw Object.assign(new Error("Feeder nahi mila ya inactive hai"), { status: 404 });
+  const f = snap.data();
+  if (actor.role === "staff" && f.houseId !== actor.houseId) throw Object.assign(new Error("Is feeder ka access nahi hai"), { status: 403 });
+  const house = await db.collection("powerhouses").doc(f.houseId).get();
+  if (!house.exists || house.data().active !== true) throw Object.assign(new Error("Power House inactive hai"), { status: 409 });
+  return { feederId, feederName: f.name, houseId: f.houseId, houseName: house.data().name };
+}
+
+
+async function createOutage(db, actor, body, type) {
+  requireRole(actor, "staff");
+  if (!validDate(body.date) || !validTime(body.startTime) || !validText(body.reason, 1000)) {
+    throw Object.assign(new Error("Date, start time aur reason zaroori hain"), { status: 400 });
+  }
+  if (body.endTime && !validTime(body.endTime)) throw Object.assign(new Error("End time sahi nahi hai"), { status: 400 });
+  const feeder = await validateFeeder(db, actor, body.feederId);
+  const collectionName = type === "Breakdown" ? "breakdowns" : "shutdowns";
+  const clientId = typeof body.clientEntryId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId) ? body.clientEntryId : "";
+  const ref = clientId ? db.collection(collectionName).doc(clientId) : db.collection(collectionName).doc();
+  const statusRef = db.collection("feeder_status").doc(feeder.feederId);
+  const historyRef = db.collection("entry_history").doc();
+  const notificationRef = db.collection("notifications").doc();
+  const status = body.endTime ? "resolved" : "ongoing";
+  const data = {
+    ...feeder, date: body.date, startTime: body.startTime, endTime: body.endTime || null,
+    reason: clean(body.reason), status, createdBy: actor.uid, createdByUserId: actor.userId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+  return db.runTransaction(async tx => {
+    const [duplicate, feederStatus] = await Promise.all([tx.get(ref), tx.get(statusRef)]);
+    if (duplicate.exists) return { id: ref.id, status: duplicate.data().status, duplicate: true };
+    if (!body.endTime && feederStatus.exists && feederStatus.data().status !== "Running") {
+      throw Object.assign(new Error("Is feeder par pehle se Breakdown ya Shutdown ongoing hai"), { status: 409 });
+    }
+    tx.set(ref, data);
+    if (!body.endTime) {
+      tx.set(statusRef, {
+        houseId: feeder.houseId, feederId: feeder.feederId, feederName: feeder.feederName,
+        status: type, activeRecordId: ref.id, activeCollection: collectionName,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    tx.set(historyRef, {
+      recordCollection: collectionName, recordId: ref.id, houseId: feeder.houseId,
+      action: "created", before: null,
+      after: { ...data, createdAt: null, updatedAt: null },
+      actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    tx.set(notificationRef, {
+      houseId: feeder.houseId, type: "new_entry", title: type + " entry",
+      message: feeder.feederName + " · " + body.date, recordCollection: collectionName,
+      recordId: ref.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    return { id: ref.id, status };
+  });
+}
+
+async function resolveOutage(db, actor, body, type) {
+  if (!validText(body.id, 128) || !validTime(body.endTime)) throw Object.assign(new Error("Record aur end time zaroori hain"), { status: 400 });
+  const collectionName = type === "Breakdown" ? "breakdowns" : "shutdowns";
+  const ref = db.collection(collectionName).doc(body.id);
+  const historyRef = db.collection("entry_history").doc();
+  const outcome = await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw Object.assign(new Error("Record nahi mila"), { status: 404 });
+    const old = snap.data();
+    if (actor.role === "staff" && old.houseId !== actor.houseId) throw Object.assign(new Error("Access denied"), { status: 403 });
+    if (old.status !== "ongoing") throw Object.assign(new Error("Yeh event pehle hi close ho chuka hai"), { status: 409 });
+    const statusRef = db.collection("feeder_status").doc(old.feederId);
+    const statusSnap = await tx.get(statusRef);
+    const after = { ...old, endTime: body.endTime, status: "resolved", resolvedBy: actor.uid, resolvedByUserId: actor.userId, updatedAt: null };
+    tx.update(ref, { endTime: body.endTime, status: "resolved", resolvedBy: actor.uid, resolvedByUserId: actor.userId, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    if (statusSnap.exists && statusSnap.data().activeRecordId === ref.id) {
+      tx.set(statusRef, { ...statusSnap.data(), status: "Running", activeRecordId: null, activeCollection: null, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+    tx.set(historyRef, {
+      recordCollection: collectionName, recordId: ref.id, houseId: old.houseId,
+      action: "resolved", before: old, after,
+      actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    return { id: ref.id, status: "resolved" };
+  });
+  return outcome;
+}
+
+async function createDailyReport(db, actor, body) {
+  requireRole(actor, "staff");
+  if (!validDate(body.reportDate)) throw Object.assign(new Error("Report date zaroori hai"), { status: 400 });
+  const breakerAllowed = ["ON", "OFF", "TRIPPED", "UNDER MAINTENANCE"];
+  const eventAllowed = ["Normal"];
+  if (!breakerAllowed.includes(body.breakerStatus) || !eventAllowed.includes(body.eventType)) {
+    throw Object.assign(new Error("Breaker status ya event type sahi select karein"), { status: 400 });
+  }
+  const feeder = await validateFeeder(db, actor, body.feederId);
+  const clientId = typeof body.clientEntryId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId) ? body.clientEntryId : "";
+  const ref = clientId ? db.collection("daily_reports").doc(clientId) : db.collection("daily_reports").doc();
+  const duplicate = await ref.get();
+  if (duplicate.exists) return { id: ref.id, duplicate: true };
+  const data = {
+    ...feeder, reportDate: body.reportDate, breakerStatus: body.breakerStatus,
+    eventType: body.eventType, faultDetails: clean(body.faultDetails).slice(0,2000),
+    duration: clean(body.duration).slice(0,100), restorationTime: clean(body.restorationTime).slice(0,10),
+    remarks: clean(body.remarks).slice(0,2000), submittedBy: actor.uid,
+    createdByUserId: actor.userId, createdAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+  const batch = db.batch();
+  batch.set(ref, data);
+  const historyRef = db.collection("entry_history").doc();
+  batch.set(historyRef, { recordCollection:"daily_reports", recordId:ref.id, houseId:feeder.houseId, action:"created", before:null, after:{...data,createdAt:null}, actorUid:actor.uid, actorUserId:actor.userId, actorRole:actor.role, createdAt:admin.firestore.FieldValue.serverTimestamp() });
+  const notificationRef = db.collection("notifications").doc();
+  batch.set(notificationRef, { houseId:feeder.houseId, type:"new_entry", title:"Daily feeder report", message:feeder.feederName+" · "+body.reportDate, recordCollection:"daily_reports", recordId:ref.id, read:false, createdAt:admin.firestore.FieldValue.serverTimestamp() });
+  await batch.commit();
+  return { id:ref.id };
+}
+
+async function createSimpleRecord(db, actor, body, collectionName) {
+  requireRole(actor, "staff");
+  if (!validText(actor.houseId, 128)) throw Object.assign(new Error("Staff Power House missing hai"), { status: 403 });
+  const houseSnap = await db.collection("powerhouses").doc(actor.houseId).get();
+  if (!houseSnap.exists || houseSnap.data().active !== true) throw Object.assign(new Error("Power House inactive hai"), { status: 409 });
+  const houseName = houseSnap.data().name;
+  if (!validDate(body.date)) throw Object.assign(new Error("Date zaroori hai"), { status: 400 });
+  let data;
+  if (collectionName === "trippings") {
+    const trippingCount = Number(body.trippingCount), feederCount = Number(body.feederCount);
+    if (body.trippingCount == null || body.feederCount == null || body.trippingCount === "" || body.feederCount === "" || !Number.isInteger(trippingCount) || trippingCount < 0 || trippingCount > 10000 ||
+        !Number.isInteger(feederCount) || feederCount < 0 || feederCount > 10000) {
+      throw Object.assign(new Error("Tripping aur feeder count sahi bharein"), { status: 400 });
+    }
+    data = { houseId: actor.houseId, houseName, date: body.date, trippingCount, feederCount };
+  } else {
+    const keys = ["apFeeder", "ruralDomestic", "urban", "industrial", "independent"];
+    const values = {};
+    for (const key of keys) {
+      const n = Number(body[key]);
+      if (body[key] == null || body[key] === "" || !Number.isFinite(n) || n < 0 || n > 1e12) throw Object.assign(new Error("Sabhi paanch consumption readings sahi bharein"), { status: 400 });
+      values[key] = n;
+    }
+    data = { houseId: actor.houseId, houseName, date: body.date, ...values, total: keys.reduce((sum, key) => sum + values[key], 0) };
+  }
+  const clientId = typeof body.clientEntryId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId) ? body.clientEntryId : "";
+  const ref = clientId ? db.collection(collectionName).doc(clientId) : db.collection(collectionName).doc();
+  const duplicate = await ref.get();
+  if (duplicate.exists) return { id: ref.id, duplicate: true, total: duplicate.data().total };
+  const saved = { ...data, createdBy: actor.uid, createdByUserId: actor.userId, createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  const batch = db.batch();
+  batch.set(ref, saved);
+  const hist = db.collection("entry_history").doc();
+  batch.set(hist, { recordCollection: collectionName, recordId: ref.id, houseId: actor.houseId, action: "created", before: null, after: { ...saved, createdAt: null, updatedAt: null }, actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  const note = db.collection("notifications").doc();
+  batch.set(note, { houseId: actor.houseId, type: "new_entry", title: collectionName === "trippings" ? "Tripping entry" : "Consumption entry", message: data.date, recordCollection: collectionName, recordId: ref.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  await batch.commit();
+  return { id: ref.id, total: data.total };
+}
+
+export default async req => {
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  try {
+    const fb = fbAdmin();
+    const db = fb.firestore();
+    const actor = await actorFor(req, fb, db);
+    const body = await req.json();
+    switch (body.action) {
+      case "createBreakdown": return json({ success: true, ...(await createOutage(db, actor, body, "Breakdown")) });
+      case "createShutdown": return json({ success: true, ...(await createOutage(db, actor, body, "Shutdown")) });
+      case "resolveBreakdown": return json({ success: true, ...(await resolveOutage(db, actor, body, "Breakdown")) });
+      case "resolveShutdown": return json({ success: true, ...(await resolveOutage(db, actor, body, "Shutdown")) });
+      case "createDailyReport": return json({ success: true, ...(await createDailyReport(db, actor, body)) });
+      case "createTripping": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "trippings")) });
+      case "createConsumption": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "consumption_readings")) });
+      case "getRecords": {
+        const requestedHouse = clean(body.houseId);
+        const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
+        const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "notifications", "entry_history"];
+        const output = {};
+        await Promise.all(names.map(async name => {
+          let q = db.collection(name);
+          if (houseId) q = q.where("houseId", "==", houseId);
+          if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
+          else q = q.orderBy("date", "desc");
+          const snap = await q.limit(500).get();
+          output[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }));
+        return json({ success: true, ...output });
+      }
+      case "markNotificationRead": {
+        if (!validText(body.id, 128)) return json({ error: "Notification ID required" }, 400);
+        const ref = db.collection("notifications").doc(clean(body.id));
+        const snap = await ref.get();
+        if (!snap.exists || (actor.role === "staff" && snap.data().houseId !== actor.houseId)) return json({ error: "Notification not found" }, 404);
+        await ref.update({ read: true, readAt: admin.firestore.FieldValue.serverTimestamp(), readBy: actor.uid });
+        return json({ success: true });
+      }
+      default: return json({ error: "Invalid action" }, 400);
+    }
+  } catch (error) {
+    console.error("RECORDS FUNCTION ERROR:", error);
+    return json({ error: error.status ? error.message : "Server error. Please try again." }, error.status || 500);
+  }
+};

@@ -11,6 +11,29 @@ function getAdmin() {
   return admin;
 }
 
+async function rateLimit(db, userId, success = false, checkOnly = false) {
+  const key = crypto.createHash("sha256").update(userId.toLowerCase()).digest("hex");
+  const ref = db.collection("login_attempt_limits").doc(key);
+  const now = Date.now();
+  if (success) { await ref.delete().catch(() => {}); return true; }
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? snap.data() : {};
+    if (Number(data.lockUntil || 0) > now) return false;
+    if (checkOnly) return true;
+    const withinWindow = now - Number(data.windowStart || 0) < 10 * 60 * 1000;
+    const attempts = withinWindow ? Number(data.attempts || 0) + 1 : 1;
+    const locked = attempts >= 5;
+    tx.set(ref, {
+      attempts: locked ? 0 : attempts,
+      windowStart: locked ? now : (withinWindow ? data.windowStart : now),
+      lockUntil: locked ? now + 15 * 60 * 1000 : 0,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    return !locked;
+  });
+}
+
 export default async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
   try {
@@ -21,8 +44,13 @@ export default async (req) => {
     }
     const fb = getAdmin();
     const db = fb.firestore();
+    const allowed = await rateLimit(db, userId, false, true);
+    if (!allowed) return Response.json({ error: "Too many attempts. Please try again after 15 minutes." }, { status: 429 });
     const snap = await db.collection("users").where("userId", "==", userId).limit(1).get();
-    if (snap.empty) return Response.json({ error: "Invalid User ID or PIN" }, { status: 401 });
+    if (snap.empty) {
+      await rateLimit(db, userId);
+      return Response.json({ error: "Invalid User ID or PIN" }, { status: 401 });
+    }
     const userDoc = snap.docs[0];
     const profile = userDoc.data();
     if (profile.active !== true || !profile.pinSalt || !profile.pinHash) {
@@ -32,8 +60,10 @@ export default async (req) => {
     const expected = Buffer.from(profile.pinHash, "hex");
     const actual = Buffer.from(calculated, "hex");
     if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+      await rateLimit(db, userId);
       return Response.json({ error: "Invalid User ID or PIN" }, { status: 401 });
     }
+    await rateLimit(db, userId, true);
     const uid = userDoc.id;
     const customToken = await fb.auth().createCustomToken(uid, {
       role: profile.role, houseId: profile.houseId || ""
@@ -41,16 +71,14 @@ export default async (req) => {
     return Response.json({
       token: customToken,
       profile: {
-        userId: profile.userId, role: profile.role,
+        uid, userId: profile.userId, role: profile.role,
         houseId: profile.houseId || "", houseName: profile.houseName || ""
       }
     });
   
   } catch (error) {
     console.error("LOGIN FUNCTION ERROR:", error);
-    return Response.json({
-      error: error.message || "Unknown login error"
-    }, { status: 500 });
+    return Response.json({ error: "Login service error. Please try again." }, { status: 500 });
   }
 
 };

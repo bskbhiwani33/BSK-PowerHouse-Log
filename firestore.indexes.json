@@ -1,0 +1,135 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "breakdowns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "shutdowns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "trippings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "consumption_readings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "entry_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "feeders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "feeders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
