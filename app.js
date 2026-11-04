@@ -809,7 +809,7 @@ $("backupRecords")?.addEventListener("click", async () => {
   const label = button?.textContent || "Download Backup JSON";
   if (button) { button.disabled = true; button.textContent = "Preparing backup..."; }
   try {
-    const collections = ["powerhouses","feeders","users","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","notifications","entry_history"];
+    const collections = ["powerhouses","feeders","users","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","feeder_status","notifications","entry_history"];
     const backup = { exportedAt: new Date().toISOString(), collections: {} };
     for (const collection of collections) {
       const rows = [];
