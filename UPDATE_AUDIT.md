@@ -24,7 +24,7 @@ Status meanings:
 | 12 | Date-wise search | Partial | From/to filters apply to record history, feeder history, reports, charts and three dedicated Excel exports; verify all combinations in runtime. |
 | 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. |
 | 14 | PDF report | Partial | Current action opens browser print dialog; it is not a dedicated generated/downloadable PDF report and needs layout/filter testing. |
-| 15 | Staff login with individual login ID | Partial | User ID + PIN login and staff provisioning exist; provisioning currently blocks a second active staff member for the same Power House. Confirm/adjust this restriction if multiple staff are required. |
+| 15 | Staff login with individual login ID | Present | User ID + PIN login and Admin provisioning support multiple active staff accounts per Power House; verify login and staff isolation in runtime. |
 | 16 | Staff-wise entry history | Partial | Staff now see their own audit history and can page older house records; Admin sees staff-wise counts. Runtime verification remains. |
 | 17 | Admin dashboard/reporting | Present | Admin dashboard, management forms, report views and operational records are present; end-to-end checks remain. |
 | 18 | Edit history (who changed record and when) | Present | Update/resolve operations write before/after audit entries with actor and timestamp. |
