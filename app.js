@@ -1078,6 +1078,8 @@ const hindiWords = {
   "BSK Login":"बीएसके लॉगिन","User ID":"यूजर आईडी","Login":"लॉगिन",
   "Save offline. It will sync when internet returns.":"ऑफलाइन सेव हुआ। इंटरनेट आने पर अपने आप सिंक होगा.",
   "All Records Excel":"सभी रिकॉर्ड एक्सेल","Load All History":"पूरा इतिहास लोड करें",
+  "Load Older Records":"पुराना इतिहास लोड करें","Loading older records...":"पुराना इतिहास लोड हो रहा है...",
+  "Loading all history...":"पूरा इतिहास लोड हो रहा है...",
   "All Records Loaded":"सभी रिकॉर्ड लोड हो गए","Retry Loading History":"इतिहास फिर से लोड करें",
   "Ongoing Breakdown Alert (24+ hours)":"चालू ब्रेकडाउन अलर्ट (24+ घंटे)",
   "Ongoing Shutdown Alert (24+ hours)":"चालू शटडाउन अलर्ट (24+ घंटे)",
