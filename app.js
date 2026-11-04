@@ -39,7 +39,9 @@ let dashboardData = {
 
 function message(id, text, error = false) {
   if ($(id)) {
-    $(id).textContent = text;
+    const displayText = typeof hindiMode !== "undefined" && hindiMode && typeof hindiWords !== "undefined"
+      ? (hindiWords[text] || text) : text;
+    $(id).textContent = displayText;
     $(id).style.color = error ? "#dc2626" : "#15803d";
   }
 }
@@ -1105,7 +1107,18 @@ const hindiWords = {
   "Repeat Breakdown Report":"दोहराए गए ब्रेकडाउन की रिपोर्ट","Feeder-wise Report":"फीडर-वार रिपोर्ट",
   "Daily Entry Summary":"दैनिक एंट्री सारांश","Monthly Entry Summary":"मासिक एंट्री सारांश",
   "My Entry History":"मेरी एंट्री का इतिहास","Search a feeder to see its current status and history.":"स्थिति और इतिहास देखने के लिए फीडर खोजें।",
-  "None crossed the 24-hour threshold.":"कोई भी 24 घंटे की सीमा पार नहीं हुआ।"
+  "None crossed the 24-hour threshold.":"कोई भी 24 घंटे की सीमा पार नहीं हुआ।",
+  "Signing in...":"लॉगिन हो रहा है...","Loading dashboard...":"डैशबोर्ड लोड हो रहा है...",
+  "Dashboard updated.":"डैशबोर्ड अपडेट हो गया।","Power House created successfully.":"पावर हाउस सफलतापूर्वक बन गया।",
+  "Feeder created successfully.":"फीडर सफलतापूर्वक बन गया।","Staff account created successfully.":"स्टाफ खाता सफलतापूर्वक बन गया।",
+  "Report submitted successfully.":"रिपोर्ट सफलतापूर्वक जमा हो गई।",
+  "Entry saved successfully and visible on dashboard.":"एंट्री सेव हो गई और डैशबोर्ड पर दिख रही है।",
+  "Event resolved successfully.":"घटना सफलतापूर्वक समाप्त हुई।",
+  "Record updated. Edit history saved.":"रिकॉर्ड अपडेट हुआ। बदलाव का इतिहास सेव हो गया।",
+  "Offline: showing last synced records.":"ऑफलाइन: आखिरी सिंक किए गए रिकॉर्ड दिखाए जा रहे हैं।",
+  "Could not load the next history page. Check connection and retry.":"पुराना इतिहास लोड नहीं हुआ। इंटरनेट जाँचकर फिर कोशिश करें।",
+  "Complete backup downloaded.":"पूरा बैकअप डाउनलोड हो गया।",
+  "All available records are loaded.":"सभी उपलब्ध रिकॉर्ड लोड हो गए।"
 };
 const hindiPlaceholders = {
   "Enter User ID":"यूजर आईडी दर्ज करें","Feeder name":"फीडर का नाम",
