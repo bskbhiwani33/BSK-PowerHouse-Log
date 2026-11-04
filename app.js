@@ -497,14 +497,50 @@ function ongoingRecords() {
   ].sort((a,b) => String(a.date).localeCompare(String(b.date)));
 }
 
-async function loadOperationalRecords() {
+let recordPageCursors = null;
+let recordPagesLoaded = 0;
+
+async function loadOperationalRecords(options = {}) {
+  const append = options.append === true;
   try {
-    const result = await recordsRequest("getRecords");
+    const result = await recordsRequest("getRecords", {
+      cursors: append ? (recordPageCursors || {}) : {}
+    });
     const assignedFeeders = operational.feeders || [];
-    operational = Object.fromEntries(recordCollections.concat(["feeder_status","notifications","entry_history"]).map(k => [k, result[k] || []]));
+    const keys = recordCollections.concat(["feeder_status","notifications","entry_history"]);
+
+    if (append) {
+      for (const key of keys) {
+        const existing = operational[key] || [];
+        const incoming = result[key] || [];
+        const byId = new Map(existing.map(item => [item.id, item]));
+        incoming.forEach(item => byId.set(item.id, item));
+        operational[key] = [...byId.values()];
+      }
+    } else {
+      operational = Object.fromEntries(keys.map(k => [k, result[k] || []]));
+      recordPagesLoaded = 0;
+    }
+
     operational.feeders = assignedFeeders;
+    recordPageCursors = result.nextCursors || {};
+    recordPagesLoaded += 1;
+    const hasMore = Object.values(recordPageCursors).some(Boolean);
+    const loadMoreButton = $("loadMoreHistory");
+    if (loadMoreButton) {
+      loadMoreButton.disabled = !hasMore;
+      loadMoreButton.textContent = hasMore
+        ? "Load Older Records (page " + (recordPagesLoaded + 1) + ")"
+        : "All Records Loaded";
+    }
+
     localStorage.setItem(recordsCacheKey(), JSON.stringify(operational));
     renderOperational();
+    if (append && $("adminMessage")) {
+      message("adminMessage", hasMore
+        ? "Older records loaded. More history is available."
+        : "All available records are loaded.");
+    }
   } catch (error) {
     try {
       const cached = JSON.parse(localStorage.getItem(recordsCacheKey()) || "null");
@@ -811,6 +847,14 @@ recordsRequest = async (action, data = {}) => {
 };
 
 $("recordsSearch")?.addEventListener("input", () => { renderRecordHistory(); renderReports(); });
+
+$("loadMoreHistory")?.addEventListener("click", async () => {
+  const button = $("loadMoreHistory");
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  button.textContent = "Loading older records...";
+  await loadOperationalRecords({ append: true });
+});
 
 $("backupRecords")?.addEventListener("click", async () => {
   if (currentProfile?.role !== "admin") {
