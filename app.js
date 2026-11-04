@@ -728,8 +728,7 @@ function renderRecordHistory() {
   renderFeederStatusSearch();
   if ($("staffEntryHistory")) {
     const ownHistory = operational.entry_history
-      .filter(h => h.actorUserId === currentProfile?.userId)
-      .slice(0, 40);
+      .filter(h => h.actorUserId === currentProfile?.userId);
     $("staffEntryHistory").innerHTML = "<h3>My Entry History</h3>" +
       (ownHistory.length ? ownHistory.map(h => {
         const seconds = h.createdAt?.seconds ?? h.createdAt?._seconds;
