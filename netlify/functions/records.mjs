@@ -270,7 +270,7 @@ export default async req => {
           let q = db.collection(name);
           if (houseId) q = q.where("houseId", "==", houseId);
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
-          else q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
+          else if (name !== "feeder_status") q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
           const snap = await q.limit(500).get();
           output[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }));
