@@ -213,17 +213,6 @@ export default async (req) => {
         return response({ error: "User ID already exists" }, 409);
       }
 
-      const existingStaff = await db.collection("users")
-        .where("houseId", "==", houseId)
-        .where("role", "==", "staff")
-        .where("active", "==", true).limit(1).get();
-
-      if (!existingStaff.empty) {
-        return response({
-          error: "This Power House already has an active Staff member"
-        }, 409);
-      }
-
       const pinSalt = crypto.randomBytes(16).toString("hex");
       const pinHash = crypto.scryptSync(pin, pinSalt, 64).toString("hex");
       const ref = db.collection("users").doc();
