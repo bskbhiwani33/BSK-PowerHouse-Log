@@ -38,11 +38,17 @@ let dashboardData = {
 };
 
 function message(id, text, error = false) {
-  if ($(id)) {
-    const displayText = typeof hindiMode !== "undefined" && hindiMode && typeof hindiWords !== "undefined"
-      ? (hindiWords[text] || text) : text;
-    $(id).textContent = displayText;
-    $(id).style.color = error ? "#dc2626" : "#15803d";
+  const target = $(id);
+  if (target) {
+    target.textContent = text;
+    const textNode = target.firstChild;
+    if (textNode) {
+      textNode.__bskEnglish = text;
+      if (typeof hindiMode !== "undefined" && hindiMode && typeof hindiWords !== "undefined" && hindiWords[text]) {
+        textNode.nodeValue = hindiWords[text];
+      }
+    }
+    target.style.color = error ? "#dc2626" : "#15803d";
   }
 }
 
