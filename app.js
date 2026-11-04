@@ -1174,6 +1174,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
 }
 
 $("downloadDailyReports")?.addEventListener("click", () => {
+  if (!requireCompleteHistoryForExport()) return;
   let reports = getFilteredReports();
   if (!reports.length) { alert("No daily reports available for this filter."); return; }
   const columns = ["Report Date","Power House","Feeder","Breaker Status","Event Type","Fault Details","Duration","Restoration Time","Remarks","Staff User ID"];
