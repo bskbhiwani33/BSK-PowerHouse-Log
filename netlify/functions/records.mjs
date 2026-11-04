@@ -272,7 +272,15 @@ export default async req => {
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
           else if (name !== "feeder_status") q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
           const snap = await q.limit(500).get();
-          output[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const docs = new Map(snap.docs.map(d => [d.id, d]));
+          // Keep every ongoing outage visible even when older than the latest 500 records.
+          if (name === "breakdowns" || name === "shutdowns") {
+            const ongoing = await db.collection(name).where("status", "==", "ongoing").get();
+            ongoing.docs.forEach(d => {
+              if (!houseId || d.data().houseId === houseId) docs.set(d.id, d);
+            });
+          }
+          output[name] = [...docs.values()].map(d => ({ id: d.id, ...d.data() }));
         }));
         return json({ success: true, ...output });
       }
