@@ -546,7 +546,9 @@ async function loadOperationalRecords(options = {}) {
       const cached = JSON.parse(localStorage.getItem(recordsCacheKey()) || "null");
       if (cached) { operational = cached; renderOperational(); }
     } catch {}
-    if ($("adminMessage")) message("adminMessage", "Offline: showing last synced records.", true);
+    const button = $("loadMoreHistory");
+    if (button) { button.disabled = false; button.textContent = "Retry Loading History"; }
+    if ($("adminMessage")) message("adminMessage", "Could not load the next history page. Check connection and retry.", true);
   }
 }
 
@@ -776,7 +778,7 @@ submitOperational("consumptionForm", "createConsumption", () => ({
   industrial:$("industrial").value, independent:$("independent").value
 }), "consumptionMessage");
 
-$("refreshRecords")?.addEventListener("click", loadOperationalRecords);
+$("refreshRecords")?.addEventListener("click", refreshOperationalRecordsPreservingHistory);
 ["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); }));
 
 function downloadExcelXml(kind) {
