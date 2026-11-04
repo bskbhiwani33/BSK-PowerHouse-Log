@@ -135,7 +135,8 @@ async function updateRecord(db, actor, body) {
   if(input[dateKey]!==undefined){if(!validDate(input[dateKey]))throw Object.assign(new Error("Invalid date"),{status:400});next[dateKey]=input[dateKey];}
   if(name==="breakdowns"||name==="shutdowns"){
     if(input.startTime!==undefined){if(!validTime(input.startTime))throw Object.assign(new Error("Invalid start time"),{status:400});next.startTime=input.startTime;}
-    if(input.endTime!==undefined){if(input.endTime&&!validTime(input.endTime))throw Object.assign(new Error("Invalid end time"),{status:400});next.endTime=input.endTime||null;}
+    // Closing/reopening outages must use the dedicated resolve workflow so feeder_status and audit history stay consistent.
+    if(input.endTime!==undefined)throw Object.assign(new Error("End time ko Resolve Breakdown/Shutdown action se hi badlein"),{status:400});
     if(input.reason!==undefined){if(!validText(input.reason,1000))throw Object.assign(new Error("Reason required"),{status:400});next.reason=clean(input.reason);}
   } else if(name==="trippings"){
     for(const k of ["trippingCount","feederCount"])if(input[k]!==undefined){const n=Number(input[k]);if(!Number.isInteger(n)||n<0||n>10000)throw Object.assign(new Error("Invalid count"),{status:400});next[k]=n;}
