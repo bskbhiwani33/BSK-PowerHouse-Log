@@ -275,14 +275,28 @@ export default async req => {
         const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
         const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports", "feeder_status", "notifications", "entry_history"];
         const output = {};
+        const pageSize = 500;
+        const nextCursors = {};
         await Promise.all(names.map(async name => {
           let q = db.collection(name);
           if (houseId) q = q.where("houseId", "==", houseId);
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
           else if (name !== "feeder_status") q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
-          const snap = await q.limit(500).get();
+          else q = q.orderBy(admin.firestore.FieldPath.documentId());
+
+          const cursor = body.cursors && typeof body.cursors[name] === "string"
+            ? body.cursors[name] : "";
+          if (cursor) {
+            const cursorSnap = await db.collection(name).doc(cursor).get();
+            if (cursorSnap.exists) q = q.startAfter(cursorSnap);
+          }
+
+          const snap = await q.limit(pageSize).get();
+          nextCursors[name] = snap.size === pageSize
+            ? snap.docs[snap.docs.length - 1].id : null;
+
           const docs = new Map(snap.docs.map(d => [d.id, d]));
-          // Keep every ongoing outage visible even when older than the latest 500 records.
+          // Keep every ongoing outage visible even when it falls on an older page.
           if (name === "breakdowns" || name === "shutdowns") {
             const ongoing = await db.collection(name).where("status", "==", "ongoing").get();
             ongoing.docs.forEach(d => {
@@ -291,7 +305,7 @@ export default async req => {
           }
           output[name] = [...docs.values()].map(d => ({ id: d.id, ...d.data() }));
         }));
-        return json({ success: true, ...output });
+        return json({ success: true, ...output, nextCursors });
       }
       case "markNotificationRead": {
         if (!validText(body.id, 128)) return json({ error: "Notification ID required" }, 400);
