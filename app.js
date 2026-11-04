@@ -137,6 +137,7 @@ $("loginForm")?.addEventListener("submit", async event => {
     await loadOperationalRecords();
     setOperationalDates();
     await syncOutbox();
+    renderOfflineQueueStatus();
 
     if (currentProfile.role === "admin") {
       await refreshDashboard();
