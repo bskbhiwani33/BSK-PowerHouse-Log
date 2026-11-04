@@ -68,7 +68,10 @@ async function createOutage(db, actor, body, type) {
   };
   return db.runTransaction(async tx => {
     const [duplicate, feederStatus] = await Promise.all([tx.get(ref), tx.get(statusRef)]);
-    if (duplicate.exists) return { id: ref.id, status: duplicate.data().status, duplicate: true };
+    if (duplicate.exists) {
+      if (duplicate.data().houseId !== feeder.houseId) throw Object.assign(new Error("Entry ID already used"), { status: 409 });
+      return { id: ref.id, status: duplicate.data().status, duplicate: true };
+    }
     if (!body.endTime && feederStatus.exists && feederStatus.data().status !== "Running") {
       throw Object.assign(new Error("Is feeder par pehle se Breakdown ya Shutdown ongoing hai"), { status: 409 });
     }
@@ -181,7 +184,10 @@ async function createDailyReport(db, actor, body) {
   const notificationRef = db.collection("notifications").doc();
   return db.runTransaction(async tx => {
     const duplicate = await tx.get(ref);
-    if (duplicate.exists) return { id: ref.id, duplicate: true };
+    if (duplicate.exists) {
+      if (duplicate.data().houseId !== feeder.houseId) throw Object.assign(new Error("Entry ID already used"), { status: 409 });
+      return { id: ref.id, duplicate: true };
+    }
     tx.set(ref, data);
     tx.set(historyRef, { recordCollection:"daily_reports", recordId:ref.id, houseId:feeder.houseId, action:"created", before:null, after:{...data,createdAt:null}, actorUid:actor.uid, actorUserId:actor.userId, actorRole:actor.role, createdAt:admin.firestore.FieldValue.serverTimestamp() });
     tx.set(notificationRef, { houseId:feeder.houseId, type:"new_entry", title:"Daily feeder report", message:feeder.feederName+" · "+body.reportDate, recordCollection:"daily_reports", recordId:ref.id, read:false, createdAt:admin.firestore.FieldValue.serverTimestamp() });
@@ -221,7 +227,10 @@ async function createSimpleRecord(db, actor, body, collectionName) {
   const note = db.collection("notifications").doc();
   return db.runTransaction(async tx => {
     const duplicate = await tx.get(ref);
-    if (duplicate.exists) return { id: ref.id, duplicate: true, total: duplicate.data().total };
+    if (duplicate.exists) {
+      if (duplicate.data().houseId !== actor.houseId) throw Object.assign(new Error("Entry ID already used"), { status: 409 });
+      return { id: ref.id, duplicate: true, total: duplicate.data().total };
+    }
     tx.set(ref, saved);
     tx.set(hist, { recordCollection: collectionName, recordId: ref.id, houseId: actor.houseId, action: "created", before: null, after: { ...saved, createdAt: null, updatedAt: null }, actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role, createdAt: admin.firestore.FieldValue.serverTimestamp() });
     tx.set(note, { houseId: actor.houseId, type: "new_entry", title: collectionName === "trippings" ? "Tripping entry" : "Consumption entry", message: data.date, recordCollection: collectionName, recordId: ref.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp() });
