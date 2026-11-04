@@ -951,9 +951,14 @@ function renderAlertsAndCharts() {
     const start = new Date(x.date+"T"+x.startTime+":00+05:30").getTime();
     return Number.isFinite(start) && Date.now()-start >= 24*60*60*1000;
   });
-  if ($("longRunningAlerts")) $("longRunningAlerts").innerHTML = long.length
-    ? "<h3>Long-running alert (24+ hours)</h3>"+long.map(x=>`<div class="alert-warning">${safe(x.kind)} · ${safe(x.feederName)} · ${safe(x.date)} ${safe(x.startTime)}</div>`).join("")
-    : "<p class='muted'>No outage has crossed the 24-hour alert threshold.</p>";
+  const longBreakdowns = long.filter(x=>x.kind==="Breakdown");
+  const longShutdowns = long.filter(x=>x.kind==="Shutdown");
+  const alertRows = items => items.length
+    ? items.map(x=>`<div class="alert-warning">${safe(x.feederName)} · ${safe(x.date)} ${safe(x.startTime)}</div>`).join("")
+    : "<p class='muted'>None crossed the 24-hour threshold.</p>";
+  if ($("longRunningAlerts")) $("longRunningAlerts").innerHTML =
+    "<h3>Ongoing Breakdown Alert (24+ hours)</h3>"+alertRows(longBreakdowns)+
+    "<h3>Ongoing Shutdown Alert (24+ hours)</h3>"+alertRows(longShutdowns);
   const counts = [
     {label:"Breakdown",value:operational.breakdowns.length},
     {label:"Shutdown",value:operational.shutdowns.length},
