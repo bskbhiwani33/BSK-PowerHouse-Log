@@ -31,7 +31,7 @@ Status meanings:
 | 19 | Staff cannot delete old records | Present | No staff delete UI/API action is exposed; Firestore direct writes are denied. Verify all routes remain protected. |
 | 20 | Ongoing Breakdown alert | Partial | Separate Breakdown long-running alert section now appears at 24+ hours; no push/background notification delivery. |
 | 21 | Ongoing Shutdown alert | Partial | Separate Shutdown long-running alert section now appears at 24+ hours; no push/background notification delivery. |
-| 22 | New entry notification to Admin | Partial | New-entry notifications are saved transactionally and shown with unread count in Admin dashboard; no push/background delivery. |
+| 22 | New entry notification to Admin | Partial | New-entry notifications are saved transactionally and shown with unread count in Admin dashboard; only Admin can mark them read. No push/background delivery. |
 | 23 | Pending Entry Alert = unread notifications, not approval queue | Present | Unread notification count and Mark Read action exist; no approval/reject queue is present. |
 | 24 | Hindi + English toggle | Partial | Added translations for login guidance, report instructions, select prompts, Power House management text and empty states. Less-common validation/server messages and full device coverage still need testing. |
 | 25 | Dark Mode | Present | Theme toggle and local preference persistence exist; visual coverage needs device testing. |
