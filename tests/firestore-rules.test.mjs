@@ -70,7 +70,11 @@ try {
     await assertFails(setDoc(doc(adminDb, collection, "admin-write"), { houseId: "house-1" }));
   }
   await assertFails(getDoc(doc(staffDb, "users", "staff-1")));
+  await assertFails(getDoc(doc(adminDb, "users", "staff-1")));
   await assertFails(getDoc(doc(staffDb, "edit_requests", "legacy-1")));
+  await assertFails(getDoc(doc(adminDb, "edit_requests", "legacy-1")));
+  await assertFails(getDoc(doc(anonDb, "powerhouses", "house-1")));
+  await assertFails(setDoc(doc(anonDb, "powerhouses", "anonymous-house"), { name: "No Access" }));
   await assertSucceeds(getDoc(doc(otherStaffDb, "daily_reports", "report-2")));
   await assertSucceeds(getDoc(doc(adminDb, "daily_reports", "report-2")));
   await assertFails(setDoc(doc(adminDb, "daily_reports", "report-2"), { houseId: "house-2", changed: true }));
