@@ -1102,11 +1102,11 @@ $("backupRecords")?.addEventListener("click", async () => {
       do {
         const page = await recordsRequest("exportBackupPage", { collection, cursor });
         if (!page?.success || !Array.isArray(page.rows)) {
-          throw new Error("Backup page was incomplete for " + collection + ". Please retry.");
+          throw new Error("Backup page was incomplete. Please retry.");
         }
         rows.push(...page.rows);
         const next = page.nextCursor || null;
-        if (next && seenCursors.has(next)) throw new Error("Backup pagination stopped unexpectedly for " + collection);
+        if (next && seenCursors.has(next)) throw new Error("Backup pagination stopped unexpectedly. Please restart the backup.");
         if (next) seenCursors.add(next);
         cursor = next;
       } while (cursor);
