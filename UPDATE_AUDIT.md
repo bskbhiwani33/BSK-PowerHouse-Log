@@ -33,7 +33,7 @@ Status meanings:
 | 21 | Ongoing Shutdown alert | Partial | Separate Shutdown long-running alert section now appears at 24+ hours; no push/background notification delivery. |
 | 22 | New entry notification to Admin | Partial | New-entry notifications are saved transactionally and shown with unread count in Admin dashboard; no push/background delivery. |
 | 23 | Pending Entry Alert = unread notifications, not approval queue | Present | Unread notification count and Mark Read action exist; no approval/reject queue is present. |
-| 24 | Hindi + English toggle | Partial | New report/history controls and common live status messages are translated; less-common validation/server messages still need coverage. |
+| 24 | Hindi + English toggle | Partial | Added translations for login guidance, report instructions, select prompts, Power House management text and empty states. Less-common validation/server messages and full device coverage still need testing. |
 | 25 | Dark Mode | Present | Theme toggle and local preference persistence exist; visual coverage needs device testing. |
 | 26 | Search by Feeder/date | Partial | Feeder-name search and date range filters exist in separate views; consistent combined search across all datasets is incomplete. |
 | 27 | Dashboard charts | Partial | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
