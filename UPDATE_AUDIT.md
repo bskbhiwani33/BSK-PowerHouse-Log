@@ -15,7 +15,7 @@ Status meanings:
 | 3 | Breakdown/Shutdown entry with feeder, date, start, optional end, reason | Present | Separate forms and resolve workflow exist; verify overnight duration and simultaneous outage constraints. |
 | 4 | Five Power House consumption readings, automatic total, history and Excel | Present | Five fields, client/server total calculation, history list and Consumption Excel exist; verify units/rounding and larger datasets. |
 | 5 | Feeder status Running/Breakdown/Shutdown | Present | Canonical `feeder_status` records are written on ongoing outage and reset on resolution. |
-| 6 | Feeder history | Partial | Feeder search now applies the date range and displays all currently loaded history; use Load All History to retrieve older pages. Runtime verification remains. |
+| 6 | Feeder history | Partial | Feeder search now applies the date range and displays all currently loaded history; use Load All History to retrieve older pages. Backend now rejects malformed or expired pagination cursors rather than silently restarting from the first page. Runtime verification remains. |
 | 7 | Automatic Breakdown duration | Present | Duration is calculated from start to end/current time for display; verify date/time edge cases. |
 | 8 | Repeat-Breakdown report | Partial | Repeat counts are grouped by feeder ID and filtered by date/search; complete historical counts require loading all pages first. |
 | 9 | Feeder-wise report | Partial | A dedicated feeder-wise breakdown/shutdown count summary is present; it reflects loaded records until all history pages are loaded. |
