@@ -159,3 +159,4 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 - The resolve form now updates the just-resolved event in the local history before refreshing, so the event does not disappear from the visible older-page cache while the backend's active-outage reconciliation removes it from ongoing counts.
 - The locally resolved outage state is also written to the account-scoped records cache before the refresh, so a transient read failure does not restore the old ongoing state from stale cache.
 - If the newest-page refresh fails, the in-memory history is restored instead of replacing it with a possibly older/incomplete local cache.
+- When another Staff account resolves an older outage, the latest audit page is used to update the cached historical event to its resolved state where available, instead of simply dropping it from the old-page cache.
