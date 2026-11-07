@@ -22,6 +22,12 @@ try {
     await setDoc(doc(db, "daily_reports", "report-1"), { houseId: "house-1" });
     await setDoc(doc(db, "daily_reports", "report-2"), { houseId: "house-2" });
     await setDoc(doc(db, "breakdowns", "outage-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "trippings", "tripping-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "consumption_readings", "consumption-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "feeder_status", "feeder-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "entry_history", "history-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "notifications", "notification-1"), { houseId: "house-1" });
+    await setDoc(doc(db, "login_attempt_limits", "attempt-1"), { attempts: 1 });
     await setDoc(doc(db, "users", "staff-1"), { role: "staff" });
     await setDoc(doc(db, "edit_requests", "legacy-1"), { houseId: "house-1" });
   });
@@ -49,6 +55,20 @@ try {
   await assertFails(setDoc(doc(staffDb, "daily_reports", "report-1"), { houseId: "house-1", changed: true }));
   await assertFails(deleteDoc(doc(staffDb, "daily_reports", "report-1")));
   await assertFails(getDoc(doc(staffDb, "breakdowns", "outage-1")));
+  // Operational collections are backend-only, even for authenticated Staff/Admin.
+  for (const [collection, id] of [
+    ["trippings", "tripping-1"],
+    ["consumption_readings", "consumption-1"],
+    ["feeder_status", "feeder-1"],
+    ["entry_history", "history-1"],
+    ["notifications", "notification-1"],
+    ["login_attempt_limits", "attempt-1"]
+  ]) {
+    await assertFails(getDoc(doc(staffDb, collection, id)));
+    await assertFails(setDoc(doc(staffDb, collection, "staff-write"), { houseId: "house-1" }));
+    await assertFails(getDoc(doc(adminDb, collection, id)));
+    await assertFails(setDoc(doc(adminDb, collection, "admin-write"), { houseId: "house-1" }));
+  }
   await assertFails(getDoc(doc(staffDb, "users", "staff-1")));
   await assertFails(getDoc(doc(staffDb, "edit_requests", "legacy-1")));
   await assertSucceeds(getDoc(doc(otherStaffDb, "daily_reports", "report-2")));
