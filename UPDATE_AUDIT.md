@@ -90,3 +90,9 @@ Status meanings:
 - Limited the cross-collection duplicate-outage transaction checks to records whose status is `ongoing`, rather than reading every historical Breakdown and Shutdown for the feeder on every new outage entry.
 - Added staged composite indexes for feederId + status on both outage collections. The query still checks both collections in the same transaction; no live index publication has occurred.
 - CI and emulator checks are being rerun against this latest staged change. Real Firebase index readiness remains a release prerequisite.
+
+
+## Stale feeder-status recovery
+- Reviewed the outage creation transaction and found that a stale `feeder_status` document could reject a new outage even when both Breakdown and Shutdown collections contained no ongoing event for that feeder.
+- The transaction now treats active outage records in both collections as the source of truth for duplicate prevention; when none exists, the new outage transaction writes the current status and replaces the stale status document.
+- This avoids a false permanent block while retaining the cross-collection transaction check. CI is rerunning; live Firebase testing and index publication remain pending.
