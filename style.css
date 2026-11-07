@@ -16,3 +16,13 @@ body.dark .secondary{background:#526477}
 .alert-warning{border-left:4px solid #d97706;padding:8px 12px;margin:8px 0;background:#fff7ed;color:#7c2d12}
 body.dark .alert-warning{background:#422d19;color:#ffdfb2}
 @media(max-width:520px){.topbar{padding:12px 4%;gap:8px}.topbar>div:nth-child(2){flex:1}.wrap{margin:18px auto}.card{padding:18px}}
+
+/* Accessibility and responsive interaction states */
+:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+button:disabled{opacity:.58;cursor:not-allowed}
+input:disabled,select:disabled,textarea:disabled{opacity:.7;cursor:not-allowed}
+button,.secondary{transition:background-color .15s ease,opacity .15s ease}
+button:not(:disabled):hover{filter:brightness(1.06)}
+.card{min-width:0}
+#recordsInsights,#adminRecordsList,#staffEntryHistory,#notificationList{overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
