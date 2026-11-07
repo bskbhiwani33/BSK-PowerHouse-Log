@@ -84,3 +84,9 @@ Status meanings:
 - The records API now applies the authenticated Staff UID as a Firestore query filter before pagination and rejects cursors belonging to another Staff account.
 - Added a staged composite index for houseId + actorUid + createdAt descending. This index is committed only to the preparation branch and is not published to Firebase yet.
 - Runtime validation of the new composite query/index remains part of the release checklist; CI will verify syntax, bundles and Firestore rules, but does not publish the index.
+
+
+## Active-outage transaction query optimization
+- Limited the cross-collection duplicate-outage transaction checks to records whose status is `ongoing`, rather than reading every historical Breakdown and Shutdown for the feeder on every new outage entry.
+- Added staged composite indexes for feederId + status on both outage collections. The query still checks both collections in the same transaction; no live index publication has occurred.
+- CI and emulator checks are being rerun against this latest staged change. Real Firebase index readiness remains a release prerequisite.
