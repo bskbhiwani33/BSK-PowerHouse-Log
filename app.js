@@ -126,6 +126,7 @@ $("loginForm")?.addEventListener("submit", async event => {
 
     await signInWithCustomToken(auth, result.token);
     currentProfile = result.profile;
+    resetOperationalSessionState();
     localStorage.setItem("bsk-profile", JSON.stringify(currentProfile));
 
     $("loginCard").classList.add("hidden");
@@ -170,6 +171,7 @@ $("loginForm")?.addEventListener("submit", async event => {
 $("logoutBtn")?.addEventListener("click", async () => {
   await signOut(auth);
   currentProfile = null;
+  resetOperationalSessionState();
   localStorage.removeItem("bsk-profile");
 
   $("appPanel").classList.add("hidden");
@@ -472,7 +474,13 @@ setToday();
 
 
 // ---------------- Operational records (direct save; no approval workflow) ----------------
-let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [] };
+let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [], feeders: [] };
+function resetOperationalSessionState() {
+  operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [], feeders: [] };
+  recordPageCursors = null;
+  recordPagesLoaded = 0;
+  historyLoadInProgress = false;
+}
 const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports"];
 
 async function recordsRequest(action, data = {}) {
@@ -938,7 +946,8 @@ setOperationalDates();
 // Server-side clientEntryId makes retries idempotent.
 function recordsCacheKey() {
   if (currentProfile?.role === "admin") return "bsk-record-cache-admin";
-  return "bsk-record-cache-house-" + (currentProfile?.houseId || "unknown");
+  // Staff accounts in one Power House must not share cached audit history.
+  return "bsk-record-cache-staff-" + (auth.currentUser?.uid || "unknown");
 }
 function outboxKey() { return "bsk-operational-outbox-v1-" + (auth.currentUser?.uid || "signed-out"); }
 function readOutbox() {
