@@ -108,3 +108,9 @@ Status meanings:
 - The records API now applies the Staff/Admin selected Power House filter directly to the ongoing Breakdown and Shutdown queries, rather than fetching ongoing events across every Power House and filtering them afterward.
 - Added staged houseId + status composite indexes for both outage collections. This narrows backend reads while keeping ongoing feeders visible on every history page.
 - Indexes remain un-published until the coordinated Firebase release; CI checks and emulator validation are running.
+
+
+## Expanded Firestore rules regression coverage
+- Added emulator assertions that authenticated Staff and Admin cannot directly read or write backend-only `trippings`, `consumption_readings`, `feeder_status`, `entry_history`, `notifications`, or `login_attempt_limits` documents.
+- This complements existing house-scope checks for Power Houses, feeders and daily reports, and verifies that legacy `edit_requests` remains inaccessible.
+- Latest CI run will validate the expanded emulator suite; no rules were published to Firebase.
