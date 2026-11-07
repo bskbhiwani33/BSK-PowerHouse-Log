@@ -18,6 +18,10 @@ function response(data, status = 200) {
   return Response.json(data, { status });
 }
 
+function validDocId(value) {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+}
+
 function validName(value) {
   return typeof value === "string" &&
     value.trim().length >= 2 &&
@@ -149,7 +153,7 @@ export default async (req) => {
     if (body.action === "createFeeder") {
       const { houseId } = body;
 
-      if (typeof houseId !== "string" || !houseId) {
+      if (!validDocId(houseId)) {
         return response({ error: "Select a Power House" }, 400);
       }
 
@@ -196,7 +200,7 @@ export default async (req) => {
           !/^[A-Za-z0-9_-]{3,40}$/.test(userId) ||
           typeof pin !== "string" ||
           !/^[0-9]{4}$/.test(pin) ||
-          typeof houseId !== "string" || !houseId) {
+          !validDocId(houseId)) {
         return response({ error: "Invalid Staff details" }, 400);
       }
 
