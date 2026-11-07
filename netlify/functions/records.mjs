@@ -287,8 +287,14 @@ export default async req => {
           const cursor = body.cursors && typeof body.cursors[name] === "string"
             ? body.cursors[name] : "";
           if (cursor) {
+            if (cursor.length > 1500 || cursor.includes("/")) {
+              throw Object.assign(new Error("Invalid history cursor"), { status: 400 });
+            }
             const cursorSnap = await db.collection(name).doc(cursor).get();
-            if (cursorSnap.exists) q = q.startAfter(cursorSnap);
+            if (!cursorSnap.exists) {
+              throw Object.assign(new Error("History cursor expired. Refresh records and try again."), { status: 409 });
+            }
+            q = q.startAfter(cursorSnap);
           }
 
           const snap = await q.limit(pageSize).get();
