@@ -25,7 +25,7 @@ Status meanings:
 | 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. |
 | 14 | PDF report | Partial | Print-ready report opens in a separate window so the user can choose Save as PDF; test browser/WebView print support and filtered layout. |
 | 15 | Staff login with individual login ID | Present | User ID + PIN login and Admin provisioning support multiple active staff accounts per Power House; verify login and staff isolation in runtime. |
-| 16 | Staff-wise entry history | Partial | Staff now see their own audit history and can page older house records; Admin sees staff-wise counts. Daily Feeder Report submission now refreshes operational records immediately so the saved entry appears without waiting for the 60-second polling cycle. Runtime verification remains. |
+| 16 | Staff-wise entry history | Partial | Staff API responses now include only the signed-in Staff member's own audit events and omit the Admin notification feed; Admin retains full house-level history and notifications. Staff can page older personal history. Daily Feeder Report submission refreshes operational records immediately. Runtime verification remains. |
 | 17 | Admin dashboard/reporting | Present | Admin dashboard, management forms, report views and operational records are present; end-to-end checks remain. |
 | 18 | Edit history (who changed record and when) | Present | Update/resolve operations write before/after audit entries with actor and timestamp. |
 | 19 | Staff cannot delete old records | Present | No staff delete UI/API action is exposed; Firestore direct writes are denied. Verify all routes remain protected. |
