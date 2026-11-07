@@ -278,6 +278,14 @@ export default async req => {
         const pageSize = 500;
         const nextCursors = {};
         await Promise.all(names.map(async name => {
+          // Staff only need their own audit trail. Admin receives the full
+          // house-level history and notifications; do not expose coworkers'
+          // audit metadata or admin notification feed to Staff clients.
+          if (actor.role === "staff" && name === "notifications") {
+            output[name] = [];
+            nextCursors[name] = null;
+            return;
+          }
           let q = db.collection(name);
           if (houseId) q = q.where("houseId", "==", houseId);
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
@@ -309,7 +317,9 @@ export default async req => {
               if (!houseId || d.data().houseId === houseId) docs.set(d.id, d);
             });
           }
-          output[name] = [...docs.values()].map(d => ({ id: d.id, ...d.data() }));
+          output[name] = [...docs.values()]
+            .filter(d => actor.role !== "staff" || name !== "entry_history" || d.data().actorUid === actor.uid)
+            .map(d => ({ id: d.id, ...d.data() }));
         }));
         return json({ success: true, ...output, nextCursors });
       }
