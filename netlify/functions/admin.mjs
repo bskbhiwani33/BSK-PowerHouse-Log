@@ -18,6 +18,10 @@ function response(data, status = 200) {
   return Response.json(data, { status });
 }
 
+function validDocId(value) {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+}
+
 function validName(value) {
   return typeof value === "string" &&
     value.trim().length >= 2 &&
@@ -57,15 +61,13 @@ export default async (req) => {
     const body = await req.json();
 
     if (body.action === "getDashboardData") {
-      const [housesSnap, feedersSnap, usersSnap, reportsSnap, requestsSnap] =
+      const [housesSnap, feedersSnap, usersSnap, reportsSnap] =
         await Promise.all([
           db.collection("powerhouses").get(),
           db.collection("feeders").get(),
           db.collection("users").get(),
           db.collection("daily_reports")
-            .orderBy("reportDate", "desc").limit(300).get(),
-          db.collection("edit_requests")
-            .orderBy("createdAt", "desc").limit(200).get()
+            .orderBy("reportDate", "desc").limit(500).get()
         ]);
 
       const houses = housesSnap.docs.map(doc => ({
@@ -106,23 +108,17 @@ export default async (req) => {
           restorationTime: d.restorationTime || "",
           remarks: d.remarks || "",
           submittedBy: d.submittedBy || "",
+          createdByUserId: d.createdByUserId || "",
           createdAt: cleanDate(d.createdAt)
         };
       });
-
-      const editRequests = requestsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: cleanDate(doc.data().createdAt)
-      }));
 
       return response({
         success: true,
         houses,
         feeders,
         users,
-        reports,
-        editRequests
+        reports
       });
     }
 
@@ -157,7 +153,7 @@ export default async (req) => {
     if (body.action === "createFeeder") {
       const { houseId } = body;
 
-      if (typeof houseId !== "string" || !houseId) {
+      if (!validDocId(houseId)) {
         return response({ error: "Select a Power House" }, 400);
       }
 
@@ -204,7 +200,7 @@ export default async (req) => {
           !/^[A-Za-z0-9_-]{3,40}$/.test(userId) ||
           typeof pin !== "string" ||
           !/^[0-9]{4}$/.test(pin) ||
-          typeof houseId !== "string" || !houseId) {
+          !validDocId(houseId)) {
         return response({ error: "Invalid Staff details" }, 400);
       }
 
@@ -219,17 +215,6 @@ export default async (req) => {
 
       if (!existingUser.empty) {
         return response({ error: "User ID already exists" }, 409);
-      }
-
-      const existingStaff = await db.collection("users")
-        .where("houseId", "==", houseId)
-        .where("role", "==", "staff")
-        .where("active", "==", true).limit(1).get();
-
-      if (!existingStaff.empty) {
-        return response({
-          error: "This Power House already has an active Staff member"
-        }, 409);
       }
 
       const pinSalt = crypto.randomBytes(16).toString("hex");
@@ -259,9 +244,7 @@ export default async (req) => {
   } catch (error) {
     console.error("ADMIN FUNCTION ERROR:", error);
 
-    return response({
-      error: error.message || "Unknown admin service error"
-    }, 500);
+    return response({ error: "Server error. Please try again." }, 500);
   }
 
 };

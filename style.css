@@ -1,1 +1,28 @@
 *{box-sizing:border-box}body{margin:0;background:#f2f5f9;color:#172536;font:16px/1.5 Arial,sans-serif}.topbar{background:#12345a;color:#fff;padding:15px 5%;display:flex;gap:14px;align-items:center}.brand{font-size:22px;font-weight:800;letter-spacing:1px}.wrap{max-width:760px;margin:32px auto;padding:0 16px}.card{background:#fff;border-radius:14px;padding:24px;margin:18px 0;box-shadow:0 4px 18px #10243a12}h1{margin:0 0 8px}h2{margin-top:0}.muted,.tiny{color:#66758a}.tiny{font-size:12px;margin-top:18px}label{display:block;font-weight:700;margin:14px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff}button{margin-top:18px;width:100%;padding:13px;border:0;border-radius:8px;background:#1769aa;color:#fff;font-weight:700;font-size:16px;cursor:pointer}.secondary{width:auto;margin:0;background:#64748b;padding:10px 16px}.message{min-height:22px;color:#b42318}.hidden{display:none!important}.row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}footer{text-align:center;color:#77869a;padding:28px;font-size:13px}@media(min-width:650px){.wrap{margin-top:48px}.card{padding:30px}}
+
+.report-item{padding:12px 0;border-bottom:1px solid #d8e0ea;overflow-wrap:anywhere}
+.topbar{flex-wrap:wrap}
+.topbar .secondary{font-size:13px;padding:8px 12px}
+#adminRecordsList,#staffOngoingList,#adminBreakdownList,#adminShutdownList{overflow-wrap:anywhere}
+body.dark{background:#101923;color:#e5edf6}
+body.dark .card{background:#1b2938;color:#e5edf6;box-shadow:0 4px 18px #0005}
+body.dark input,body.dark select,body.dark textarea{background:#0f1b28;color:#e5edf6;border-color:#526477}
+body.dark .muted,body.dark .tiny{color:#aab8c8}
+body.dark .report-item{border-color:#435366}
+body.dark .secondary{background:#526477}
+#recordsChart .chart-row{display:grid;grid-template-columns:minmax(100px,160px) 1fr 50px;gap:10px;align-items:center;margin:8px 0}
+.chart-track{height:12px;background:#dbe5ef;border-radius:20px;overflow:hidden}
+.chart-fill{height:100%;background:#1769aa}
+.alert-warning{border-left:4px solid #d97706;padding:8px 12px;margin:8px 0;background:#fff7ed;color:#7c2d12}
+body.dark .alert-warning{background:#422d19;color:#ffdfb2}
+@media(max-width:520px){.topbar{padding:12px 4%;gap:8px}.topbar>div:nth-child(2){flex:1}.wrap{margin:18px auto}.card{padding:18px}}
+
+/* Accessibility and responsive interaction states */
+:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+button:disabled{opacity:.58;cursor:not-allowed}
+input:disabled,select:disabled,textarea:disabled{opacity:.7;cursor:not-allowed}
+button,.secondary{transition:background-color .15s ease,opacity .15s ease}
+button:not(:disabled):hover{filter:brightness(1.06)}
+.card{min-width:0}
+#recordsInsights,#adminRecordsList,#staffEntryHistory,#notificationList{overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

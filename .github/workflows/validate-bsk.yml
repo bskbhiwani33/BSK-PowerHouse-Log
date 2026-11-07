@@ -1,0 +1,31 @@
+name: Validate BSK source
+on:
+  push:
+    branches:
+      - bsk-complete-update-prep
+  workflow_dispatch:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript and Firebase config syntax
+        run: |
+          node --check app.js
+          node --check netlify/functions/admin.mjs
+          node --check netlify/functions/login.mjs
+          node --check netlify/functions/records.mjs
+          node --check netlify/functions/create-admin.mjs
+          node --check sw.js
+          node -e "JSON.parse(require('fs').readFileSync('firebase.json')); JSON.parse(require('fs').readFileSync('firestore.indexes.json'));"
+      - name: Install project dependencies
+        run: npm install --ignore-scripts
+      - name: Verify Netlify function bundles
+        run: npx --yes esbuild@0.25.0 netlify/functions/*.mjs --bundle --platform=node --packages=external --outdir=/tmp/bsk-functions
+      - name: Install Firestore rules test dependencies
+        run: npm install --no-save firebase @firebase/rules-unit-testing
+      - name: Test Firestore security rules in emulator
+        run: npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-bsk "node tests/firestore-rules.test.mjs"
