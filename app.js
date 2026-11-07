@@ -1018,11 +1018,11 @@ async function syncOutbox() {
   }
 }
 window.addEventListener("online", syncOutbox);
-document.addEventListener("visibilitychange", () => {
+document.addEventListener("visibilitychange", async () => {
   if (document.hidden || !currentProfile || !navigator.onLine) return;
-  syncOutbox();
-  if (currentProfile.role === "admin") refreshDashboard();
-  else refreshOperationalRecordsPreservingHistory();
+  await syncOutbox();
+  if (currentProfile.role === "admin") await refreshDashboard();
+  else await refreshOperationalRecordsPreservingHistory();
 });
 const originalRecordsRequest = recordsRequest;
 recordsRequest = async (action, data = {}) => {
