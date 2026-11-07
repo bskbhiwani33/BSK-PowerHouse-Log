@@ -1354,7 +1354,8 @@ Object.assign(hindiWords, {
   "Staff:":"स्टाफ:",
   "Trippings:":"ट्रिपिंग:",
   "Feeders:":"फीडर:",
-  "Total:":"कुल:"
+  "Total:":"कुल:",
+  "BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
 });
  
 const hindiPlaceholders = {
