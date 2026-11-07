@@ -89,13 +89,13 @@ Status meanings:
 ## Active-outage transaction query optimization
 - Limited the cross-collection duplicate-outage transaction checks to records whose status is `ongoing`, rather than reading every historical Breakdown and Shutdown for the feeder on every new outage entry.
 - Added staged composite indexes for feederId + status on both outage collections. The query still checks both collections in the same transaction; no live index publication has occurred.
-- CI and emulator checks are being rerun against this latest staged change. Real Firebase index readiness remains a release prerequisite.
+- Latest CI syntax, Netlify bundle and Firestore Rules emulator checks have passed. Real Firebase index readiness remains a release prerequisite.
 
 
 ## Stale feeder-status recovery
 - Reviewed the outage creation transaction and found that a stale `feeder_status` document could reject a new outage even when both Breakdown and Shutdown collections contained no ongoing event for that feeder.
 - The transaction now treats active outage records in both collections as the source of truth for duplicate prevention; when none exists, the new outage transaction writes the current status and replaces the stale status document.
-- This avoids a false permanent block while retaining the cross-collection transaction check. CI is rerunning; live Firebase testing and index publication remain pending.
+- This avoids a false permanent block while retaining the cross-collection transaction check. Latest CI syntax, Netlify bundle and Firestore Rules emulator checks have passed; live Firebase testing and index publication remain pending.
 
 
 ## Service-worker registration review correction
@@ -107,13 +107,13 @@ Status meanings:
 ## House-scoped ongoing-outage page reads
 - The records API now applies the Staff/Admin selected Power House filter directly to the ongoing Breakdown and Shutdown queries, rather than fetching ongoing events across every Power House and filtering them afterward.
 - Added staged houseId + status composite indexes for both outage collections. This narrows backend reads while keeping ongoing feeders visible on every history page.
-- Indexes remain un-published until the coordinated Firebase release; CI checks and emulator validation are running.
+- Indexes remain un-published until the coordinated Firebase release; Latest CI syntax, Netlify bundle and Firestore Rules emulator validation passed; production index readiness remains pending.
 
 
 ## Expanded Firestore rules regression coverage
 - Added emulator assertions that authenticated Staff and Admin cannot directly read or write backend-only `trippings`, `consumption_readings`, `feeder_status`, `entry_history`, `notifications`, or `login_attempt_limits` documents.
 - This complements existing house-scope checks for Power Houses, feeders and daily reports, and verifies that legacy `edit_requests` remains inaccessible.
-- Latest CI run will validate the expanded emulator suite; no rules were published to Firebase.
+- Latest CI run #228 passed the expanded emulator suite; no rules were published to Firebase.
 
 - Further assertions cover Admin access to user/legacy approval records and anonymous denial for Power House reads/writes; these remain denied by client Firestore rules.
 
