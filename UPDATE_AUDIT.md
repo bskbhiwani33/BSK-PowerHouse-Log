@@ -8,6 +8,8 @@ Status meanings:
 - **Partial**: some implementation exists, but the requested feature needs completion or stronger verification.
 - **Not found**: no corresponding implementation was found in the reviewed source.
 
+Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is not a production sign-off; live Firebase/Netlify and Android device checks remain release gates.
+
 | # | Requested update | Source audit status | Notes / remaining work |
 |---|---|---|---|
 | 1 | Dashboard: only ongoing Breakdown/Shutdown counts and feeder names | Present | Live outage dashboard renders ongoing counts and lists; verify role visibility and multiple feeders. |
