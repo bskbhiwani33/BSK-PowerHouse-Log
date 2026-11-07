@@ -96,3 +96,9 @@ Status meanings:
 - Reviewed the outage creation transaction and found that a stale `feeder_status` document could reject a new outage even when both Breakdown and Shutdown collections contained no ongoing event for that feeder.
 - The transaction now treats active outage records in both collections as the source of truth for duplicate prevention; when none exists, the new outage transaction writes the current status and replaces the stale status document.
 - This avoids a false permanent block while retaining the cross-collection transaction check. CI is rerunning; live Firebase testing and index publication remain pending.
+
+
+## Offline shell activation correction
+- Source review found `sw.js` was present but no page registered it, so its shell cache and offline navigation fallback would not activate in normal browser/WebView use.
+- Added guarded service-worker registration from `index.html` on secure contexts. The worker remains network-first for app assets and does not cache Netlify API routes.
+- This enables the existing offline shell/outbox path when the browser supports Service Workers; offline form submission, queued sync, and WebView behavior still require real-device testing.
