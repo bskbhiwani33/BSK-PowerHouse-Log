@@ -305,6 +305,11 @@ export default async req => {
           }
           let q = db.collection(name);
           if (houseId) q = q.where("houseId", "==", houseId);
+          // Apply Staff ownership before pagination so other employees' audit
+          // rows cannot consume pages and hide this Staff member's older history.
+          if (actor.role === "staff" && name === "entry_history") {
+            q = q.where("actorUid", "==", actor.uid);
+          }
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
           else if (name !== "feeder_status") q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
           else q = q.orderBy(admin.firestore.FieldPath.documentId());
@@ -321,6 +326,9 @@ export default async req => {
             }
             if (houseId && cursorSnap.data().houseId !== houseId) {
               throw Object.assign(new Error("History cursor does not belong to this Power House."), { status: 403 });
+            }
+            if (actor.role === "staff" && name === "entry_history" && cursorSnap.data().actorUid !== actor.uid) {
+              throw Object.assign(new Error("History cursor does not belong to this Staff account."), { status: 403 });
             }
             q = q.startAfter(cursorSnap);
           }
