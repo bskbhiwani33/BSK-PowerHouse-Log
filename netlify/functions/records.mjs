@@ -68,12 +68,19 @@ async function createOutage(db, actor, body, type) {
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   };
   return db.runTransaction(async tx => {
-    const [duplicate, feederStatus] = await Promise.all([tx.get(ref), tx.get(statusRef)]);
+    const [duplicate, feederStatus, activeBreakdowns, activeShutdowns] = await Promise.all([
+      tx.get(ref),
+      tx.get(statusRef),
+      tx.get(db.collection("breakdowns").where("feederId", "==", feeder.feederId)),
+      tx.get(db.collection("shutdowns").where("feederId", "==", feeder.feederId))
+    ]);
     if (duplicate.exists) {
       if (duplicate.data().houseId !== feeder.houseId) throw Object.assign(new Error("Entry ID already used"), { status: 409 });
       return { id: ref.id, status: duplicate.data().status, duplicate: true };
     }
-    if (!body.endTime && feederStatus.exists && feederStatus.data().status !== "Running") {
+    const hasActiveOutage = [...activeBreakdowns.docs, ...activeShutdowns.docs]
+      .some(doc => doc.data().status === "ongoing");
+    if (!body.endTime && (hasActiveOutage || (feederStatus.exists && feederStatus.data().status !== "Running"))) {
       throw Object.assign(new Error("Is feeder par pehle se Breakdown ya Shutdown ongoing hai"), { status: 409 });
     }
     tx.set(ref, data);
