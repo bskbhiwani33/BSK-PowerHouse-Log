@@ -890,7 +890,13 @@ $("resolveForm")?.addEventListener("submit", async event => {
   try {
     const [id, kind] = $("resolveRecord").value.split("|");
     if (!id || !kind) throw new Error("Select ongoing event.");
-    await recordsRequest(kind === "Breakdown" ? "resolveBreakdown" : "resolveShutdown", { id, endTime:$("resolveEnd").value });
+    const endTime = $("resolveEnd").value;
+    await recordsRequest(kind === "Breakdown" ? "resolveBreakdown" : "resolveShutdown", { id, endTime });
+    const collection = kind === "Breakdown" ? "breakdowns" : "shutdowns";
+    operational[collection] = (operational[collection] || []).map(item =>
+      item.id === id ? { ...item, endTime, status:"resolved" } : item
+    );
+    renderOperational();
     $("resolveForm").reset();
     await refreshOperationalRecordsPreservingHistory();
     message("resolveMessage", "Event resolved successfully.");
