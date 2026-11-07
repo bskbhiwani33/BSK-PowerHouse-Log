@@ -38,7 +38,7 @@ Status meanings:
 | 26 | Search by Feeder/date | Partial | Feeder-name search and date range filters exist in separate views; consistent combined search across all datasets is incomplete. |
 | 27 | Dashboard charts | Partial | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
 | 28 | Backup system | Partial | Admin can export paginated JSON backup across operational collections; pagination loop guards added. Restore workflow and backup integrity tests remain. PIN hashes/salts are excluded. |
-| 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable IDs, transactional idempotency, guarded single-run sync, queue merging that preserves entries added during sync, online/visibility/periodic retry and storage-quota warning exist; offline reload and device testing remain. |
+| 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable IDs, transactional idempotency, guarded single-run sync, queue merging that preserves entries added during sync, online/visibility/periodic retry and storage-quota warning exist. Operational record-cache quota failures no longer replace fresh server data with stale cached records; offline reload and device testing remain. |
 | 30 | Three separate Excel downloads with date filtering | Present | Separate Breakdown, Shutdown and Consumption Excel exports use From/To date filters and the shared XML 1.0 text sanitizer. |
  
 ## Important project constraints
