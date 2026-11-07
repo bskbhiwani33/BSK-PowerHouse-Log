@@ -71,3 +71,9 @@ Status meanings:
 ## Report search filter refresh
 - The shared feeder/staff search input now refreshes record history, daily reports, feeder status/history, alerts, charts, and report summaries immediately as the user types. Previously, date filters refreshed these views but typing in the shared search field did not consistently refresh them until another render-triggering action.
 - Source-level correction only; browser/device regression testing remains part of final verification.
+
+
+## Staff history and search rendering review
+- Confirmed the Staff "Load Older Records" control is wired to the shared paginated records API and uses the same guarded history-loading lock as Admin pagination.
+- Removed a duplicate `recordsSearch` input listener. The shared search now has one refresh path, avoiding repeated rendering of history, reports, feeder status, alerts and charts for each keystroke.
+- This is source review plus CI syntax/bundle/rules coverage; actual browser/device pagination and offline-sync tests remain outstanding.
