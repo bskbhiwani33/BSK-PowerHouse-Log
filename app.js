@@ -576,6 +576,7 @@ async function loadOperationalRecords(options = {}) {
         ? "Older records loaded. More history is available."
         : "All available records are loaded.");
     }
+    return true;
   } catch (error) {
     try {
       const cached = JSON.parse(localStorage.getItem(recordsCacheKey()) || "null");
@@ -584,6 +585,7 @@ async function loadOperationalRecords(options = {}) {
     const button = $("loadMoreHistory");
     if (button) { button.disabled = false; button.textContent = "Retry Loading History"; }
     if ($("adminMessage")) message("adminMessage", "Could not load the next history page. Check connection and retry.", true);
+    return false;
   }
 }
 
@@ -595,10 +597,12 @@ async function refreshOperationalRecordsPreservingHistory() {
   try {
     // Keep older pages visible during periodic refreshes and dashboard refreshes.
     const pagesToRestore = Math.max(1, recordPagesLoaded || 1);
-    await loadOperationalRecords();
+    const firstPageLoaded = await loadOperationalRecords();
+    if (!firstPageLoaded) return;
     for (let page = 1; page < pagesToRestore; page += 1) {
       if (!Object.values(recordPageCursors || {}).some(Boolean)) break;
-      await loadOperationalRecords({ append: true });
+      const nextPageLoaded = await loadOperationalRecords({ append: true });
+      if (!nextPageLoaded) break;
     }
   } finally {
     historyLoadInProgress = false;
