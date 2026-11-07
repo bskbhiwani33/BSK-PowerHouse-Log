@@ -155,3 +155,5 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 - Older pages remain visible; full-history exports remain blocked until the cursor chain is loaded completely again. This avoids re-reading every historical page on each 60-second Admin poll while preserving completeness safeguards.
 
 - The latest-page merge also reconciles ongoing Breakdown/Shutdown records against the API's complete active-outage set, so an older cached outage that has been resolved is not left incorrectly marked ongoing. Admin edits trigger a one-time full-history reload to refresh older changed records.
+
+- The resolve form now updates the just-resolved event in the local history before refreshing, so the event does not disappear from the visible older-page cache while the backend's active-outage reconciliation removes it from ongoing counts.
