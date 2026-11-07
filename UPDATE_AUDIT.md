@@ -153,3 +153,5 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 ## Lower-read-cost history refresh
 - Changed periodic/dashboard refresh to fetch the newest records page only, merge it with older pages already loaded in memory, and keep the new first-page cursor for later pagination.
 - Older pages remain visible; full-history exports remain blocked until the cursor chain is loaded completely again. This avoids re-reading every historical page on each 60-second Admin poll while preserving completeness safeguards.
+
+- The latest-page merge also reconciles ongoing Breakdown/Shutdown records against the API's complete active-outage set, so an older cached outage that has been resolved is not left incorrectly marked ongoing. Admin edits trigger a one-time full-history reload to refresh older changed records.
