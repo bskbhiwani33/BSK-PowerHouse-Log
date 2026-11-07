@@ -120,8 +120,16 @@ Status meanings:
 
 ## One-shot release order (not executed)
 1. Freeze source changes on this preparation branch and confirm latest CI success.
-2. Publish the staged Firestore Rules and all composite indexes together from this same branch; wait until every required composite index reports READY.
+2. Publish only the staged Firestore composite indexes first; this is additive. Wait until every required index reports READY.
 3. Merge this branch to `main` exactly once to trigger the single Netlify production deployment. Do not make follow-up code commits to `main`.
-4. Smoke-test Admin/Staff login, immediate entry visibility, outage create/resolve, consumption totals, notifications, pagination, Excel/PDF, and offline/reconnect behavior on the live site.
-5. Only after those checks, perform the one final Android APK build from the prepared project and verify it loads the deployed URL.
+4. Smoke-test the new Admin/Staff app and Netlify API while the existing Firestore rules remain in place. The old live `main` app writes daily reports directly, while the new app routes these writes through the audited API.
+5. After confirming the new app is active and users have refreshed/reopened it, publish the restrictive Firestore Rules. Do not publish these rules before the Netlify update, because they deny direct client writes to `daily_reports` and would break the old live app.
+6. Re-test Admin/Staff login, immediate entry visibility, outage create/resolve, consumption totals, notifications, pagination, Excel/PDF, and offline/reconnect behavior.
+7. Only after those checks, perform the one final Android APK build from the prepared project and verify it loads the deployed URL.
 - No step above has been executed; this is a release checklist only.
+
+
+## Live-main compatibility finding
+- The current `main` branch still writes `daily_reports` directly from `app.js`; it does not yet use the staged `records.mjs` API for that action.
+- The staged Firestore Rules deny direct client writes to `daily_reports`. Therefore the rules must be published only after the one Netlify deployment has replaced the old app code and the new app has passed smoke tests.
+- The staged indexes can be published first because adding indexes is non-breaking. This dependency is now reflected in the one-shot release order above.
