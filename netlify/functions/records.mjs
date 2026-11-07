@@ -71,8 +71,8 @@ async function createOutage(db, actor, body, type) {
     const [duplicate, feederStatus, activeBreakdowns, activeShutdowns] = await Promise.all([
       tx.get(ref),
       tx.get(statusRef),
-      tx.get(db.collection("breakdowns").where("feederId", "==", feeder.feederId)),
-      tx.get(db.collection("shutdowns").where("feederId", "==", feeder.feederId))
+      tx.get(db.collection("breakdowns").where("feederId", "==", feeder.feederId).where("status", "==", "ongoing")),
+      tx.get(db.collection("shutdowns").where("feederId", "==", feeder.feederId).where("status", "==", "ongoing"))
     ]);
     if (duplicate.exists) {
       if (duplicate.data().houseId !== feeder.houseId) throw Object.assign(new Error("Entry ID already used"), { status: 409 });
