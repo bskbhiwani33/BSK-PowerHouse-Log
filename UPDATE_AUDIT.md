@@ -56,3 +56,8 @@ Status meanings:
 4. Complete Hindi translation coverage and PDF/export behavior.
 5. Harden and test offline queue and backup/restore.
 6. Run full automated and manual regression checks before release approval.
+
+
+## Feeder status consistency review
+- The feeder status/history search now derives the displayed live state from the ongoing Breakdown and Shutdown records returned by the records API. This avoids a stale `feeder_status` document overriding a currently ongoing outage in the UI. The records API explicitly merges all ongoing outages into each history page, so the status calculation does not depend on loading every historical page.
+- This is a source-level correction; live Firebase/Netlify and Android WebView behavior still requires pre-release testing. No production deployment, Firestore Rules/index publication, or APK build was performed.
