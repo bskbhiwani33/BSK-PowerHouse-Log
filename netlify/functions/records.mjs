@@ -261,7 +261,16 @@ export default async req => {
         if (!allowed.includes(name)) return json({ error: "Invalid backup collection" }, 400);
         const pageSize = 400;
         let q = db.collection(name).orderBy(admin.firestore.FieldPath.documentId()).limit(pageSize);
-        if (validText(body.cursor, 1500)) q = q.startAfter(clean(body.cursor));
+        if (body.cursor !== undefined && body.cursor !== null && body.cursor !== "") {
+          if (!validText(body.cursor, 1500) || body.cursor.includes("/")) {
+            throw Object.assign(new Error("Invalid backup cursor"), { status: 400 });
+          }
+          const cursorSnap = await db.collection(name).doc(body.cursor).get();
+          if (!cursorSnap.exists) {
+            throw Object.assign(new Error("Backup cursor expired. Restart the backup."), { status: 409 });
+          }
+          q = q.startAfter(cursorSnap);
+        }
         const snap = await q.get();
         const rows = snap.docs.map(d => {
           const data = { id: d.id, ...d.data() };
@@ -301,6 +310,9 @@ export default async req => {
             const cursorSnap = await db.collection(name).doc(cursor).get();
             if (!cursorSnap.exists) {
               throw Object.assign(new Error("History cursor expired. Refresh records and try again."), { status: 409 });
+            }
+            if (houseId && cursorSnap.data().houseId !== houseId) {
+              throw Object.assign(new Error("History cursor does not belong to this Power House."), { status: 403 });
             }
             q = q.startAfter(cursorSnap);
           }
