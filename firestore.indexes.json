@@ -175,6 +175,34 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "breakdowns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "feederId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "shutdowns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "feederId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
