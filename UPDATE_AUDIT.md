@@ -46,6 +46,7 @@ Status meanings:
 - Do not deploy to Netlify, publish Firestore Rules, push/merge to `main`, or build APK until final tests and explicit user approval.
 - Do not reintroduce Admin Approval/Reject. Staff entries must save immediately and appear in the dashboard; preserve audit history.
 - Batch changes for a single Netlify deployment and build the Android APK only once after all changes and tests.
+- The hosted app uses a network-first service worker for static assets, excludes Netlify API responses from cache, and increments the shell cache version when release assets change; the Android WebView should continue loading the hosted URL so website releases can appear without rebuilding the APK. Verify on the installed APK before release.
 - Android WebView changes are deferred until the website's 30 updates are completed and tested.
 
 ## Next implementation order
