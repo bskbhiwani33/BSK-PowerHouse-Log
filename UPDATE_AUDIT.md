@@ -14,7 +14,7 @@ Status meanings:
 | 2 | Tripping entry: only number of trippings and number of feeders | Present | Form has exactly the two requested numeric inputs; date is hidden/automatic. |
 | 3 | Breakdown/Shutdown entry with feeder, date, start, optional end, reason | Present | Separate forms and resolve workflow exist; verify overnight duration and simultaneous outage constraints. |
 | 4 | Five Power House consumption readings, automatic total, history and Excel | Present | Five fields, client/server total calculation, history list and Consumption Excel exist; verify units/rounding and larger datasets. |
-| 5 | Feeder status Running/Breakdown/Shutdown | Present | Canonical `feeder_status` records are written on ongoing outage and reset on resolution. |
+| 5 | Feeder status Running/Breakdown/Shutdown | Present | Canonical `feeder_status` records are written on ongoing outage and reset on resolution. Added a houseId + document-ID composite index for Staff pagination of feeder status; index deployment remains deferred until final release. |
 | 6 | Feeder history | Partial | Feeder search now applies the date range and displays all currently loaded history; use Load All History to retrieve older pages. Backend now rejects malformed or expired pagination cursors rather than silently restarting from the first page. Runtime verification remains. |
 | 7 | Automatic Breakdown duration | Present | Duration is calculated from start to end/current time for display; verify date/time edge cases. |
 | 8 | Repeat-Breakdown report | Partial | Repeat counts are grouped by feeder ID and filtered by date/search; complete historical counts require loading all pages first. |
