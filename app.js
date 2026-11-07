@@ -606,15 +606,30 @@ async function refreshOperationalRecordsPreservingHistory() {
   if (historyLoadInProgress) return;
   historyLoadInProgress = true;
   try {
-    // Keep older pages visible during periodic refreshes and dashboard refreshes.
-    const pagesToRestore = Math.max(1, recordPagesLoaded || 1);
+    // Refresh only the newest page, then retain older pages already in memory.
+    // The next cursor belongs to the refreshed first page; Load Older can
+    // continue from there and deduplicate any overlap by document ID.
+    const previous = operational;
     const firstPageLoaded = await loadOperationalRecords();
     if (!firstPageLoaded) return;
-    for (let page = 1; page < pagesToRestore; page += 1) {
-      if (!Object.values(recordPageCursors || {}).some(Boolean)) break;
-      const nextPageLoaded = await loadOperationalRecords({ append: true });
-      if (!nextPageLoaded) break;
+    const keys = recordCollections.concat(["feeder_status", "notifications", "entry_history"]);
+    for (const key of keys) {
+      const byId = new Map((operational[key] || []).map(item => [item.id, item]));
+      (previous[key] || []).forEach(item => {
+        if (!byId.has(item.id)) byId.set(item.id, item);
+      });
+      operational[key] = [...byId.values()];
     }
+    operational.feeders = previous.feeders || operational.feeders || [];
+    // Only the newest page was refreshed from the server. Older cached pages
+    // remain visible but are not re-fetched on every 60-second dashboard poll.
+    recordPagesLoaded = 1;
+    try {
+      localStorage.setItem(recordsCacheKey(), JSON.stringify(operational));
+    } catch (cacheError) {
+      console.warn("BSK history cache could not be refreshed; keeping merged records in memory.", cacheError);
+    }
+    renderOperational();
   } finally {
     historyLoadInProgress = false;
   }
