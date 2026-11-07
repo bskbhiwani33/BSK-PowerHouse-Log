@@ -563,7 +563,13 @@ async function loadOperationalRecords(options = {}) {
       staffLoadMore.textContent = hasMore ? "Load Older Records" : "All Records Loaded";
     }
 
-    localStorage.setItem(recordsCacheKey(), JSON.stringify(operational));
+    // Browser storage can fill up after many history pages. A cache-write
+    // failure must not discard the fresh records already received from server.
+    try {
+      localStorage.setItem(recordsCacheKey(), JSON.stringify(operational));
+    } catch (cacheError) {
+      console.warn("BSK records cache could not be updated; keeping fresh server data in memory.", cacheError);
+    }
     renderOperational();
     if (append && $("adminMessage")) {
       message("adminMessage", hasMore
