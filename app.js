@@ -44,8 +44,11 @@ function message(id, text, error = false) {
     const textNode = target.firstChild;
     if (textNode) {
       textNode.__bskEnglish = text;
-      if (typeof hindiMode !== "undefined" && hindiMode && typeof hindiWords !== "undefined" && hindiWords[text]) {
-        textNode.nodeValue = hindiWords[text];
+      if (typeof hindiMode !== "undefined" && hindiMode && typeof hindiWords !== "undefined") {
+        if (hindiWords[text]) textNode.nodeValue = hindiWords[text];
+        else if (typeof text === "string" && text.startsWith("Backup failed: ")) {
+          textNode.nodeValue = "बैकअप असफल हुआ: " + text.slice("Backup failed: ".length);
+        }
       }
     }
     target.style.color = error ? "#dc2626" : "#15803d";
@@ -963,7 +966,12 @@ function readOutbox() {
 function writeOutbox(items) { localStorage.setItem(outboxKey(), JSON.stringify(items)); renderOfflineQueueStatus(); }
 function renderOfflineQueueStatus() {
   const count=readOutbox().length;
-  if ($("offlineQueueStatus")) $("offlineQueueStatus").textContent = count ? count+" offline entr"+(count===1?"y":"ies")+" waiting to sync." : "";
+  if ($("offlineQueueStatus")) {
+    $("offlineQueueStatus").textContent = !count ? "" :
+      (typeof hindiMode !== "undefined" && hindiMode
+        ? count + " ऑफलाइन एंट्री सिंक होने की प्रतीक्षा में हैं।"
+        : count + " offline entr" + (count===1?"y":"ies") + " waiting to sync.");
+  }
 }
 function newClientEntryId() {
   return crypto.randomUUID ? crypto.randomUUID() : "bsk"+Date.now()+Math.random().toString(36).slice(2);
