@@ -896,6 +896,7 @@ $("resolveForm")?.addEventListener("submit", async event => {
     operational[collection] = (operational[collection] || []).map(item =>
       item.id === id ? { ...item, endTime, status:"resolved" } : item
     );
+    try { localStorage.setItem(recordsCacheKey(), JSON.stringify(operational)); } catch {}
     renderOperational();
     $("resolveForm").reset();
     await refreshOperationalRecordsPreservingHistory();
