@@ -17,7 +17,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 | 3 | Breakdown/Shutdown entry with feeder, date, start, optional end, reason | Present | Separate forms and resolve workflow exist; verify overnight duration and simultaneous outage constraints. |
 | 4 | Five Power House consumption readings, automatic total, history and Excel | Present | Five fields, client/server total calculation, history list and Consumption Excel exist; verify units/rounding and larger datasets. |
 | 5 | Feeder status Running/Breakdown/Shutdown | Present | Canonical `feeder_status` records are written on ongoing outage and reset on resolution. Added a houseId + document-ID composite index for Staff pagination of feeder status; index deployment remains deferred until final release. |
-| 6 | Feeder history | Present | Feeder search now applies the date range and displays all currently loaded history; use Load All History to retrieve older pages. Backend rejects malformed/expired cursors and invalid Firestore document IDs for resolve, edit, notification, feeder selection, Admin house selection and pagination cursor actions; refresh and paging share a lock, and history restoration stops cleanly after a failed page request. Runtime verification remains. |
+| 6 | Feeder history | Present | Feeder search applies date range and displays loaded history; Load All History retrieves older pages. Backend rejects malformed/expired cursors and invalid Firestore document IDs. Refresh and paging share a lock; periodic refresh now updates only the newest page and preserves older pages in memory instead of re-downloading all history. Runtime verification remains. |
 | 7 | Automatic Breakdown duration | Present | Duration is calculated from start to end/current time for display; verify date/time edge cases. |
 | 8 | Repeat-Breakdown report | Present | Repeat counts are grouped by feeder ID and filtered by date/search. The report now warns when only partial history is loaded; complete historical counts require loading all pages first. |
 | 9 | Feeder-wise report | Present | A dedicated feeder-wise breakdown/shutdown count summary is present and warns when older history pages remain unloaded. |
@@ -148,3 +148,8 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 
 ## Foreground dashboard refresh
 - Added an immediate records/dashboard refresh when the app returns to the foreground, while retaining the existing 60-second polling interval and offline/hidden-tab guards. This helps Admin see Staff entries promptly without doubling continuous Firestore read traffic.
+
+
+## Lower-read-cost history refresh
+- Changed periodic/dashboard refresh to fetch the newest records page only, merge it with older pages already loaded in memory, and keep the new first-page cursor for later pagination.
+- Older pages remain visible; full-history exports remain blocked until the cursor chain is loaded completely again. This avoids re-reading every historical page on each 60-second Admin poll while preserving completeness safeguards.
