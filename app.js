@@ -1318,6 +1318,41 @@ const hindiWords = {
   "Invalid Staff details":"स्टाफ का विवरण सही नहीं है।",
   "User ID already exists":"यह यूजर आईडी पहले से मौजूद है।"
 };
+Object.assign(hindiWords, {
+  "Preparing backup...":"बैकअप तैयार हो रहा है...",
+  "No records in selected date range.":"चुनी गई दिनांक सीमा में कोई रिकॉर्ड नहीं है।",
+  "All available history is loaded. Summaries include all records matching the selected filters.":"पूरा उपलब्ध इतिहास लोड है। सारांश में चुने गए फ़िल्टर के सभी रिकॉर्ड शामिल हैं।",
+  "These summaries may be incomplete. Select Load All History above to include older records.":"ये सारांश अधूरे हो सकते हैं। पुराने रिकॉर्ड शामिल करने के लिए ऊपर पूरा इतिहास लोड करें।",
+  "No repeat breakdown found in selected dates.":"चुनी गई तारीखों में दोहराया गया ब्रेकडाउन नहीं मिला।",
+  "No feeder outage records in selected dates.":"चुनी गई तारीखों में इस फीडर का कोई आउटेज रिकॉर्ड नहीं है।",
+  "No daily records.":"कोई दैनिक रिकॉर्ड नहीं है।",
+  "No monthly records.":"कोई मासिक रिकॉर्ड नहीं है।",
+  "No history loaded.":"इतिहास लोड नहीं हुआ।",
+  "No entries found in your history.":"आपके इतिहास में कोई एंट्री नहीं मिली।",
+  "No reports found.":"कोई रिपोर्ट नहीं मिली।",
+  "None ongoing.":"अभी कोई घटना चालू नहीं है।",
+  "Edit Record":"रिकॉर्ड संपादित करें",
+  "Mark read":"पढ़ा हुआ चिन्हित करें",
+  "Read":"पढ़ा गया",
+  "New":"नया",
+  "Breakdown":"ब्रेकडाउन",
+  "Shutdown":"शटडाउन",
+  "Tripping":"ट्रिपिंग",
+  "Consumption":"खपत",
+  "Daily Report":"दैनिक रिपोर्ट",
+  "UNDER MAINTENANCE":"रखरखाव के अधीन",
+  "TRIPPED":"ट्रिप्ड",
+  "ON":"चालू",
+  "OFF":"बंद",
+  "Status:":"स्थिति:",
+  "Saved":"सेव हुआ",
+  "Duration:":"अवधि:",
+  "Staff:":"स्टाफ:",
+  "Trippings:":"ट्रिपिंग:",
+  "Feeders:":"फीडर:",
+  "Total:":"कुल:"
+});
+ 
 const hindiPlaceholders = {
   "Enter User ID":"यूजर आईडी दर्ज करें","Feeder name":"फीडर का नाम",
   "e.g. 45 minutes":"जैसे 45 मिनट","Enter Power House name":"पावर हाउस का नाम दर्ज करें",
