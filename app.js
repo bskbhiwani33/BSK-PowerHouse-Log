@@ -938,7 +938,7 @@ $("downloadPdf")?.addEventListener("click",()=>{
   if (!requireCompleteHistoryForExport()) return;
   const content = ($("recordsInsights")?.innerHTML || "") + ($("recordsChart")?.innerHTML || "") + ($("adminRecordsList")?.innerHTML || "") + ($("reportList")?.innerHTML || "");
   const w=window.open("","_blank");
-  if (!w) { alert("Please allow pop-ups to create PDF."); return; }
+  if (!w) { bskAlert("Please allow pop-ups to create PDF."); return; }
   w.document.write("<html><head><title>BSK Report</title><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{font:14px Arial,sans-serif;padding:24px;color:#172536}h1,h2,h3{break-after:avoid}article,.report-item{border-bottom:1px solid #ccc;padding:10px 0;break-inside:avoid}button{display:none!important}@page{margin:16mm}@media print{body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h1>BSK Power House Report</h1>"+content+"</body></html>");
   w.document.close();
   setTimeout(() => { if (!w.closed) { w.focus(); w.print(); } }, 250);
@@ -1388,6 +1388,11 @@ const languageObserver = new MutationObserver(()=>{ if(hindiMode) applyLanguage(
 languageObserver.observe(document.body,{childList:true,subtree:true});
 if (hindiMode) applyLanguage();
 
+function bskAlert(englishText) {
+  const translated = hindiMode ? (hindiWords[englishText] || englishText) : englishText;
+  alert(translated);
+}
+
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(error => console.warn("BSK offline cache unavailable:", error));
@@ -1397,7 +1402,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
 $("downloadDailyReports")?.addEventListener("click", () => {
   if (!requireCompleteHistoryForExport()) return;
   let reports = getFilteredReports();
-  if (!reports.length) { alert("No daily reports available for this filter."); return; }
+  if (!reports.length) { bskAlert("No daily reports available for this filter."); return; }
   const columns = ["Report Date","Power House","Feeder","Breaker Status","Event Type","Fault Details","Duration","Restoration Time","Remarks","Staff User ID"];
   const rows = [columns, ...reports.map(r=>[r.reportDate,r.houseName,r.feederName,r.breakerStatus,r.eventType,r.faultDetails,r.duration,r.restorationTime,r.remarks,r.createdByUserId])];
   const esc = xmlEscape;
@@ -1445,5 +1450,5 @@ $("notificationList")?.addEventListener("click", async event => {
   try {
     await recordsRequest("markNotificationRead",{id:button.dataset.notificationId});
     await refreshOperationalRecordsPreservingHistory();
-  } catch(error) { alert(error.message); }
+  } catch(error) { bskAlert(error.message); }
 });
