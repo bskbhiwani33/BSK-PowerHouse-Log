@@ -1082,20 +1082,32 @@ $("backupRecords")?.addEventListener("click", async () => {
   if (button) { button.disabled = true; button.textContent = "Preparing backup..."; }
   try {
     const collections = ["powerhouses","feeders","users","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","feeder_status","notifications","entry_history"];
-    const backup = { exportedAt: new Date().toISOString(), collections: {} };
+    const backup = {
+      format: "BSK_FULL_BACKUP",
+      schemaVersion: 1,
+      firebaseProjectId: firebaseConfig.projectId,
+      exportedAt: new Date().toISOString(),
+      exportedBy: currentProfile?.userId || "admin",
+      collectionCounts: {},
+      collections: {}
+    };
     for (const collection of collections) {
       const rows = [];
       const seenCursors = new Set();
       let cursor = null;
       do {
         const page = await recordsRequest("exportBackupPage", { collection, cursor });
-        rows.push(...(Array.isArray(page.rows) ? page.rows : []));
+        if (!page?.success || !Array.isArray(page.rows)) {
+          throw new Error("Backup page was incomplete for " + collection + ". Please retry.");
+        }
+        rows.push(...page.rows);
         const next = page.nextCursor || null;
         if (next && seenCursors.has(next)) throw new Error("Backup pagination stopped unexpectedly for " + collection);
         if (next) seenCursors.add(next);
         cursor = next;
       } while (cursor);
       backup.collections[collection] = rows;
+      backup.collectionCounts[collection] = rows.length;
     }
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
