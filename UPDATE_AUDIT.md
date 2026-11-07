@@ -139,7 +139,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 
 ## Hindi translation coverage improvement
 - Added Hindi mappings for common login, Admin, validation, cursor/pagination, backup, PDF and offline-sync messages.
-- Replaced collection-specific backup failure strings with stable translatable messages. The language feature remains marked Partial because uncommon dynamic messages and full screen/device coverage still need review.
+- Replaced collection-specific backup failure strings with stable translatable messages. The language feature is marked Present at source level; uncommon dynamic messages and full screen/device coverage still need review.
 
 - Static visible text on the current page was compared against the Hindi dictionary; only the BSK brand and raw breaker status values remain intentionally untranslated. Added a Hindi footer label and dynamic offline queue / backup-failure prefix handling.
 
