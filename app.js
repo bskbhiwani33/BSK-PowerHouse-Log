@@ -604,10 +604,22 @@ async function refreshAllOperationalHistory() {
   if (historyLoadInProgress) return;
   historyLoadInProgress = true;
   try {
-    if (!await loadOperationalRecords()) return;
+    const previous = operational;
+    if (!await loadOperationalRecords()) {
+      operational = previous;
+      renderOperational();
+      return;
+    }
     while (Object.values(recordPageCursors || {}).some(Boolean)) {
       const before = JSON.stringify(recordPageCursors || {});
-      if (!await loadOperationalRecords({ append: true })) break;
+      const loadedPageState = operational;
+      const loadedPageCursors = recordPageCursors;
+      if (!await loadOperationalRecords({ append: true })) {
+        operational = loadedPageState;
+        recordPageCursors = loadedPageCursors;
+        renderOperational();
+        break;
+      }
       if (JSON.stringify(recordPageCursors || {}) === before) break;
     }
   } finally {
