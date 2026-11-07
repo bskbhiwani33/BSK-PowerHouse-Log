@@ -406,6 +406,8 @@ $("clearReportFilter")?.addEventListener("click", () => {
   ["filterHouse","filterDate","recordsFrom","recordsTo","recordsSearch"].forEach(id => { if ($(id)) $(id).value=""; });
   renderReports();
   renderRecordHistory();
+  renderFeederStatusSearch();
+  renderAlertsAndCharts();
 });
 
 function getFilteredReports() {
