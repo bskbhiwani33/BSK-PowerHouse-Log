@@ -1034,8 +1034,6 @@ recordsRequest = async (action, data = {}) => {
   }
 };
 
-$("recordsSearch")?.addEventListener("input", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); renderAlertsAndCharts(); });
-
 $("loadMoreStaffHistory")?.addEventListener("click", async () => {
   const button=$("loadMoreStaffHistory");
   if(!button||button.disabled||historyLoadInProgress)return;
