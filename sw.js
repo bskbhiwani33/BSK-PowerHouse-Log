@@ -1,4 +1,4 @@
-const CACHE_NAME = "bsk-shell-v3";
+const CACHE_NAME = "bsk-shell-v4";
 const APP_SHELL = ["/", "/index.html", "/style.css", "/app.js", "/manifest.webmanifest"];
 const FIREBASE_MODULES = [
   "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js",
