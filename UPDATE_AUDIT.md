@@ -116,3 +116,12 @@ Status meanings:
 - Latest CI run will validate the expanded emulator suite; no rules were published to Firebase.
 
 - Further assertions cover Admin access to user/legacy approval records and anonymous denial for Power House reads/writes; these remain denied by client Firestore rules.
+
+
+## One-shot release order (not executed)
+1. Freeze source changes on this preparation branch and confirm latest CI success.
+2. Publish the staged Firestore Rules and all composite indexes together from this same branch; wait until every required composite index reports READY.
+3. Merge this branch to `main` exactly once to trigger the single Netlify production deployment. Do not make follow-up code commits to `main`.
+4. Smoke-test Admin/Staff login, immediate entry visibility, outage create/resolve, consumption totals, notifications, pagination, Excel/PDF, and offline/reconnect behavior on the live site.
+5. Only after those checks, perform the one final Android APK build from the prepared project and verify it loads the deployed URL.
+- No step above has been executed; this is a release checklist only.
