@@ -38,7 +38,7 @@ Status meanings:
 | 26 | Search by Feeder/date | Partial | Feeder-name search and date range filters exist in separate views; consistent combined search across all datasets is incomplete. |
 | 27 | Dashboard charts | Partial | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
 | 28 | Backup system | Partial | Admin can export a paginated JSON backup across operational collections. Backup includes format/schema/project/exporter metadata and per-collection row counts, validates every page response, rejects malformed/expired cursors and guards repeated cursors. Restore workflow and backup integrity tests remain. PIN hashes/salts are excluded. |
-| 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable IDs, transactional idempotency, guarded single-run sync, queue merging that preserves entries added during sync, online/visibility/periodic retry and storage-quota warning exist. The service worker is now registered for secure contexts and caches the app shell for offline reload; API routes remain network-only. Operational record caches are isolated per Staff UID; login/logout resets in-memory records and pagination. Cache quota failures no longer replace fresh server data with stale cached records; offline reload, sync and WebView device testing remain. |
+| 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable IDs, transactional idempotency, guarded single-run sync, queue merging that preserves entries added during sync, online/visibility/periodic retry and storage-quota warning exist. Existing registration in app.js activates the service worker, which caches the app shell for offline reload while API routes remain network-only. Operational record caches are isolated per Staff UID; login/logout resets in-memory records and pagination. Cache quota failures no longer replace fresh server data with stale cached records; offline reload, sync and WebView device testing remain. |
 | 30 | Three separate Excel downloads with date filtering | Present | Separate Breakdown, Shutdown and Consumption Excel exports use From/To date filters and the shared XML 1.0 text sanitizer. |
  
 ## Important project constraints
@@ -98,7 +98,7 @@ Status meanings:
 - This avoids a false permanent block while retaining the cross-collection transaction check. CI is rerunning; live Firebase testing and index publication remain pending.
 
 
-## Offline shell activation correction
-- Source review found `sw.js` was present but no page registered it, so its shell cache and offline navigation fallback would not activate in normal browser/WebView use.
-- Added guarded service-worker registration from `index.html` on secure contexts. The worker remains network-first for app assets and does not cache Netlify API routes.
-- This enables the existing offline shell/outbox path when the browser supports Service Workers; offline form submission, queued sync, and WebView behavior still require real-device testing.
+## Service-worker registration review correction
+- A deeper search confirmed that `app.js` already registers `/sw.js` on HTTPS; the earlier review missed this existing module-level registration.
+- Removed the extra duplicate registration that had briefly been added to `index.html`. The original single registration remains in `app.js`; the worker stays network-first for app assets and does not cache Netlify API routes.
+- Offline form submission, shell reload, queued sync and WebView behavior still require real-device testing.
