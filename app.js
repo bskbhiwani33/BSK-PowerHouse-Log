@@ -762,7 +762,10 @@ function renderRecordHistory() {
       const who=x.actorUserId||"Unknown";
       staffCounts[who]=(staffCounts[who]||0)+1;
     });
-    $("recordsInsights").innerHTML =
+    const historyCoverageNote = recordPagesLoaded > 0 && allHistoryPagesLoaded()
+      ? "<p class=\"muted\">All available history is loaded. Summaries include all records matching the selected filters.</p>"
+      : "<p class=\"muted\">These summaries may be incomplete. Select Load All History above to include older records.</p>";
+    $("recordsInsights").innerHTML = historyCoverageNote +
       "<h3>Repeat Breakdown Report</h3>" +
       (repeats.length ? repeats.map(x=>`<p>${safe(x.name)} · ${x.count} breakdowns</p>`).join("") : "<p>No repeat breakdown found in selected dates.</p>") +
       "<h3>Feeder-wise Report</h3>" +
