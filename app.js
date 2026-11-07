@@ -626,7 +626,12 @@ async function refreshOperationalRecordsPreservingHistory() {
     // continue from there and deduplicate any overlap by document ID.
     const previous = operational;
     const firstPageLoaded = await loadOperationalRecords();
-    if (!firstPageLoaded) return;
+    if (!firstPageLoaded) {
+      // Keep the freshest in-memory history if cache fallback is older/incomplete.
+      operational = previous;
+      renderOperational();
+      return;
+    }
     const keys = recordCollections.concat(["feeder_status", "notifications", "entry_history"]);
     for (const key of keys) {
       const byId = new Map((operational[key] || []).map(item => [item.id, item]));
