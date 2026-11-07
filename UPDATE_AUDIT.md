@@ -66,3 +66,8 @@ Status meanings:
 ## Ongoing outage integrity review
 - Outage creation now checks both Breakdown and Shutdown collections for an existing ongoing record for the selected feeder inside the same Firestore transaction, in addition to checking `feeder_status`. This prevents a stale or missing feeder-status document from allowing a second ongoing outage to be created for that feeder.
 - The feeder status/history search derives the visible live status from ongoing outage records returned by the API. Both changes are source-level safeguards and still require runtime verification against the Firebase emulator and a test Power House before release.
+
+
+## Report search filter refresh
+- The shared feeder/staff search input now refreshes record history, daily reports, feeder status/history, alerts, charts, and report summaries immediately as the user types. Previously, date filters refreshed these views but typing in the shared search field did not consistently refresh them until another render-triggering action.
+- Source-level correction only; browser/device regression testing remains part of final verification.
