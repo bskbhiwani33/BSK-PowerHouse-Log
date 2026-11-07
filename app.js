@@ -1155,6 +1155,12 @@ if (localStorage.getItem("bsk-theme")==="dark") {
 let hindiMode = localStorage.getItem("bsk-language") === "hi";
 const hindiWords = {
   "Power House Feeder Log":"पावर हाउस फीडर लॉग","Dashboard":"डैशबोर्ड","Logout":"लॉग आउट",
+  "Sign in with your User ID and 4-digit PIN.":"अपनी यूजर आईडी और 4 अंकों के पिन से लॉगिन करें।",
+  "First-time setup is performed by the project administrator.":"पहली बार की सेटिंग प्रोजेक्ट एडमिन द्वारा की जाती है।",
+  "Select status":"स्थिति चुनें","Select event":"घटना चुनें","Normal":"सामान्य",
+  "Use the separate Breakdown / Shutdown forms below for outage entries.":"ब्रेकडाउन / शटडाउन दर्ज करने के लिए नीचे दिए गए अलग फॉर्म का उपयोग करें।",
+  "End Time":"समाप्ति समय","Power House Feeder Log Management":"पावर हाउस फीडर लॉग प्रबंधन",
+  "No data loaded.":"अभी कोई डेटा लोड नहीं हुआ।","All Power Houses":"सभी पावर हाउस","No reports loaded.":"अभी कोई रिपोर्ट लोड नहीं हुई।",
   "Dark Mode":"डार्क मोड","Light Mode":"लाइट मोड","Breakdown Entry":"ब्रेकडाउन एंट्री",
   "Shutdown Entry":"शटडाउन एंट्री","Tripping Entry":"ट्रिपिंग एंट्री",
   "Power House Consumption Readings":"पावर हाउस खपत रीडिंग",
