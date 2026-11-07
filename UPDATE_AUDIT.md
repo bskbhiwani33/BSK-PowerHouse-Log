@@ -22,7 +22,7 @@ Status meanings:
 | 10 | Daily summary | Partial | Daily entry counts now show category-separated totals across loaded record types; full-history verification remains. |
 | 11 | Monthly report | Partial | Monthly entry counts now show category-separated totals; full-history verification remains. |
 | 12 | Date-wise search | Partial | From/to filters apply to record history, feeder history, reports, charts and three dedicated Excel exports. Clearing report filters now refreshes feeder history and charts as well as record lists; verify all combinations in runtime. |
-| 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. |
+| 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. SpreadsheetML text is now sanitized for XML 1.0 invalid control characters in the combined and dedicated exports. |
 | 14 | PDF report | Partial | Print-ready report opens in a separate window so the user can choose Save as PDF; test browser/WebView print support and filtered layout. |
 | 15 | Staff login with individual login ID | Present | User ID + PIN login and Admin provisioning support multiple active staff accounts per Power House; verify login and staff isolation in runtime. |
 | 16 | Staff-wise entry history | Partial | Staff API responses now include only the signed-in Staff member's own audit events and omit the Admin notification feed; Admin retains full house-level history and notifications. Staff can page older personal history. Daily Feeder Report submission refreshes operational records immediately. Runtime verification remains. |
@@ -39,7 +39,7 @@ Status meanings:
 | 27 | Dashboard charts | Partial | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
 | 28 | Backup system | Partial | Admin can export paginated JSON backup across operational collections; pagination loop guards added. Restore workflow and backup integrity tests remain. PIN hashes/salts are excluded. |
 | 29 | Offline entry + sync on reconnection | Partial | Local outbox, stable IDs, transactional idempotency, guarded single-run sync, queue merging that preserves entries added during sync, online/visibility/periodic retry and storage-quota warning exist; offline reload and device testing remain. |
-| 30 | Three separate Excel downloads with date filtering | Present | Separate Breakdown, Shutdown and Consumption Excel exports use From/To date filters. |
+| 30 | Three separate Excel downloads with date filtering | Present | Separate Breakdown, Shutdown and Consumption Excel exports use From/To date filters and the shared XML 1.0 text sanitizer. |
  
 ## Important project constraints
 - Work only on `bsk-complete-update-prep`.
