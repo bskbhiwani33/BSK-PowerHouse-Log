@@ -324,10 +324,12 @@ export default async req => {
         return json({ success: true, ...output, nextCursors });
       }
       case "markNotificationRead": {
+        // New-entry notifications are an Admin inbox; Staff cannot acknowledge them.
+        requireRole(actor, "admin");
         if (!validText(body.id, 128)) return json({ error: "Notification ID required" }, 400);
         const ref = db.collection("notifications").doc(clean(body.id));
         const snap = await ref.get();
-        if (!snap.exists || (actor.role === "staff" && snap.data().houseId !== actor.houseId)) return json({ error: "Notification not found" }, 404);
+        if (!snap.exists) return json({ error: "Notification not found" }, 404);
         await ref.update({ read: true, readAt: admin.firestore.FieldValue.serverTimestamp(), readBy: actor.uid });
         return json({ success: true });
       }
