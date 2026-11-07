@@ -11,6 +11,7 @@ function fbAdmin() {
 
 const json = (data, status = 200) => Response.json(data, { status });
 const validText = (v, max = 160) => typeof v === "string" && v.trim().length > 0 && v.trim().length <= max;
+const validDocId = v => typeof v === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(v);
 const validDate = v => {
   if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
   const parsed = new Date(v + "T00:00:00Z");
@@ -100,7 +101,7 @@ async function createOutage(db, actor, body, type) {
 }
 
 async function resolveOutage(db, actor, body, type) {
-  if (!validText(body.id, 128) || !validTime(body.endTime)) throw Object.assign(new Error("Record aur end time zaroori hain"), { status: 400 });
+  if (!validDocId(body.id) || !validTime(body.endTime)) throw Object.assign(new Error("Record aur end time zaroori hain"), { status: 400 });
   const collectionName = type === "Breakdown" ? "breakdowns" : "shutdowns";
   const ref = db.collection(collectionName).doc(body.id);
   const historyRef = db.collection("entry_history").doc();
@@ -131,7 +132,7 @@ async function resolveOutage(db, actor, body, type) {
 async function updateRecord(db, actor, body) {
   requireRole(actor, "admin");
   const name=clean(body.recordCollection), allowed=["breakdowns","shutdowns","daily_reports","trippings","consumption_readings"];
-  if(!allowed.includes(name)||!validText(body.id,128)||!body.changes||typeof body.changes!=="object")throw Object.assign(new Error("Invalid record details"),{status:400});
+  if(!allowed.includes(name)||!validDocId(body.id)||!body.changes||typeof body.changes!=="object")throw Object.assign(new Error("Invalid record details"),{status:400});
   const ref=db.collection(name).doc(clean(body.id)), snap=await ref.get();
   if(!snap.exists)throw Object.assign(new Error("Record not found"),{status:404});
   const old=snap.data(), input=body.changes, next={}, dateKey=name==="daily_reports"?"reportDate":"date";
@@ -338,7 +339,7 @@ export default async req => {
       case "markNotificationRead": {
         // New-entry notifications are an Admin inbox; Staff cannot acknowledge them.
         requireRole(actor, "admin");
-        if (!validText(body.id, 128)) return json({ error: "Notification ID required" }, 400);
+        if (!validDocId(body.id)) return json({ error: "Notification ID required" }, 400);
         const ref = db.collection("notifications").doc(clean(body.id));
         const snap = await ref.get();
         if (!snap.exists) return json({ error: "Notification not found" }, 404);
