@@ -203,6 +203,34 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "breakdowns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "shutdowns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "houseId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
