@@ -688,6 +688,19 @@ function renderRecordHistory() {
   const search = ($("recordsSearch")?.value || "").toLowerCase().trim();
   const inside = x => (!from || x.date >= from) && (!to || x.date <= to) &&
     (!search || [x.feederName,x.createdByUserId,x.houseName].some(v => String(v || "").toLowerCase().includes(search)));
+  const auditDate = h => {
+    const record = h.after || h.before || {};
+    const storedDate = record.date || record.reportDate;
+    if (storedDate) return String(storedDate);
+    const seconds = h.createdAt?.seconds ?? h.createdAt?._seconds;
+    return Number.isFinite(seconds) ? new Date(seconds * 1000).toLocaleDateString("en-CA") : "";
+  };
+  const auditMatches = h => {
+    const record = h.after || h.before || {};
+    const date = auditDate(h);
+    return (!from || (date && date >= from)) && (!to || (date && date <= to)) &&
+      (!search || [h.actorUserId,record.feederName,record.houseName].some(v => String(v || "").toLowerCase().includes(search)));
+  };
   const rows = [
     ...operational.breakdowns.filter(inside).map(x => ({...x, kind:"Breakdown", collection:"breakdowns"})),
     ...operational.shutdowns.filter(inside).map(x => ({...x, kind:"Shutdown", collection:"shutdowns"})),
@@ -743,7 +756,12 @@ function renderRecordHistory() {
       }
     });
     const staffCounts = {};
-    operational.entry_history.forEach(x=>{ const who=x.actorUserId||"Unknown"; staffCounts[who]=(staffCounts[who]||0)+1; });
+    // Count actual created entries (not later resolve/edit audit actions) and
+    // apply the same date/search filters used by the report views.
+    operational.entry_history.filter(h => h.action === "created" && auditMatches(h)).forEach(x=>{
+      const who=x.actorUserId||"Unknown";
+      staffCounts[who]=(staffCounts[who]||0)+1;
+    });
     $("recordsInsights").innerHTML =
       "<h3>Repeat Breakdown Report</h3>" +
       (repeats.length ? repeats.map(x=>`<p>${safe(x.name)} · ${x.count} breakdowns</p>`).join("") : "<p>No repeat breakdown found in selected dates.</p>") +
@@ -759,7 +777,7 @@ function renderRecordHistory() {
   renderFeederStatusSearch();
   if ($("staffEntryHistory")) {
     const ownHistory = operational.entry_history
-      .filter(h => h.actorUserId === currentProfile?.userId);
+      .filter(h => h.actorUserId === currentProfile?.userId && auditMatches(h));
     $("staffEntryHistory").innerHTML = "<h3>My Entry History</h3>" +
       (ownHistory.length ? ownHistory.map(h => {
         const seconds = h.createdAt?.seconds ?? h.createdAt?._seconds;
@@ -775,7 +793,7 @@ function renderRecordHistory() {
       return "";
     };
     $("historyList").innerHTML = "<h3>Recent Edit History (who / when)</h3>" +
-      operational.entry_history.filter(h=>!search || String(h.actorUserId||"").toLowerCase().includes(search)).slice(0,40).map(h => `<p>${safe(h.action)} · ${safe(h.recordCollection)} · Staff: ${safe(h.actorUserId)} · ${safe(timeOf(h))}</p>`).join("");
+      operational.entry_history.filter(auditMatches).slice(0,40).map(h => `<p>${safe(h.action)} · ${safe(h.recordCollection)} · Staff: ${safe(h.actorUserId)} · ${safe(timeOf(h))}</p>`).join("");
   }
   if ($("notificationList")) $("notificationList").innerHTML = "<h3>New Entry Notifications · Unread: "+operational.notifications.filter(n=>!n.read).length+"</h3>" +
     operational.notifications.slice(0,30).map(n => `<p>${safe(n.title)} · ${safe(n.message)} · ${n.read ? "Read" : "New"} ${n.read ? "" : `<button type="button" class="secondary" data-notification-id="${safe(n.id)}">Mark read</button>`}</p>`).join("");
