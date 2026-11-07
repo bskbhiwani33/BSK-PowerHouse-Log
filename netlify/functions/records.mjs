@@ -68,9 +68,8 @@ async function createOutage(db, actor, body, type) {
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   };
   return db.runTransaction(async tx => {
-    const [duplicate, feederStatus, activeBreakdowns, activeShutdowns] = await Promise.all([
+    const [duplicate, activeBreakdowns, activeShutdowns] = await Promise.all([
       tx.get(ref),
-      tx.get(statusRef),
       tx.get(db.collection("breakdowns").where("feederId", "==", feeder.feederId).where("status", "==", "ongoing")),
       tx.get(db.collection("shutdowns").where("feederId", "==", feeder.feederId).where("status", "==", "ongoing"))
     ]);
