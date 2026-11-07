@@ -33,7 +33,7 @@ Status meanings:
 | 21 | Ongoing Shutdown alert | Present | Separate in-app Shutdown long-running alert section appears at 24+ hours; push/background delivery is not included. |
 | 22 | New entry notification to Admin | Present | New-entry notifications are saved transactionally and shown with unread count in Admin dashboard; only Admin can mark them read. Push/background delivery is not included. |
 | 23 | Pending Entry Alert = unread notifications, not approval queue | Present | Unread notification count and Mark Read action exist; no approval/reject queue is present. |
-| 24 | Hindi + English toggle | Partial | Expanded translations now cover login, form guidance, operational actions, backup/pagination, offline sync, and common Admin/Staff/server validation errors. A few dynamic or less-common messages may still remain in English; full screen/device coverage needs testing. |
+| 24 | Hindi + English toggle | Present | Toggle covers all static page labels/placeholders, common login/Admin/server validation messages, backup/pagination and offline queue status. Raw breaker codes and user-entered content remain unchanged by design; dynamic edge-case messages and full device coverage still need testing. |
 | 25 | Dark Mode | Present | Theme toggle and local preference persistence exist; visual coverage needs device testing. |
 | 26 | Search by Feeder/date | Present | Feeder-name search and date-range filters are available across operational history, feeder history, reports, charts and exports; controls are separate by view rather than one global search. Runtime combinations still need testing. |
 | 27 | Dashboard charts | Present | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
@@ -138,3 +138,5 @@ Status meanings:
 ## Hindi translation coverage improvement
 - Added Hindi mappings for common login, Admin, validation, cursor/pagination, backup, PDF and offline-sync messages.
 - Replaced collection-specific backup failure strings with stable translatable messages. The language feature remains marked Partial because uncommon dynamic messages and full screen/device coverage still need review.
+
+- Static visible text on the current page was compared against the Hindi dictionary; only the BSK brand and raw breaker status values remain intentionally untranslated. Added a Hindi footer label and dynamic offline queue / backup-failure prefix handling.
