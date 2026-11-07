@@ -271,15 +271,5 @@
 
   <footer>BSK · Power House Feeder Log</footer>
   <script type="module" src="/app.js"></script>
-  <script>
-    // Enable the shell cache used by offline reload and queued-entry recovery.
-    if ("serviceWorker" in navigator && window.isSecureContext) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").catch(error => {
-          console.warn("BSK offline support could not be enabled:", error);
-        });
-      });
-    }
-  </script>
 </body>
 </html>
