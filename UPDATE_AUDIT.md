@@ -102,3 +102,9 @@ Status meanings:
 - A deeper search confirmed that `app.js` already registers `/sw.js` on HTTPS; the earlier review missed this existing module-level registration.
 - Removed the extra duplicate registration that had briefly been added to `index.html`. The original single registration remains in `app.js`; the worker stays network-first for app assets and does not cache Netlify API routes.
 - Offline form submission, shell reload, queued sync and WebView behavior still require real-device testing.
+
+
+## House-scoped ongoing-outage page reads
+- The records API now applies the Staff/Admin selected Power House filter directly to the ongoing Breakdown and Shutdown queries, rather than fetching ongoing events across every Power House and filtering them afterward.
+- Added staged houseId + status composite indexes for both outage collections. This narrows backend reads while keeping ongoing feeders visible on every history page.
+- Indexes remain un-published until the coordinated Firebase release; CI checks and emulator validation are running.
