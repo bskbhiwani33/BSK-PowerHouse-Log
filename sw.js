@@ -28,7 +28,7 @@ function isAppAsset(request) {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return false;
   if (url.pathname.startsWith("/.netlify/") || url.pathname.startsWith("/api/")) return false;
-  return APP_SHELL.includes(url.pathname) || /\\.(?:css|js|webmanifest|png|jpe?g|svg|ico|woff2?)$/i.test(url.pathname);
+  return APP_SHELL.includes(url.pathname) || /\.(?:css|js|webmanifest|png|jpe?g|svg|ico|woff2?)$/i.test(url.pathname);
 }
 
 self.addEventListener("fetch", event => {
