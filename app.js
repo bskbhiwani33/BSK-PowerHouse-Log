@@ -863,11 +863,13 @@ $("refreshRecords")?.addEventListener("click", refreshOperationalRecordsPreservi
 ["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); renderAlertsAndCharts(); }));
 
 function allHistoryPagesLoaded() {
-  return !Object.values(recordPageCursors || {}).some(Boolean);
+  // A missing cursor before the first successful server page is not proof
+  // that the cache contains the complete history.
+  return recordPagesLoaded > 0 && !Object.values(recordPageCursors || {}).some(Boolean);
 }
 function requireCompleteHistoryForExport() {
   if (allHistoryPagesLoaded()) return true;
-  message("adminMessage", "Please click Load All History before downloading a complete report.", true);
+  message("adminMessage", "Refresh records and load all history before downloading a complete report.", true);
   return false;
 }
 function downloadExcelXml(kind) {
