@@ -61,3 +61,8 @@ Status meanings:
 ## Feeder status consistency review
 - The feeder status/history search now derives the displayed live state from the ongoing Breakdown and Shutdown records returned by the records API. This avoids a stale `feeder_status` document overriding a currently ongoing outage in the UI. The records API explicitly merges all ongoing outages into each history page, so the status calculation does not depend on loading every historical page.
 - This is a source-level correction; live Firebase/Netlify and Android WebView behavior still requires pre-release testing. No production deployment, Firestore Rules/index publication, or APK build was performed.
+
+
+## Ongoing outage integrity review
+- Outage creation now checks both Breakdown and Shutdown collections for an existing ongoing record for the selected feeder inside the same Firestore transaction, in addition to checking `feeder_status`. This prevents a stale or missing feeder-status document from allowing a second ongoing outage to be created for that feeder.
+- The feeder status/history search derives the visible live status from ongoing outage records returned by the API. Both changes are source-level safeguards and still require runtime verification against the Firebase emulator and a test Power House before release.
