@@ -114,3 +114,5 @@ Status meanings:
 - Added emulator assertions that authenticated Staff and Admin cannot directly read or write backend-only `trippings`, `consumption_readings`, `feeder_status`, `entry_history`, `notifications`, or `login_attempt_limits` documents.
 - This complements existing house-scope checks for Power Houses, feeders and daily reports, and verifies that legacy `edit_requests` remains inaccessible.
 - Latest CI run will validate the expanded emulator suite; no rules were published to Firebase.
+
+- Further assertions cover Admin access to user/legacy approval records and anonymous denial for Power House reads/writes; these remain denied by client Firestore rules.
