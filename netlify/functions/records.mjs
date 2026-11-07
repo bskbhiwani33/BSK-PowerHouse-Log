@@ -80,7 +80,9 @@ async function createOutage(db, actor, body, type) {
     }
     const hasActiveOutage = [...activeBreakdowns.docs, ...activeShutdowns.docs]
       .some(doc => doc.data().status === "ongoing");
-    if (!body.endTime && (hasActiveOutage || (feederStatus.exists && feederStatus.data().status !== "Running"))) {
+    // The outage collections are the source of truth. A stale feeder_status
+    // document must not permanently block new entries when no outage is active.
+    if (!body.endTime && hasActiveOutage) {
       throw Object.assign(new Error("Is feeder par pehle se Breakdown ya Shutdown ongoing hai"), { status: 409 });
     }
     tx.set(ref, data);
