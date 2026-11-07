@@ -62,6 +62,16 @@ function safe(value) {
   })[char]);
 }
 
+// Escape Excel SpreadsheetML text and remove characters forbidden by XML 1.0.
+function xmlEscape(value) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function setToday() {
   if ($("reportDate")) {
     $("reportDate").value =
@@ -829,7 +839,7 @@ function downloadExcelXml(kind) {
   const search = ($("recordsSearch")?.value || "").toLowerCase().trim();
   const inRange = x => (!from || x.date >= from) && (!to || x.date <= to) && (!search || [x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search)));
   let rows = [], filename = "";
-  const xml = v => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const xml = xmlEscape;
   if (kind === "breakdowns") {
     rows = [["Date","Power House","Feeder","Start Time","End Time","Status","Reason"], ...operational.breakdowns.filter(inRange).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])]; filename="BSK_Breakdown_Report.xls";
   } else if (kind === "shutdowns") {
@@ -850,7 +860,7 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
   if (!requireCompleteHistoryForExport()) return;
   const from=$("recordsFrom")?.value||"",to=$("recordsTo")?.value||"";
   const search=($("recordsSearch")?.value||"").toLowerCase().trim();
-  const xml=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const xml=xmlEscape;
   const inRange=(x,dateKey="date")=>(!from||String(x[dateKey]||"")>=from)&&(!to||String(x[dateKey]||"")<=to)&&(!search||[x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search)));
   const sheets=[
     {name:"Breakdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.breakdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
@@ -1220,7 +1230,7 @@ $("downloadDailyReports")?.addEventListener("click", () => {
   if (!reports.length) { alert("No daily reports available for this filter."); return; }
   const columns = ["Report Date","Power House","Feeder","Breaker Status","Event Type","Fault Details","Duration","Restoration Time","Remarks","Staff User ID"];
   const rows = [columns, ...reports.map(r=>[r.reportDate,r.houseName,r.feederName,r.breakerStatus,r.eventType,r.faultDetails,r.duration,r.restorationTime,r.remarks,r.createdByUserId])];
-  const esc = v => String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const esc = xmlEscape;
   const table = rows.map(row=>"<Row>"+row.map(v=>"<Cell><Data ss:Type=\"String\">"+esc(v)+"</Data></Cell>").join("")+"</Row>").join("");
   const xml = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Daily Reports"><Table>'+table+'</Table></Worksheet></Workbook>';
   const blob=new Blob([xml],{type:"application/vnd.ms-excel"}), url=URL.createObjectURL(blob), link=document.createElement("a");
