@@ -1021,6 +1021,7 @@ window.addEventListener("online", syncOutbox);
 document.addEventListener("visibilitychange", async () => {
   if (document.hidden || !currentProfile || !navigator.onLine) return;
   await syncOutbox();
+  if (!currentProfile) return;
   if (currentProfile.role === "admin") await refreshDashboard();
   else await refreshOperationalRecordsPreservingHistory();
 });
