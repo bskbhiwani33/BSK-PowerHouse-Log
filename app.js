@@ -238,6 +238,9 @@ $("reportForm")?.addEventListener("submit", async event => {
 
     $("reportForm").reset();
     setToday();
+    // Refresh operational records immediately so a newly saved Staff report
+    // appears in history and the Admin dashboard without waiting for polling.
+    await refreshOperationalRecordsPreservingHistory();
 
     message("reportMessage", saved.queued ? "Report saved offline. It will sync when internet returns." : "Report submitted successfully.");
 
