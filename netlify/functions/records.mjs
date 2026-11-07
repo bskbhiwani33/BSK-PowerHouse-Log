@@ -36,7 +36,7 @@ function requireRole(actor, role) {
 }
 
 async function validateFeeder(db, actor, feederId) {
-  if (!validText(feederId, 128)) throw Object.assign(new Error("Feeder select karein"), { status: 400 });
+  if (!validDocId(feederId)) throw Object.assign(new Error("Feeder select karein"), { status: 400 });
   const snap = await db.collection("feeders").doc(feederId).get();
   if (!snap.exists || snap.data().active !== true) throw Object.assign(new Error("Feeder nahi mila ya inactive hai"), { status: 404 });
   const f = snap.data();
@@ -263,7 +263,7 @@ export default async req => {
         const pageSize = 400;
         let q = db.collection(name).orderBy(admin.firestore.FieldPath.documentId()).limit(pageSize);
         if (body.cursor !== undefined && body.cursor !== null && body.cursor !== "") {
-          if (!validText(body.cursor, 1500) || body.cursor.includes("/")) {
+          if (!validDocId(body.cursor)) {
             throw Object.assign(new Error("Invalid backup cursor"), { status: 400 });
           }
           const cursorSnap = await db.collection(name).doc(body.cursor).get();
@@ -305,7 +305,7 @@ export default async req => {
           const cursor = body.cursors && typeof body.cursors[name] === "string"
             ? body.cursors[name] : "";
           if (cursor) {
-            if (cursor.length > 1500 || cursor.includes("/")) {
+            if (!validDocId(cursor)) {
               throw Object.assign(new Error("Invalid history cursor"), { status: 400 });
             }
             const cursorSnap = await db.collection(name).doc(cursor).get();
