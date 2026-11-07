@@ -1383,7 +1383,7 @@ function applyLanguage() {
   if ($("languageToggle")) { const label=hindiMode ? "English" : "हिन्दी"; if ($("languageToggle").textContent !== label) $("languageToggle").textContent=label; }
   document.documentElement.lang = hindiMode ? "hi" : "en";
 }
-$("languageToggle")?.addEventListener("click",()=>{hindiMode=!hindiMode;localStorage.setItem("bsk-language",hindiMode?"hi":"en");applyLanguage();});
+$("languageToggle")?.addEventListener("click",()=>{hindiMode=!hindiMode;localStorage.setItem("bsk-language",hindiMode?"hi":"en");applyLanguage();renderOfflineQueueStatus();});
 const languageObserver = new MutationObserver(()=>{ if(hindiMode) applyLanguage(); });
 languageObserver.observe(document.body,{childList:true,subtree:true});
 if (hindiMode) applyLanguage();
