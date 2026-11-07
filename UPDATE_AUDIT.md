@@ -157,3 +157,4 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 - The latest-page merge also reconciles ongoing Breakdown/Shutdown records against the API's complete active-outage set, so an older cached outage that has been resolved is not left incorrectly marked ongoing. Admin edits trigger a one-time full-history reload to refresh older changed records.
 
 - The resolve form now updates the just-resolved event in the local history before refreshing, so the event does not disappear from the visible older-page cache while the backend's active-outage reconciliation removes it from ongoing counts.
+- The locally resolved outage state is also written to the account-scoped records cache before the refresh, so a transient read failure does not restore the old ongoing state from stale cache.
