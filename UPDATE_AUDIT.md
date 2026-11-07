@@ -51,13 +51,21 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 - The hosted app uses a network-first service worker for static assets, excludes Netlify API responses from cache, and increments the shell cache version when release assets change; the Android WebView should continue loading the hosted URL so website releases can appear without rebuilding the APK. Verify on the installed APK before release.
 - Android WebView changes are deferred until the website's 30 updates are completed and tested.
 
-## Next implementation order
-1. Complete data/report foundations: validate full-history pagination and date-filtered repeat/feeder/daily/monthly summaries.
-2. Complete staff/admin reporting: staff-filtered history and export/report consistency.
-3. Complete notifications and separate Breakdown/Shutdown alerts without adding approval workflow.
-4. Complete Hindi translation coverage and PDF/export behavior.
-5. Harden and test offline queue and backup/restore.
-6. Run full automated and manual regression checks before release approval.
+## Remaining work before production sign-off (runtime verification, not feature coding)
+1. Confirm the latest preparation-branch CI run passes JavaScript syntax, Firebase config parsing, Netlify function bundling, and Firestore Rules emulator tests.
+2. Publish the 16 staged composite indexes to the Firebase project and wait until every index is READY; do this before the website deployment.
+3. After the single Netlify deployment, smoke-test Admin/Staff login, immediate Staff entry visibility, outage create/resolve, consumption totals, notifications, pagination, exports, and backup against live Firebase data.
+4. Verify date/time edge cases, Hindi labels/messages, dark mode, filtered PDF print layout, and large-history pagination in a browser.
+5. Verify offline shell reload, queued entry sync, and account isolation on the actual Android WebView device.
+6. Confirm the hosted website update appears in the installed WebView app without a native rebuild; then build the APK once only if the native wrapper itself needs an update.
+7. Publish restrictive Firestore Rules only after the new hosted app is active and old clients have refreshed; repeat the live smoke tests.
+
+Known scope limits (not to be mistaken for completed runtime checks):
+- Alerts and new-entry notifications are in-app only; push/background notifications are not implemented.
+- Backup is a paginated JSON export; a restore/import workflow is not included.
+- PDF output uses the browser print dialog / Save as PDF; WebView print support needs device verification.
+- Hindi mode translates app UI and common messages; user-entered free text and raw breaker status codes are not translated.
+- Offline queue, WebView cache refresh, and Android behavior are source-implemented but still need real-device testing.
 
 
 ## Feeder status consistency review
@@ -161,3 +169,8 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 - If the newest-page refresh fails, the in-memory history is restored instead of replacing it with a possibly older/incomplete local cache.
 - When another Staff account resolves an older outage, the latest audit page is used to update the cached historical event to its resolved state where available, instead of simply dropping it from the old-page cache.
 - The explicit full-history reload used after Admin edits also restores the last successful in-memory page set if a later page request fails, rather than replacing it with an older cache snapshot.
+
+
+## Final pre-release audit correction
+- Corrected the Service Worker static-asset extension matcher in `sw.js`; the prior extra escaping prevented the intended extension match for non-shell static assets. The app-shell assets were already explicitly listed, but this improves offline caching for additional static resources.
+- The correction is on the preparation branch only. It has not been deployed to Netlify and has not been verified on an Android device.
