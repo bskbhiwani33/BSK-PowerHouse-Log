@@ -663,8 +663,11 @@ function renderFeederStatusSearch() {
     const inRange=x=>(!from||x.date>=from)&&(!to||x.date<=to);
     const breakdowns=operational.breakdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const shutdowns=operational.shutdowns.filter(x=>x.feederId===f.id).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-    const statusRow=(operational.feeder_status||[]).find(x=>x.feederId===f.id);
-    const status=statusRow?.status || (breakdowns.some(x=>x.status==="ongoing")?"Breakdown":shutdowns.some(x=>x.status==="ongoing")?"Shutdown":"Running");
+    // The records API includes every ongoing outage, even beyond the current history page.
+    // Derive live status from those records so stale feeder_status data cannot hide an outage.
+    const hasOngoingBreakdown=breakdowns.some(x=>x.status==="ongoing");
+    const hasOngoingShutdown=shutdowns.some(x=>x.status==="ongoing");
+    const status=hasOngoingBreakdown?"Breakdown":hasOngoingShutdown?"Shutdown":"Running";
     const dailySource=operational.daily_reports||dashboardData.reports||[];
     const daily=dailySource.filter(x=>x.feederId===f.id).map(x=>({...x,date:x.reportDate,kind:"Daily Report",reason:x.remarks||x.eventType}));
     const history=[...breakdowns.map(x=>({...x,kind:"Breakdown"})),...shutdowns.map(x=>({...x,kind:"Shutdown"})),...daily]
