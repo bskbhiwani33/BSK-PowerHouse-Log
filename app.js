@@ -588,14 +588,20 @@ async function loadOperationalRecords(options = {}) {
 }
 
 async function refreshOperationalRecordsPreservingHistory() {
-  // Avoid racing the user's explicit older-history paging request.
+  // Use the same lock as manual paging so periodic refreshes, saves and
+  // explicit Load Older actions cannot overwrite each other's cursors.
   if (historyLoadInProgress) return;
-  // Keep older pages visible during periodic refreshes and dashboard refreshes.
-  const pagesToRestore = Math.max(1, recordPagesLoaded || 1);
-  await loadOperationalRecords();
-  for (let page = 1; page < pagesToRestore; page += 1) {
-    if (!Object.values(recordPageCursors || {}).some(Boolean)) break;
-    await loadOperationalRecords({ append: true });
+  historyLoadInProgress = true;
+  try {
+    // Keep older pages visible during periodic refreshes and dashboard refreshes.
+    const pagesToRestore = Math.max(1, recordPagesLoaded || 1);
+    await loadOperationalRecords();
+    for (let page = 1; page < pagesToRestore; page += 1) {
+      if (!Object.values(recordPageCursors || {}).some(Boolean)) break;
+      await loadOperationalRecords({ append: true });
+    }
+  } finally {
+    historyLoadInProgress = false;
   }
 }
 
