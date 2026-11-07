@@ -911,20 +911,33 @@ async function queueOffline(action, payload) {
   }
   return item;
 }
+let outboxSyncInProgress = false;
 async function syncOutbox() {
-  if (!navigator.onLine || !auth.currentUser) return;
-  const items = readOutbox();
-  if (!items.length) return;
-  const remaining = [];
-  for (const item of items) {
-    if (!auth.currentUser || item.ownerUid !== auth.currentUser.uid) { remaining.push(item); continue; }
-    try { await recordsRequest(item.action, {...item.payload, clientEntryId:item.clientEntryId}); }
-    catch (error) { remaining.push(item); }
-  }
-  writeOutbox(remaining);
-  if (remaining.length !== items.length) {
-    await refreshOperationalRecordsPreservingHistory();
-    if ($("reportMessage")) message("reportMessage", remaining.length ? "Some offline entries are waiting to sync." : "Offline entries synced successfully.");
+  if (outboxSyncInProgress || !navigator.onLine || !auth.currentUser) return;
+  outboxSyncInProgress = true;
+  try {
+    const items = readOutbox();
+    if (!items.length) return;
+    const syncedIds = new Set();
+    for (const item of items) {
+      if (!auth.currentUser || item.ownerUid !== auth.currentUser.uid) continue;
+      try {
+        await recordsRequest(item.action, {...item.payload, clientEntryId:item.clientEntryId});
+        syncedIds.add(item.clientEntryId);
+      } catch (error) {
+        // Keep failed entries in the local outbox for a later retry.
+      }
+    }
+    // Merge against the latest queue so entries added during this sync are never overwritten.
+    const latestItems = readOutbox();
+    const remaining = latestItems.filter(item => !syncedIds.has(item.clientEntryId));
+    writeOutbox(remaining);
+    if (syncedIds.size) {
+      await refreshOperationalRecordsPreservingHistory();
+      if ($("reportMessage")) message("reportMessage", remaining.length ? "Some offline entries are waiting to sync." : "Offline entries synced successfully.");
+    }
+  } finally {
+    outboxSyncInProgress = false;
   }
 }
 window.addEventListener("online", syncOutbox);
