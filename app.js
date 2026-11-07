@@ -871,7 +871,9 @@ submitOperational("consumptionForm", "createConsumption", () => ({
 }), "consumptionMessage");
 
 $("refreshRecords")?.addEventListener("click", refreshOperationalRecordsPreservingHistory);
-["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); renderAlertsAndCharts(); }));
+const refreshFilteredRecordViews = () => { renderRecordHistory(); renderReports(); renderFeederStatusSearch(); renderAlertsAndCharts(); };
+["recordsFrom","recordsTo"].forEach(id => $(id)?.addEventListener("change", refreshFilteredRecordViews));
+$("recordsSearch")?.addEventListener("input", refreshFilteredRecordViews);
 
 function allHistoryPagesLoaded() {
   // A missing cursor before the first successful server page is not proof
