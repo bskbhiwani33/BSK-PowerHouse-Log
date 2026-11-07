@@ -77,3 +77,10 @@ Status meanings:
 - Confirmed the Staff "Load Older Records" control is wired to the shared paginated records API and uses the same guarded history-loading lock as Admin pagination.
 - Removed a duplicate `recordsSearch` input listener. The shared search now has one refresh path, avoiding repeated rendering of history, reports, feeder status, alerts and charts for each keystroke.
 - This is source review plus CI syntax/bundle/rules coverage; actual browser/device pagination and offline-sync tests remain outstanding.
+
+
+## Staff audit-history pagination correction
+- Found that Staff audit entries were filtered by actor UID only after fetching each page. In busy Power Houses, other Staff members' entries could consume pages and hide the current Staff member's older history.
+- The records API now applies the authenticated Staff UID as a Firestore query filter before pagination and rejects cursors belonging to another Staff account.
+- Added a staged composite index for houseId + actorUid + createdAt descending. This index is committed only to the preparation branch and is not published to Firebase yet.
+- Runtime validation of the new composite query/index remains part of the release checklist; CI will verify syntax, bundles and Firestore rules, but does not publish the index.
