@@ -600,6 +600,21 @@ async function loadOperationalRecords(options = {}) {
   }
 }
 
+async function refreshAllOperationalHistory() {
+  if (historyLoadInProgress) return;
+  historyLoadInProgress = true;
+  try {
+    if (!await loadOperationalRecords()) return;
+    while (Object.values(recordPageCursors || {}).some(Boolean)) {
+      const before = JSON.stringify(recordPageCursors || {});
+      if (!await loadOperationalRecords({ append: true })) break;
+      if (JSON.stringify(recordPageCursors || {}) === before) break;
+    }
+  } finally {
+    historyLoadInProgress = false;
+  }
+}
+
 async function refreshOperationalRecordsPreservingHistory() {
   // Use the same lock as manual paging so periodic refreshes, saves and
   // explicit Load Older actions cannot overwrite each other's cursors.
@@ -615,7 +630,15 @@ async function refreshOperationalRecordsPreservingHistory() {
     const keys = recordCollections.concat(["feeder_status", "notifications", "entry_history"]);
     for (const key of keys) {
       const byId = new Map((operational[key] || []).map(item => [item.id, item]));
+      const freshOngoingIds = new Set(
+        (operational[key] || []).filter(item => item.status === "ongoing").map(item => item.id)
+      );
       (previous[key] || []).forEach(item => {
+        // The API includes every currently ongoing outage on every page.
+        // If a previously cached ongoing event is absent now, it was resolved;
+        // do not keep showing it as active from an older cached page.
+        if ((key === "breakdowns" || key === "shutdowns") &&
+            item.status === "ongoing" && !freshOngoingIds.has(item.id)) return;
         if (!byId.has(item.id)) byId.set(item.id, item);
       });
       operational[key] = [...byId.values()];
@@ -707,8 +730,11 @@ $("adminRecordsList")?.addEventListener("click", async event => {
   const changes={};
   for(const [key,label] of fields){const value=window.prompt(label+" (blank = unchanged)",item[key]??"");if(value===null)return;if(value!=="")changes[key]=value;}
   if(!Object.keys(changes).length)return;
-  try{await recordsRequest("updateRecord",{recordCollection:collection,id,changes});await refreshOperationalRecordsPreservingHistory();message("adminMessage","Record updated. Edit history saved.");}
-  catch(error){message("adminMessage",error.message,true);}
+  try{
+    await recordsRequest("updateRecord",{recordCollection:collection,id,changes});
+    await refreshAllOperationalHistory();
+    message("adminMessage","Record updated. Edit history saved.");
+  } catch(error){message("adminMessage",error.message,true);}
 });
 
 function renderRecordHistory() {
