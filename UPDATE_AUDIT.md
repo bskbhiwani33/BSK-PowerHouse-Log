@@ -21,7 +21,7 @@ Status meanings:
 | 9 | Feeder-wise report | Partial | A dedicated feeder-wise breakdown/shutdown count summary is present; it reflects loaded records until all history pages are loaded. |
 | 10 | Daily summary | Partial | Daily entry counts now show category-separated totals across loaded record types; full-history verification remains. |
 | 11 | Monthly report | Partial | Monthly entry counts now show category-separated totals; full-history verification remains. |
-| 12 | Date-wise search | Partial | From/to filters apply to record history, feeder history, reports, charts and three dedicated Excel exports; verify all combinations in runtime. |
+| 12 | Date-wise search | Partial | From/to filters apply to record history, feeder history, reports, charts and three dedicated Excel exports. Clearing report filters now refreshes feeder history and charts as well as record lists; verify all combinations in runtime. |
 | 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. |
 | 14 | PDF report | Partial | Print-ready report opens in a separate window so the user can choose Save as PDF; test browser/WebView print support and filtered layout. |
 | 15 | Staff login with individual login ID | Present | User ID + PIN login and Admin provisioning support multiple active staff accounts per Power House; verify login and staff isolation in runtime. |
