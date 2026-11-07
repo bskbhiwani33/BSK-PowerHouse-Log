@@ -1018,7 +1018,12 @@ async function syncOutbox() {
   }
 }
 window.addEventListener("online", syncOutbox);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) syncOutbox(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !currentProfile || !navigator.onLine) return;
+  syncOutbox();
+  if (currentProfile.role === "admin") refreshDashboard();
+  else refreshOperationalRecordsPreservingHistory();
+});
 const originalRecordsRequest = recordsRequest;
 recordsRequest = async (action, data = {}) => {
   const canQueue = ["createDailyReport","createBreakdown","createShutdown","createTripping","createConsumption"].includes(action);
