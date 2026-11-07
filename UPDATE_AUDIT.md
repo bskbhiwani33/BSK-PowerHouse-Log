@@ -12,7 +12,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 
 | # | Requested update | Source audit status | Notes / remaining work |
 |---|---|---|---|
-| 1 | Dashboard: only ongoing Breakdown/Shutdown counts and feeder names | Present | Live outage dashboard renders ongoing counts and lists; verify role visibility and multiple feeders. |
+| 1 | Dashboard: only ongoing Breakdown/Shutdown counts and feeder names | Present | Live outage dashboard renders ongoing counts and lists; Admin refreshes every 60 seconds and immediately when the app becomes visible again. Verify role visibility and multiple feeders on device. |
 | 2 | Tripping entry: only number of trippings and number of feeders | Present | Form has exactly the two requested numeric inputs; date is hidden/automatic. |
 | 3 | Breakdown/Shutdown entry with feeder, date, start, optional end, reason | Present | Separate forms and resolve workflow exist; verify overnight duration and simultaneous outage constraints. |
 | 4 | Five Power House consumption readings, automatic total, history and Excel | Present | Five fields, client/server total calculation, history list and Consumption Excel exist; verify units/rounding and larger datasets. |
@@ -144,3 +144,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 - Static visible text on the current page was compared against the Hindi dictionary; only the BSK brand and raw breaker status values remain intentionally untranslated. Added a Hindi footer label and dynamic offline queue / backup-failure prefix handling.
 
 - Routed the PDF pop-up warning, empty daily-report warning and login-restoration alert through the selected-language alert helper so browser alerts respect Hindi mode too.
+
+
+## Foreground dashboard refresh
+- Added an immediate records/dashboard refresh when the app returns to the foreground, while retaining the existing 60-second polling interval and offline/hidden-tab guards. This helps Admin see Staff entries promptly without doubling continuous Firestore read traffic.
