@@ -341,10 +341,10 @@ export default async req => {
           const docs = new Map(snap.docs.map(d => [d.id, d]));
           // Keep every ongoing outage visible even when it falls on an older page.
           if (name === "breakdowns" || name === "shutdowns") {
-            const ongoing = await db.collection(name).where("status", "==", "ongoing").get();
-            ongoing.docs.forEach(d => {
-              if (!houseId || d.data().houseId === houseId) docs.set(d.id, d);
-            });
+            let ongoingQuery = db.collection(name).where("status", "==", "ongoing");
+            if (houseId) ongoingQuery = ongoingQuery.where("houseId", "==", houseId);
+            const ongoing = await ongoingQuery.get();
+            ongoing.docs.forEach(d => docs.set(d.id, d));
           }
           output[name] = [...docs.values()]
             .filter(d => actor.role !== "staff" || name !== "entry_history" || d.data().actorUid === actor.uid)
