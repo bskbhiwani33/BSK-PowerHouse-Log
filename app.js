@@ -633,6 +633,11 @@ async function refreshOperationalRecordsPreservingHistory() {
       return;
     }
     const keys = recordCollections.concat(["feeder_status", "notifications", "entry_history"]);
+    const resolvedUpdates = new Map(
+      (operational.entry_history || [])
+        .filter(item => item.action === "resolved" && item.recordId)
+        .map(item => [item.recordId, item.after || {}])
+    );
     for (const key of keys) {
       const byId = new Map((operational[key] || []).map(item => [item.id, item]));
       const freshOngoingIds = new Set(
@@ -640,10 +645,14 @@ async function refreshOperationalRecordsPreservingHistory() {
       );
       (previous[key] || []).forEach(item => {
         // The API includes every currently ongoing outage on every page.
-        // If a previously cached ongoing event is absent now, it was resolved;
-        // do not keep showing it as active from an older cached page.
+        // If an older cached event is no longer active, use its fresh resolve
+        // audit event when available; otherwise don't leave it marked ongoing.
         if ((key === "breakdowns" || key === "shutdowns") &&
-            item.status === "ongoing" && !freshOngoingIds.has(item.id)) return;
+            item.status === "ongoing" && !freshOngoingIds.has(item.id)) {
+          const resolved = resolvedUpdates.get(item.id);
+          if (resolved) byId.set(item.id, { ...item, ...resolved });
+          return;
+        }
         if (!byId.has(item.id)) byId.set(item.id, item);
       });
       operational[key] = [...byId.values()];
