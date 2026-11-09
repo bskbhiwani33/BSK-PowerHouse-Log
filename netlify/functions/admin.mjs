@@ -204,32 +204,62 @@ export default async (req) => {
         return response({ error: "Invalid Staff details" }, 400);
       }
 
-      const houseDoc = await db.collection("powerhouses").doc(houseId).get();
-
-      if (!houseDoc.exists || houseDoc.data().active !== true) {
-        return response({ error: "Power House not found or inactive" }, 404);
-      }
-
-      const existingUser = await db.collection("users")
-        .where("userId", "==", userId).limit(1).get();
-
-      if (!existingUser.empty) {
-        return response({ error: "User ID already exists" }, 409);
-      }
-
       const pinSalt = crypto.randomBytes(16).toString("hex");
       const pinHash = crypto.scryptSync(pin, pinSalt, 64).toString("hex");
       const ref = db.collection("users").doc();
+      const assignmentRef = db.collection("staff_house_assignments").doc(houseId);
 
-      await ref.set({
-        userId,
-        pinSalt,
-        pinHash,
-        role: "staff",
-        active: true,
-        houseId,
-        houseName: houseDoc.data().name,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      await db.runTransaction(async tx => {
+        const [houseSnap, existingUsers, staffInHouse, assignmentSnap] = await Promise.all([
+          tx.get(db.collection("powerhouses").doc(houseId)),
+          tx.get(db.collection("users").where("userId", "==", userId).limit(1)),
+          tx.get(db.collection("users").where("houseId", "==", houseId)),
+          tx.get(assignmentRef)
+        ]);
+
+        if (!houseSnap.exists || houseSnap.data().active !== true) {
+          throw Object.assign(new Error("Power House not found or inactive"), { status: 404 });
+        }
+        if (!existingUsers.empty) {
+          throw Object.assign(new Error("User ID already exists"), { status: 409 });
+        }
+
+        let assignedStaffActive = false;
+        if (assignmentSnap.exists && validDocId(assignmentSnap.data().staffUid)) {
+          const assignedUser = await tx.get(
+            db.collection("users").doc(assignmentSnap.data().staffUid)
+          );
+          assignedStaffActive = assignedUser.exists &&
+            assignedUser.data().role === "staff" &&
+            assignedUser.data().active === true &&
+            assignedUser.data().houseId === houseId;
+        }
+
+        const legacyStaffActive = staffInHouse.docs.some(doc =>
+          doc.data().role === "staff" && doc.data().active === true
+        );
+        if (assignedStaffActive || legacyStaffActive) {
+          throw Object.assign(
+            new Error("Is Power House ke liye Staff account pehle se maujood hai"),
+            { status: 409 }
+          );
+        }
+
+        tx.create(ref, {
+          userId,
+          pinSalt,
+          pinHash,
+          role: "staff",
+          active: true,
+          houseId,
+          houseName: houseSnap.data().name,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        tx.set(assignmentRef, {
+          houseId,
+          staffUid: ref.id,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       });
 
       return response({
@@ -244,7 +274,10 @@ export default async (req) => {
   } catch (error) {
     console.error("ADMIN FUNCTION ERROR:", error);
 
-    return response({ error: "Server error. Please try again." }, 500);
+    return response(
+      { error: error.status ? error.message : "Server error. Please try again." },
+      error.status || 500
+    );
   }
 
 };
