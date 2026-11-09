@@ -310,7 +310,7 @@ export default async req => {
         const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
         const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports", "feeder_status", "notifications", "entry_history"];
         const output = {};
-        const pageSize = 500;
+        const pageSize = 100;
         const nextCursors = {};
         await Promise.all(names.map(async name => {
           // Staff only need their own audit trail. Admin receives the full
