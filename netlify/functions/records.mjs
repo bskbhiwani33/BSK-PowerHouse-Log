@@ -72,10 +72,14 @@ async function createOutage(db, actor, body, type) {
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   };
   return db.runTransaction(async tx => {
-    const [duplicate, activeBreakdowns, activeShutdowns] = await Promise.all([
+    const [duplicate, activeBreakdowns, activeShutdowns, feederStatusGuard] = await Promise.all([
       tx.get(ref),
       tx.get(db.collection("breakdowns").where("feederId", "==", feeder.feederId).where("status", "==", "ongoing")),
-      tx.get(db.collection("shutdowns").where("feederId", "==", feeder.feederId).where("status", "==", "ongoing"))
+      tx.get(db.collection("shutdowns").where("feederId", "==", feeder.feederId).where("status", "==", "ongoing")),
+      // Read the shared feeder-status document inside the transaction. Concurrent
+      // Breakdown and Shutdown submissions for the same feeder then contend on
+      // one document and are retried serially before the ongoing-outage queries.
+      tx.get(statusRef)
     ]);
     if (duplicate.exists) {
       if (duplicate.data().houseId !== feeder.houseId) throw Object.assign(new Error("Entry ID already used"), { status: 409 });
