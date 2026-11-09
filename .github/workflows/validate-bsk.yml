@@ -23,6 +23,8 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('firebase.json')); JSON.parse(require('fs').readFileSync('firestore.indexes.json'));"
       - name: Install project dependencies
         run: npm install --ignore-scripts
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=moderate
       - name: Verify Netlify function bundles
         run: npx --yes esbuild@0.25.0 netlify/functions/*.mjs --bundle --platform=node --packages=external --outdir=/tmp/bsk-functions
       - name: Install Firestore rules test dependencies
