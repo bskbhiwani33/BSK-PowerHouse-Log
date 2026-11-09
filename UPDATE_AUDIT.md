@@ -16,7 +16,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 | 2 | Tripping entry: only number of trippings and number of feeders | Present | Form has exactly the two requested numeric inputs; date is hidden/automatic. |
 | 3 | Breakdown/Shutdown entry with feeder, date, start, optional end, reason | Present | Separate forms and resolve workflow exist; verify overnight duration and simultaneous outage constraints. |
 | 4 | Five Power House consumption readings, automatic total, history and Excel | Present | Five fields, client/server total calculation, history list and Consumption Excel exist; verify units/rounding and larger datasets. |
-| 5 | Feeder status Running/Breakdown/Shutdown | Present | Canonical `feeder_status` records are written on ongoing outage and reset on resolution. Added a houseId + document-ID composite index for Staff pagination of feeder status; index deployment remains deferred until final release. |
+| 5 | Feeder status Running/Breakdown/Shutdown | Present | Canonical `feeder_status` records are written on ongoing outage and reset on resolution. Staff pagination filters by Power House and orders by document ID; verify paging against live data. This query does not add a separate composite index definition. |
 | 6 | Feeder history | Present | Feeder search applies date range and displays loaded history; Load All History retrieves older pages. Backend rejects malformed/expired cursors and invalid Firestore document IDs. Refresh and paging share a lock; periodic refresh now updates only the newest page and preserves older pages in memory instead of re-downloading all history. Runtime verification remains. |
 | 7 | Automatic Breakdown duration | Present | Duration is calculated from start to end/current time for display; verify date/time edge cases. |
 | 8 | Repeat-Breakdown report | Present | Repeat counts are grouped by feeder ID and filtered by date/search. The report now warns when only partial history is loaded; complete historical counts require loading all pages first. |
@@ -53,7 +53,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 
 ## Remaining work before production sign-off (runtime verification, not feature coding)
 1. Confirm the latest preparation-branch CI run passes JavaScript syntax, Firebase config parsing, Netlify function bundling, and Firestore Rules emulator tests.
-2. Publish the 15 staged composite indexes to the Firebase project and wait until every index is READY; do this before the website deployment.
+2. Verify the 15 composite index definitions in this branch against Firebase. The prior Firebase CLI comparison found an exact 15/15 match and the Firebase console showed all 15 Enabled; repeat this check if index definitions change. Publish indexes only if any required definition is missing, then wait until it is READY before the website deployment.
 3. After the single Netlify deployment, smoke-test Admin/Staff login, immediate Staff entry visibility, outage create/resolve, consumption totals, notifications, pagination, exports, and backup against live Firebase data.
 4. Verify date/time edge cases, Hindi labels/messages, dark mode, filtered PDF print layout, and large-history pagination in a browser.
 5. Verify offline shell reload, queued entry sync, and account isolation on the actual Android WebView device.
@@ -70,7 +70,7 @@ Known scope limits (not to be mistaken for completed runtime checks):
 
 ## Feeder status consistency review
 - The feeder status/history search now derives the displayed live state from the ongoing Breakdown and Shutdown records returned by the records API. This avoids a stale `feeder_status` document overriding a currently ongoing outage in the UI. The records API explicitly merges all ongoing outages into each history page, so the status calculation does not depend on loading every historical page.
-- This is a source-level correction; live Firebase/Netlify and Android WebView behavior still requires pre-release testing. No production deployment, Firestore Rules/index publication, or APK build was performed.
+- This is a source-level correction; live Firebase/Netlify and Android WebView behavior still requires pre-release testing. No production deployment, Firestore Rules publication, or APK build was performed. The existing 15 composite indexes were previously checked against Firebase and found matching and Enabled.
 
 
 ## Ongoing outage integrity review
@@ -92,20 +92,20 @@ Known scope limits (not to be mistaken for completed runtime checks):
 ## Staff audit-history pagination correction
 - Found that Staff audit entries were filtered by actor UID only after fetching each page. In busy Power Houses, other Staff members' entries could consume pages and hide the current Staff member's older history.
 - The records API now applies the authenticated Staff UID as a Firestore query filter before pagination and rejects cursors belonging to another Staff account.
-- Added a staged composite index for houseId + actorUid + createdAt descending. This index is committed only to the preparation branch and is not published to Firebase yet.
+- Added the composite index for houseId + actorUid + createdAt descending to the preparation branch. The prior Firebase CLI comparison found the full 15-index set matched Firebase and the console showed all 15 Enabled; re-check if this index definition changes.
 - Runtime validation of the new composite query/index remains part of the release checklist; CI will verify syntax, bundles and Firestore rules, but does not publish the index.
 
 
 ## Active-outage transaction query optimization
 - Limited the cross-collection duplicate-outage transaction checks to records whose status is `ongoing`, rather than reading every historical Breakdown and Shutdown for the feeder on every new outage entry.
-- Added staged composite indexes for feederId + status on both outage collections. The query still checks both collections in the same transaction; no live index publication has occurred.
-- Latest CI syntax, Netlify bundle and Firestore Rules emulator checks have passed. Real Firebase index readiness remains a release prerequisite.
+- Added composite indexes for feederId + status on both outage collections. The query still checks both collections in the same transaction. The prior Firebase CLI comparison found the full 15-index set matched Firebase and the console showed all 15 Enabled.
+- Latest CI syntax, Netlify bundle and Firestore Rules emulator checks have passed. Real Firebase data-path testing remains a release prerequisite; the 15 composite indexes were previously confirmed Enabled.
 
 
 ## Stale feeder-status recovery
 - Reviewed the outage creation transaction and found that a stale `feeder_status` document could reject a new outage even when both Breakdown and Shutdown collections contained no ongoing event for that feeder.
 - The transaction now treats active outage records in both collections as the source of truth for duplicate prevention; when none exists, the new outage transaction writes the current status and replaces the stale status document.
-- This avoids a false permanent block while retaining the cross-collection transaction check. Latest CI syntax, Netlify bundle and Firestore Rules emulator checks have passed; live Firebase testing and index publication remain pending.
+- This avoids a false permanent block while retaining the cross-collection transaction check. Latest CI syntax, Netlify bundle and Firestore Rules emulator checks have passed; live Firebase testing remains pending. The existing 15 composite indexes were previously confirmed Enabled.
 
 
 ## Service-worker registration review correction
@@ -116,8 +116,8 @@ Known scope limits (not to be mistaken for completed runtime checks):
 
 ## House-scoped ongoing-outage page reads
 - The records API now applies the Staff/Admin selected Power House filter directly to the ongoing Breakdown and Shutdown queries, rather than fetching ongoing events across every Power House and filtering them afterward.
-- Added staged houseId + status composite indexes for both outage collections. This narrows backend reads while keeping ongoing feeders visible on every history page.
-- Indexes remain un-published until the coordinated Firebase release; Latest CI syntax, Netlify bundle and Firestore Rules emulator validation passed; production index readiness remains pending.
+- Added houseId + status composite indexes for both outage collections. This narrows backend reads while keeping ongoing feeders visible on every history page.
+- The 15-index set was previously found to match Firebase exactly and all indexes were shown Enabled; Latest CI syntax, Netlify bundle and Firestore Rules emulator validation passed. Re-check index readiness if the index file changes before release.
 
 
 ## Expanded Firestore rules regression coverage
@@ -130,7 +130,7 @@ Known scope limits (not to be mistaken for completed runtime checks):
 
 ## One-shot release order (not executed)
 1. Freeze source changes on this preparation branch and confirm latest CI success.
-2. Publish only the staged Firestore composite indexes first (additive): `firebase deploy --only firestore:indexes --project testing-app-8af35`. Wait until every required index reports READY.
+2. Re-check the 15 Firestore composite indexes against the current `firestore.indexes.json`. They were previously found to match the branch definitions and all were Enabled. If any are missing, publish only indexes first (additive): `firebase deploy --only firestore:indexes --project testing-app-8af35`, then wait until every required index reports READY.
 3. Merge this branch to `main` exactly once to trigger the single Netlify production deployment. Do not make follow-up code commits to `main`.
 4. Smoke-test the new Admin/Staff app and Netlify API while the existing Firestore rules remain in place. The old live `main` app writes daily reports directly, while the new app routes these writes through the audited API.
 5. After confirming the new app is active and users have refreshed/reopened it, publish the restrictive Firestore Rules: `firebase deploy --only firestore:rules --project testing-app-8af35`. Do not publish these rules before the Netlify update, because they deny direct client writes to `daily_reports` and would break the old live app.
@@ -142,7 +142,7 @@ Known scope limits (not to be mistaken for completed runtime checks):
 ## Live-main compatibility finding
 - The current `main` branch still writes `daily_reports` directly from `app.js`; it does not yet use the staged `records.mjs` API for that action.
 - The staged Firestore Rules deny direct client writes to `daily_reports`. Therefore the rules must be published only after the one Netlify deployment has replaced the old app code and the new app has passed smoke tests.
-- The staged indexes can be published first because adding indexes is non-breaking. This dependency is now reflected in the one-shot release order above.
+- Adding indexes is non-breaking, so any genuinely missing index can be published before the website. The current 15-index set was previously found matching and Enabled in Firebase.
 
 
 ## Hindi translation coverage improvement
