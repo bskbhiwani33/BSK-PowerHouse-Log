@@ -617,7 +617,8 @@ async function loadOperationalRecords(options = {}) {
     } catch {}
     const button = $("loadMoreHistory");
     if (button) { button.disabled = false; button.textContent = "Retry Loading History"; }
-    if ($("adminMessage")) message("adminMessage", "Could not load the next history page. Check connection and retry.", true);
+    const historyErrorTarget = currentProfile?.role === "staff" ? "reportMessage" : "adminMessage";
+    if ($(historyErrorTarget)) message(historyErrorTarget, "Could not load the next history page. Check connection and retry.", true);
     return false;
   }
 }
