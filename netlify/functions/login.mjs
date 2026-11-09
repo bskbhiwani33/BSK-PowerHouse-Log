@@ -63,10 +63,24 @@ export default async (req) => {
       await rateLimit(db, userId);
       return Response.json({ error: "Invalid User ID or PIN" }, { status: 401 });
     }
+    if (!["admin", "staff"].includes(profile.role)) {
+      return Response.json({ error: "Account role is not configured. Contact Admin." }, { status: 403 });
+    }
+    const houseId = profile.houseId || "";
+    if (profile.role === "staff") {
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(houseId)) {
+        return Response.json({ error: "Staff Power House assignment is missing. Contact Admin." }, { status: 403 });
+      }
+      const houseSnap = await db.collection("powerhouses").doc(houseId).get();
+      if (!houseSnap.exists || houseSnap.data().active !== true) {
+        return Response.json({ error: "Assigned Power House is inactive. Contact Admin." }, { status: 403 });
+      }
+    }
+
     await rateLimit(db, userId, true);
     const uid = userDoc.id;
     const customToken = await fb.auth().createCustomToken(uid, {
-      role: profile.role, houseId: profile.houseId || ""
+      role: profile.role, houseId
     });
     return Response.json({
       token: customToken,
