@@ -145,20 +145,6 @@
       ]
     },
     {
-      "collectionGroup": "feeder_status",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "houseId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "entry_history",
       "queryScope": "COLLECTION",
       "fields": [
