@@ -185,3 +185,6 @@ Known scope limits (not to be mistaken for completed runtime checks):
 
 - First-time Admin creation is also guarded by a transactional singleton document, so two simultaneous setup requests cannot create multiple Admin accounts. The setup guard collection is server-only and covered by the Firestore Rules denial tests.
 - Firestore Rules emulator coverage now explicitly checks that Staff and Admin clients cannot read or write the new Staff assignment, User ID claim, and Admin setup guard collections.
+
+- Login now rejects unsupported account roles and Staff accounts with a missing, malformed, or inactive Power House assignment before issuing a Firebase custom token.
+- Breakdown and Shutdown creation now reads the shared feeder-status document within its Firestore transaction. This serializes concurrent outage submissions for the same feeder so a simultaneous Breakdown and Shutdown cannot both pass the ongoing-outage check based on stale parallel reads.
