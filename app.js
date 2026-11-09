@@ -30,6 +30,8 @@ const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 
 let currentProfile = null;
+// Keep language state initialized before any early login/status messages run.
+let hindiMode = false;
 let dashboardData = {
   houses: [],
   feeders: [],
@@ -526,7 +528,9 @@ function setOperationalDates() {
 
 function fillOperationalFeederLists() {
   const source = $("feederName");
-  if (!source) return;
+  // The Staff feeder field starts as a text input and becomes a select after login.
+  // Do not read .options until that replacement has happened.
+  if (!source || !source.options) return;
   ["breakdownFeeder","shutdownFeeder"].forEach(id => {
     const target = $(id);
     if (!target) return;
@@ -1288,7 +1292,7 @@ if (localStorage.getItem("bsk-theme")==="dark") {
   document.body.classList.add("dark");
   if ($("themeToggle")) $("themeToggle").textContent="Light Mode";
 }
-let hindiMode = localStorage.getItem("bsk-language") === "hi";
+hindiMode = localStorage.getItem("bsk-language") === "hi";
 const hindiWords = {
   "Power House Feeder Log":"पावर हाउस फीडर लॉग","Dashboard":"डैशबोर्ड","Logout":"लॉग आउट",
   "Sign in with your User ID and 4-digit PIN.":"अपनी यूजर आईडी और 4 अंकों के पिन से लॉगिन करें।",
