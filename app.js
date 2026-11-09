@@ -149,21 +149,32 @@ $("loginForm")?.addEventListener("submit", async event => {
       "hidden", currentProfile.role !== "admin"
     );
 
-    message("loginMessage", "");
+    message("loginMessage", "Login successful. Loading your data...");
+    setOperationalDates();
+
+    // Start independent data requests together so the app does not wait for
+    // feeder, records, offline-sync and dashboard requests one after another.
+    const startupTasks = [
+      loadOperationalRecords(),
+      syncOutbox()
+    ];
 
     if (currentProfile.role === "staff") {
-      await loadStaffFeeders();
+      startupTasks.push(loadStaffFeeders());
+    } else if (currentProfile.role === "admin") {
+      // Dashboard data and operational history are separate requests.
+      // Avoid fetching operational history a second time inside refreshDashboard.
+      startupTasks.push(refreshDashboard({ refreshRecords: false }));
+    }
+
+    await Promise.all(startupTasks);
+
+    if (currentProfile.role === "staff") {
       fillOperationalFeederLists();
     }
 
-    await loadOperationalRecords();
-    setOperationalDates();
-    await syncOutbox();
     renderOfflineQueueStatus();
-
-    if (currentProfile.role === "admin") {
-      await refreshDashboard();
-    }
+    message("loginMessage", "");
 
   } catch (error) {
     message("loginMessage", error.message, true);
@@ -265,14 +276,16 @@ $("reportForm")?.addEventListener("submit", async event => {
 });
 
 // Admin: Refresh dashboard
-async function refreshDashboard() {
+async function refreshDashboard(options = {}) {
   message("houseMessage", "Loading dashboard...");
 
   try {
     dashboardData = await adminRequest("getDashboardData");
 
     renderDashboard();
-    await refreshOperationalRecordsPreservingHistory();
+    if (options.refreshRecords !== false) {
+      await refreshOperationalRecordsPreservingHistory();
+    }
     message("houseMessage", "Dashboard updated.");
 
   } catch (error) {
