@@ -28,7 +28,11 @@ async function actorFor(req, fb, db) {
   if (!snap.exists || snap.data().active !== true) throw Object.assign(new Error("Account inactive"), { status: 403 });
   const user = snap.data();
   if (!["admin", "staff"].includes(user.role)) throw Object.assign(new Error("Access denied"), { status: 403 });
-  return { uid: decoded.uid, role: user.role, userId: user.userId || "", houseId: user.houseId || "", houseName: user.houseName || "" };
+  const houseId = user.houseId || "";
+  if (user.role === "staff" && !validDocId(houseId)) {
+    throw Object.assign(new Error("Staff Power House assignment missing"), { status: 403 });
+  }
+  return { uid: decoded.uid, role: user.role, userId: user.userId || "", houseId, houseName: user.houseName || "" };
 }
 
 function requireRole(actor, role) {
