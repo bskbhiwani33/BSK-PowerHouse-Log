@@ -39,7 +39,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 | 25 | Dark Mode | Present | Theme toggle and local preference persistence exist; visual coverage needs device testing. |
 | 26 | Search by Feeder/date | Present | Feeder-name search and date-range filters are available across operational history, feeder history, reports, charts and exports; controls are separate by view rather than one global search. Runtime combinations still need testing. |
 | 27 | Dashboard charts | Present | Record-count and monthly activity bar charts now respond to date/search filters; validate in runtime. |
-| 28 | Backup system | Present | Admin can export a paginated JSON backup across operational collections. Backup includes format/schema/project/exporter metadata and per-collection row counts, validates every page response, rejects malformed/expired cursors and guards repeated cursors. Restore workflow is not included; PIN hashes/salts are excluded. Backup integrity still needs a live-data test. |
+| 28 | Backup system | Present | Admin can export a paginated JSON backup across operational and security-support collections, including staff-house assignments, normalized Staff User ID claims and the Admin setup guard. Backup includes format/schema/project/exporter metadata and per-collection row counts, validates every page response, rejects malformed/expired cursors and guards repeated cursors. Restore workflow is not included; PIN hashes/salts are excluded. Backup integrity still needs a live-data test. |
 | 29 | Offline entry + sync on reconnection | Present | Local outbox, stable IDs, transactional idempotency, guarded single-run sync, queue merging that preserves entries added during sync, online/visibility/periodic retry and storage-quota warning exist. Existing registration in app.js activates the service worker, which caches the app shell for offline reload while API routes remain network-only. Operational record caches are isolated per Staff UID; login/logout resets in-memory records and pagination. Cache quota failures no longer replace fresh server data with stale cached records; offline reload, sync and WebView device testing remain. |
 | 30 | Three separate Excel downloads with date filtering | Present | Separate Breakdown, Shutdown and Consumption Excel exports use From/To date filters and the shared XML 1.0 text sanitizer. |
  
@@ -188,3 +188,8 @@ Known scope limits (not to be mistaken for completed runtime checks):
 
 - Login now rejects unsupported account roles and Staff accounts with a missing, malformed, or inactive Power House assignment before issuing a Firebase custom token.
 - Breakdown and Shutdown creation now reads the shared feeder-status document within its Firestore transaction. This serializes concurrent outage submissions for the same feeder so a simultaneous Breakdown and Shutdown cannot both pass the ongoing-outage check based on stale parallel reads.
+
+
+## Backup coverage correction
+- The Admin backup export allowlist now includes `staff_house_assignments`, `staff_user_id_claims`, and `admin_setup_guard`, in addition to operational collections. These metadata collections are needed to preserve the one-Staff-per-house, normalized User ID reservation, and single-Admin setup safeguards in a complete export.
+- User PIN salts and hashes remain excluded from the export. This change is committed on `bsk-complete-update-prep` only; backup/restore is still export-only and has not been tested against live Firebase data.
