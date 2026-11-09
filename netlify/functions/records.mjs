@@ -166,7 +166,12 @@ async function updateRecord(db, actor, body) {
     next.total=keys.reduce((sum,k)=>sum+Number(next[k]??old[k]??0),0);
   } else {
     if(input.breakerStatus!==undefined){if(!["ON","OFF","TRIPPED","UNDER MAINTENANCE"].includes(input.breakerStatus))throw Object.assign(new Error("Invalid breaker status"),{status:400});next.breakerStatus=input.breakerStatus;}
-    for(const k of ["faultDetails","duration","restorationTime","remarks"])if(input[k]!==undefined)next[k]=clean(input[k]).slice(0,2000);
+    for(const k of ["faultDetails","duration","remarks"])if(input[k]!==undefined)next[k]=clean(input[k]).slice(0,2000);
+    if(input.restorationTime!==undefined){
+      const value=clean(input.restorationTime);
+      if(value && !validTime(value))throw Object.assign(new Error("Invalid restoration time"),{status:400});
+      next.restorationTime=value;
+    }
   }
   if(!Object.keys(next).length)throw Object.assign(new Error("No changes supplied"),{status:400});
   const history=db.collection("entry_history").doc();
@@ -190,10 +195,14 @@ async function createDailyReport(db, actor, body) {
   const feeder = await validateFeeder(db, actor, body.feederId);
   const clientId = typeof body.clientEntryId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId) ? body.clientEntryId : "";
   const ref = clientId ? db.collection("daily_reports").doc(clientId) : db.collection("daily_reports").doc();
+  const restorationTime = clean(body.restorationTime);
+  if (restorationTime && !validTime(restorationTime)) {
+    throw Object.assign(new Error("Restoration time sahi nahi hai"), { status: 400 });
+  }
   const data = {
     ...feeder, reportDate: body.reportDate, breakerStatus: body.breakerStatus,
     eventType: body.eventType, faultDetails: clean(body.faultDetails).slice(0,2000),
-    duration: clean(body.duration).slice(0,100), restorationTime: clean(body.restorationTime).slice(0,10),
+    duration: clean(body.duration).slice(0,100), restorationTime,
     remarks: clean(body.remarks).slice(0,2000), submittedBy: actor.uid,
     createdByUserId: actor.userId, createdAt: admin.firestore.FieldValue.serverTimestamp()
   };
