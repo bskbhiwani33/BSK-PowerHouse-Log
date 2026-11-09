@@ -21,18 +21,6 @@ service cloud.firestore {
       return isStaff() && request.auth.token.houseId == houseId;
     }
 
-    function validReportHouse() {
-      return exists(/databases/$(database)/documents/powerhouses/$(request.resource.data.houseId)) &&
-        get(/databases/$(database)/documents/powerhouses/$(request.resource.data.houseId)).data.name == request.resource.data.houseName;
-    }
-
-    function validReportFeeder() {
-      return exists(/databases/$(database)/documents/feeders/$(request.resource.data.feederId)) &&
-        get(/databases/$(database)/documents/feeders/$(request.resource.data.feederId)).data.houseId == request.resource.data.houseId &&
-        get(/databases/$(database)/documents/feeders/$(request.resource.data.feederId)).data.name == request.resource.data.feederName &&
-        get(/databases/$(database)/documents/feeders/$(request.resource.data.feederId)).data.active == true;
-    }
-
     match /users/{uid} {
       allow read, write: if false;
     }
