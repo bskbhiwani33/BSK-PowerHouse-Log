@@ -167,14 +167,19 @@ $("loginForm")?.addEventListener("submit", async event => {
       startupTasks.push(refreshDashboard({ refreshRecords: false }));
     }
 
-    await Promise.all(startupTasks);
-
-    if (currentProfile.role === "staff") {
-      fillOperationalFeederLists();
-    }
-
-    renderOfflineQueueStatus();
-    message("loginMessage", "");
+    // Do not hold the login screen open while operational history or the
+    // Admin dashboard loads. Authentication is complete at this point; load
+    // secondary data in the background so the user can start using the app.
+    Promise.allSettled(startupTasks).then(() => {
+      if (currentProfile?.role === "staff") {
+        fillOperationalFeederLists();
+      }
+      renderOfflineQueueStatus();
+      message("loginMessage", "");
+    }).catch(error => {
+      console.warn("BSK background startup task failed:", error);
+      message("loginMessage", "Login successful. Some data could not be loaded; use Refresh to retry.", true);
+    });
 
   } catch (error) {
     message("loginMessage", error.message, true);
