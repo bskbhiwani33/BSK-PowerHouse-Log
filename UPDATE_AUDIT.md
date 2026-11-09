@@ -182,3 +182,6 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - Existing active Staff accounts are detected during migration even if no assignment document exists yet. Inactive/deleted assignments can be replaced by a new Staff account.
 - The new `staff_house_assignments` and `staff_user_id_claims` collections are server-only; the Firestore client rules have no allow rule for them, so direct client access remains denied by default.
 - This is a source-level security correction. Verify transaction behavior and Staff/Admin provisioning in the Firebase emulator and then in the post-deploy smoke test; no production deploy or Rules publication has occurred.
+
+- First-time Admin creation is also guarded by a transactional singleton document, so two simultaneous setup requests cannot create multiple Admin accounts. The setup guard collection is server-only and covered by the Firestore Rules denial tests.
+- Firestore Rules emulator coverage now explicitly checks that Staff and Admin clients cannot read or write the new Staff assignment, User ID claim, and Admin setup guard collections.
