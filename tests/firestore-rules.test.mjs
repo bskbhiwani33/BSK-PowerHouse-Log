@@ -28,6 +28,9 @@ try {
     await setDoc(doc(db, "entry_history", "history-1"), { houseId: "house-1" });
     await setDoc(doc(db, "notifications", "notification-1"), { houseId: "house-1" });
     await setDoc(doc(db, "login_attempt_limits", "attempt-1"), { attempts: 1 });
+    await setDoc(doc(db, "staff_house_assignments", "house-1"), { houseId: "house-1", staffUid: "staff-1" });
+    await setDoc(doc(db, "staff_user_id_claims", "claim-1"), { userId: "staff1", staffUid: "staff-1" });
+    await setDoc(doc(db, "admin_setup_guard", "primary"), { adminUid: "admin-1" });
     await setDoc(doc(db, "users", "staff-1"), { role: "staff" });
     await setDoc(doc(db, "edit_requests", "legacy-1"), { houseId: "house-1" });
   });
@@ -62,7 +65,10 @@ try {
     ["feeder_status", "feeder-1"],
     ["entry_history", "history-1"],
     ["notifications", "notification-1"],
-    ["login_attempt_limits", "attempt-1"]
+    ["login_attempt_limits", "attempt-1"],
+    ["staff_house_assignments", "house-1"],
+    ["staff_user_id_claims", "claim-1"],
+    ["admin_setup_guard", "primary"]
   ]) {
     await assertFails(getDoc(doc(staffDb, collection, id)));
     await assertFails(setDoc(doc(staffDb, collection, "staff-write"), { houseId: "house-1" }));
