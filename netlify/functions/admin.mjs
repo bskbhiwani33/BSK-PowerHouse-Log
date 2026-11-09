@@ -208,19 +208,22 @@ export default async (req) => {
       const pinHash = crypto.scryptSync(pin, pinSalt, 64).toString("hex");
       const ref = db.collection("users").doc();
       const assignmentRef = db.collection("staff_house_assignments").doc(houseId);
+      const userIdClaimRef = db.collection("staff_user_id_claims")
+        .doc(crypto.createHash("sha256").update(userId.toLowerCase()).digest("hex"));
 
       await db.runTransaction(async tx => {
-        const [houseSnap, existingUsers, staffInHouse, assignmentSnap] = await Promise.all([
+        const [houseSnap, existingUsers, staffInHouse, assignmentSnap, userIdClaimSnap] = await Promise.all([
           tx.get(db.collection("powerhouses").doc(houseId)),
           tx.get(db.collection("users").where("userId", "==", userId).limit(1)),
           tx.get(db.collection("users").where("houseId", "==", houseId)),
-          tx.get(assignmentRef)
+          tx.get(assignmentRef),
+          tx.get(userIdClaimRef)
         ]);
 
         if (!houseSnap.exists || houseSnap.data().active !== true) {
           throw Object.assign(new Error("Power House not found or inactive"), { status: 404 });
         }
-        if (!existingUsers.empty) {
+        if (!existingUsers.empty || userIdClaimSnap.exists) {
           throw Object.assign(new Error("User ID already exists"), { status: 409 });
         }
 
@@ -259,6 +262,11 @@ export default async (req) => {
           houseId,
           staffUid: ref.id,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        tx.create(userIdClaimRef, {
+          userId,
+          staffUid: ref.id,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
       });
 
