@@ -273,7 +273,7 @@ export default async req => {
       case "createConsumption": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "consumption_readings")) });
       case "exportBackupPage": {
         requireRole(actor, "admin");
-        const allowed = ["powerhouses","feeders","users","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","feeder_status","notifications","entry_history"];
+        const allowed = ["powerhouses","feeders","users","staff_house_assignments","staff_user_id_claims","admin_setup_guard","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","feeder_status","notifications","entry_history"];
         const name = clean(body.collection);
         if (!allowed.includes(name)) return json({ error: "Invalid backup collection" }, 400);
         const pageSize = 400;
