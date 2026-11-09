@@ -26,7 +26,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 | 12 | Date-wise search | Present | From/to filters apply to record history, feeder history, reports, charts, audit history and three dedicated Excel exports. Clearing report filters refreshes feeder history and charts; verify all combinations in runtime. |
 | 13 | Excel download (general) | Present | Combined multi-sheet Excel export added for Breakdown, Shutdown, Tripping, Consumption and Daily Reports; date/search filters apply to loaded records. SpreadsheetML text is now sanitized for XML 1.0 invalid control characters in the combined and dedicated exports. |
 | 14 | PDF report | Present | Print-ready report opens in a separate window, hides edit controls, uses print margins and keeps report cards together; browser print can save as PDF. Browser/WebView print support and filtered layout still need runtime testing. |
-| 15 | Staff login with individual login ID | Present | User ID + PIN login and Admin provisioning support multiple active staff accounts per Power House; verify login and staff isolation in runtime. |
+| 15 | Staff login with individual login ID | Present | User ID + PIN login and Admin provisioning support one active Staff account per Power House; verify login and staff isolation in runtime. |
 | 16 | Staff-wise entry history | Present | Staff API responses include only the signed-in Staff member's own audit events and omit the Admin notification feed; Admin retains full house-level history and notifications. Staff offline record caches are now isolated by authenticated UID to prevent cross-account cached-history exposure. Staff history and Admin staff-wise created-entry counts apply date/search filters; counts exclude later resolve/edit audit actions. Runtime verification remains. |
 | 17 | Admin dashboard/reporting | Present | Admin dashboard, management forms, report views and operational records are present; end-to-end checks remain. |
 | 18 | Edit history (who changed record and when) | Present | Update/resolve operations write before/after audit entries with actor and timestamp. |
@@ -53,7 +53,7 @@ Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is 
 
 ## Remaining work before production sign-off (runtime verification, not feature coding)
 1. Confirm the latest preparation-branch CI run passes JavaScript syntax, Firebase config parsing, Netlify function bundling, and Firestore Rules emulator tests.
-2. Publish the 16 staged composite indexes to the Firebase project and wait until every index is READY; do this before the website deployment.
+2. Publish the 15 staged composite indexes to the Firebase project and wait until every index is READY; do this before the website deployment.
 3. After the single Netlify deployment, smoke-test Admin/Staff login, immediate Staff entry visibility, outage create/resolve, consumption totals, notifications, pagination, exports, and backup against live Firebase data.
 4. Verify date/time edge cases, Hindi labels/messages, dark mode, filtered PDF print layout, and large-history pagination in a browser.
 5. Verify offline shell reload, queued entry sync, and account isolation on the actual Android WebView device.
@@ -174,3 +174,11 @@ Known scope limits (not to be mistaken for completed runtime checks):
 ## Final pre-release audit correction
 - Corrected the Service Worker static-asset extension matcher in `sw.js`; the prior extra escaping prevented the intended extension match for non-shell static assets. The app-shell assets were already explicitly listed, but this improves offline caching for additional static resources.
 - The correction is on the preparation branch only. It has not been deployed to Netlify and has not been verified on an Android device.
+
+
+## Staff account isolation and one-Staff-per-house enforcement
+- The Records API now rejects Staff accounts without a valid Power House assignment before any house-scoped record query can run.
+- Admin Staff provisioning now uses a Firestore transaction and a deterministic per-house assignment document to prevent concurrent creation of multiple active Staff accounts for the same Power House. It also reserves a normalized User ID claim transactionally to prevent concurrent duplicate User IDs.
+- Existing active Staff accounts are detected during migration even if no assignment document exists yet. Inactive/deleted assignments can be replaced by a new Staff account.
+- The new `staff_house_assignments` and `staff_user_id_claims` collections are server-only; the Firestore client rules have no allow rule for them, so direct client access remains denied by default.
+- This is a source-level security correction. Verify transaction behavior and Staff/Admin provisioning in the Firebase emulator and then in the post-deploy smoke test; no production deploy or Rules publication has occurred.
