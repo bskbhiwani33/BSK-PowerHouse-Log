@@ -26,3 +26,11 @@ button:not(:disabled):hover{filter:brightness(1.06)}
 .card{min-width:0}
 #recordsInsights,#adminRecordsList,#staffEntryHistory,#notificationList{overflow-wrap:anywhere}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Admin correction controls: restrained semantic colours and compact layout. */
+.correction-actions{gap:8px;flex-wrap:wrap;margin-top:8px}
+.correction-actions button{width:auto;margin:4px 0;padding:8px 14px;font-size:14px}
+button.action-edit{background:#1769aa}
+button.action-state{background:#64748b}
+button.action-delete{background:#b42318}
+button.action-restore{background:#15803d}
