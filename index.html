@@ -132,9 +132,11 @@
 
         <div class="card">
           <h2>Live Outage Dashboard</h2>
-          <div class="row" style="justify-content:space-around;flex-wrap:wrap">
-            <div><h3 id="ongoingBreakdownCount">0</h3><p class="muted">Ongoing Breakdown</p></div>
-            <div><h3 id="ongoingShutdownCount">0</h3><p class="muted">Ongoing Shutdown</p></div>
+          <div class="outage-export-grid">
+            <div class="outage-export-item"><div><h3 id="ongoingBreakdownCount">0</h3><p class="muted">Ongoing Breakdown</p></div><button type="button" id="downloadBreakdowns" class="export-breakdown">Breakdown Excel</button></div>
+            <div class="outage-export-item"><div><h3 id="ongoingShutdownCount">0</h3><p class="muted">Ongoing Shutdown</p></div><button type="button" id="downloadShutdowns" class="export-shutdown">Shutdown Excel</button></div>
+            <div class="outage-export-item"><div><h3>Consumption</h3><p class="muted">Consumption readings</p></div><button type="button" id="downloadConsumption" class="export-consumption">Consumption Excel</button></div>
+            <div class="outage-export-item"><div><h3>All Records</h3><p class="muted">Complete record workbook</p></div><button type="button" id="downloadAllRecords" class="export-all">All Records Excel</button></div>
           </div>
           <h3>Breakdown Feeders</h3><div id="adminBreakdownList"></div>
           <h3>Shutdown Feeders</h3><div id="adminShutdownList"></div>
@@ -198,12 +200,8 @@
 
         <div class="card">
           <h2>Power House List</h2>
+          <p class="muted">Kisi Power House par click karein; uske sabhi Feeders neeche khul jayenge. Feeder ko wahin se edit, deactivate ya restore karein.</p>
           <div id="houseList">No data loaded.</div>
-        </div>
-
-        <div class="card">
-          <h2>Feeder List</h2>
-          <div id="feederList">No data loaded.</div>
         </div>
 
         <div class="card">
@@ -245,10 +243,6 @@
           <div id="feederStatusResult"></div>
           <button type="button" id="refreshRecords">Refresh Records</button>
           <button type="button" id="loadMoreHistory" class="secondary" disabled>Load All History</button>
-          <button type="button" id="downloadAllRecords">All Records Excel</button>
-          <button type="button" id="downloadBreakdowns">Breakdown Excel</button>
-          <button type="button" id="downloadShutdowns">Shutdown Excel</button>
-          <button type="button" id="downloadConsumption">Consumption Excel</button>
           <button type="button" id="downloadPdf">PDF Report</button>
           <div id="adminRecordsList"></div><div id="historyList"></div><div id="notificationList"></div>
         </div>
