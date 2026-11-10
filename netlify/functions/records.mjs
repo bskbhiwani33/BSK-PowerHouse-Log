@@ -58,6 +58,7 @@ async function createOutage(db, actor, body, type) {
   if (!validDate(body.date) || !validTime(body.startTime) || !validText(body.reason, 1000)) {
     throw Object.assign(new Error("Date, start time aur reason zaroori hain"), { status: 400 });
   }
+  if (body.ptwTakenOnTime && !validTime(body.ptwTakenOnTime)) throw Object.assign(new Error("PTW taken time sahi nahi hai"), { status: 400 });
   if (body.endTime && !validTime(body.endTime)) throw Object.assign(new Error("End time sahi nahi hai"), { status: 400 });
   const feeder = await validateFeeder(db, actor, body.feederId);
   const collectionName = type === "Breakdown" ? "breakdowns" : "shutdowns";
@@ -68,7 +69,8 @@ async function createOutage(db, actor, body, type) {
   const notificationRef = db.collection("notifications").doc();
   const status = body.endTime ? "resolved" : "ongoing";
   const data = {
-    ...feeder, date: body.date, startTime: body.startTime, endTime: body.endTime || null,
+    ...feeder, date: body.date, startTime: body.startTime,
+    ptwTakenOnTime: body.ptwTakenOnTime || null, endTime: body.endTime || null,
     reason: clean(body.reason), status, createdBy: actor.uid, createdByUserId: actor.userId,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
@@ -157,6 +159,7 @@ async function updateRecord(db, actor, body) {
   if(input[dateKey]!==undefined){if(!validDate(input[dateKey]))throw Object.assign(new Error("Invalid date"),{status:400});next[dateKey]=input[dateKey];}
   if(name==="breakdowns"||name==="shutdowns"){
     if(input.startTime!==undefined){if(!validTime(input.startTime))throw Object.assign(new Error("Invalid start time"),{status:400});next.startTime=input.startTime;}
+    if(input.ptwTakenOnTime!==undefined){if(!validTime(input.ptwTakenOnTime))throw Object.assign(new Error("Invalid PTW taken time"),{status:400});next.ptwTakenOnTime=input.ptwTakenOnTime;}
     // Closing/reopening outages must use the dedicated resolve workflow so feeder_status and audit history stay consistent.
     if(input.endTime!==undefined)throw Object.assign(new Error("End time ko Resolve Breakdown/Shutdown action se hi badlein"),{status:400});
     if(input.reason!==undefined){if(!validText(input.reason,1000))throw Object.assign(new Error("Reason required"),{status:400});next.reason=clean(input.reason);}
