@@ -1,5 +1,5 @@
 
-import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getApps, getApp, initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import crypto from "node:crypto";
@@ -13,7 +13,7 @@ function getAdmin() {
       credential: cert(JSON.parse(raw))
     });
   }
-  return admin;
+  return getApp();
 }
 
 export default async (req) => {
