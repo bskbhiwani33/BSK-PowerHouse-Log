@@ -377,8 +377,8 @@ export default async req => {
             q = q.where("actorUid", "==", actor.uid);
           }
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
-          else if (name !== "feeder_status") q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
-          else q = q.orderBy(FieldPath.documentId());
+          else if (name === "feeder_status" || name === "supply_positions") q = q.orderBy(FieldPath.documentId());
+          else q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
 
           const cursor = body.cursors && typeof body.cursors[name] === "string"
             ? body.cursors[name] : "";
