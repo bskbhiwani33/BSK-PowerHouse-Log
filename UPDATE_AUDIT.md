@@ -200,3 +200,13 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - **32. Breakdown PTW time:** Added a required Staff input labelled “PTW Taken on Time” between Start Time and End Time. The time is saved in the Breakdown document and creation audit snapshot, can be edited by Admin with an audit event, appears in Breakdown history, and is included in the dedicated Breakdown Excel and combined Excel export. Backend validates the time format when supplied.
 - Updated the service-worker shell cache version so the hosted WebView/PWA refreshes the changed HTML and JavaScript assets. Device-level refresh verification remains pending.
 - Source edits are on the preparation branch only. No Production deployment, Firestore Rules publication, main-branch update, or APK build was performed.
+
+
+## Staff Supply Position and two-section navigation (2026-11-10)
+- Added exactly two Staff choices after Staff Operations: **Supply Position** and **Consumption Data**. Consumption Data contains the existing Consumption readings and all existing Breakdown, Shutdown, Resolve and Tripping forms; those forms and their underlying record collections are retained.
+- Added Supply Position capture for three daily slots (1st, 2nd, 3rd) with report time. Every active feeder must be recorded as Running, Breakdown, or Direct Shutdown.
+- Breakdown requires start time, PTW Taken on Time and reason; end time may be blank while ongoing. Direct Shutdown requires start time and reason; end time may be blank. Running needs no outage details.
+- Supply Position is saved separately in `supply_positions`, with Power House/date/slot/time, feeder details and counts, and generates audit history and an Admin notification. The server verifies the authenticated Staff house and requires every active feeder exactly once.
+- Supply Position history is shown to Staff and Admin record history. Combined Excel and JSON backup include the new collection. Offline queue supports Supply Position submissions.
+- Added houseId + date descending index for Supply Position history. It is staged only; verify it exists and is READY in Firebase before release.
+- Incremented Service Worker cache version to v6. No Production deploy, Firestore Rules publication, main update, or APK build was performed.
