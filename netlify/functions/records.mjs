@@ -263,7 +263,7 @@ async function createSupplyPosition(db, actor, body) {
     if(duplicate.exists){if(duplicate.data().houseId!==actor.houseId)throw Object.assign(new Error("Entry ID already used"),{status:409});return{id:ref.id,duplicate:true};}
     tx.set(ref,saved);
     tx.set(hist,{recordCollection:"supply_positions",recordId:ref.id,houseId:actor.houseId,action:"created",before:null,after:{...saved,createdAt:null,updatedAt:null},actorUid:actor.uid,actorUserId:actor.userId,actorRole:actor.role,createdAt:FieldValue.serverTimestamp()});
-    tx.set(note,{houseId:actor.houseId,type:"new_entry",title:"Supply Position entry",message:body.date+" · "+counts.runningCount+" Closed · "+counts.breakdownCount+" Opened,recordCollection:"supply_positions",recordId:ref.id,read:false,createdAt:FieldValue.serverTimestamp()});
+    tx.set(note,{houseId:actor.houseId,type:"new_entry",title:"Supply Position entry",message:body.date+" · "+counts.runningCount+" Closed · "+counts.breakdownCount+" Opened",recordCollection:"supply_positions",recordId:ref.id,read:false,createdAt:FieldValue.serverTimestamp()});
     return{id:ref.id,...counts};
   });
 }
