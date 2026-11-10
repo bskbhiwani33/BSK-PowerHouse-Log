@@ -226,10 +226,6 @@ function showStaffSection(section) {
 }
 $("showSupplyPosition")?.addEventListener("click", () => showStaffSection("supply"));
 $("showConsumptionData")?.addEventListener("click", () => showStaffSection("consumption"));
-function setSupplyPositionTime() {
-  const now = new Date();
-  if ($("supplyPositionTime") && !$("supplyPositionTime").value) $("supplyPositionTime").value = String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
-}
 function renderSupplyPositionFeederRows() {
   const host = $("supplyPositionFeederRows");
   if (!host) return;
@@ -238,52 +234,61 @@ function renderSupplyPositionFeederRows() {
   host.innerHTML = feeders.map(feeder => `
     <article class="report-item supply-feeder-row" data-feeder-id="${safe(feeder.id)}">
       <strong>${safe(feeder.name)}</strong>
-      <label>Status</label><select class="supply-feeder-status" required>
-        <option value="Running">Running</option><option value="Breakdown">Breakdown</option><option value="Shutdown">Direct Shutdown</option>
-      </select>
+      <div class="row" style="gap:18px;flex-wrap:wrap;margin-top:10px">
+        <label><input type="checkbox" class="supply-closed" checked> Closed</label>
+        <label><input type="checkbox" class="supply-opened"> Opened</label>
+      </div>
       <div class="supply-event-details hidden">
-        <label>Start Time</label><input class="supply-start-time" type="time">
-        <div class="supply-ptw-field hidden"><label>PTW Taken on Time</label><input class="supply-ptw-time" type="time"></div>
-        <label>End Time (blank if ongoing)</label><input class="supply-end-time" type="time">
-        <label>Reason</label><textarea class="supply-reason" rows="2" maxlength="1000"></textarea>
+        <label>Breakdown Time</label><input class="supply-start-time" type="time">
+        <label>PTW Taken on Time</label><input class="supply-ptw-time" type="time">
       </div>
     </article>`).join("");
 }
 $("supplyPositionFeederRows")?.addEventListener("change", event => {
-  if (!event.target.matches(".supply-feeder-status")) return;
-  const row = event.target.closest(".supply-feeder-row"), status = event.target.value;
-  row.querySelector(".supply-event-details").classList.toggle("hidden", status === "Running");
-  row.querySelector(".supply-ptw-field").classList.toggle("hidden", status !== "Breakdown");
-  row.querySelector(".supply-start-time").required = status !== "Running";
-  row.querySelector(".supply-reason").required = status !== "Running";
-  row.querySelector(".supply-ptw-time").required = status === "Breakdown";
+  if (!event.target.matches(".supply-closed, .supply-opened")) return;
+  const row = event.target.closest(".supply-feeder-row");
+  const opened = event.target.classList.contains("supply-opened") && event.target.checked;
+  const closed = event.target.classList.contains("supply-closed") && event.target.checked;
+  if (opened) row.querySelector(".supply-closed").checked = false;
+  else if (closed) row.querySelector(".supply-opened").checked = false;
+  else if (!row.querySelector(".supply-closed").checked && !row.querySelector(".supply-opened").checked) {
+    event.target.checked = true;
+  }
+  const isOpened = row.querySelector(".supply-opened").checked;
+  row.querySelector(".supply-event-details").classList.toggle("hidden", !isOpened);
+  row.querySelector(".supply-start-time").required = isOpened;
+  row.querySelector(".supply-ptw-time").required = isOpened;
 });
 function renderSupplyPositionHistory() {
   const host = $("supplyPositionHistory");
   if (!host) return;
-  const rows = [...(operational.supply_positions || [])].sort((a,b) => String(b.date).localeCompare(String(a.date)) || String(b.reportTime).localeCompare(String(a.reportTime)));
+  const rows = [...(operational.supply_positions || [])].sort((a,b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt?.seconds || "").localeCompare(String(a.createdAt?.seconds || "")));
   host.innerHTML = "<h3>Supply Position History</h3>" + (rows.length ? rows.map(item => {
-    const details = (item.feeders || []).map(f => `<p><strong>${safe(f.feederName)}</strong> — ${safe(f.status)}${f.status !== "Running" ? " · Start: "+safe(f.startTime)+" · "+(f.status==="Breakdown" ? "PTW: "+safe(f.ptwTakenOnTime||"—")+" · " : "")+"End: "+safe(f.endTime||"Ongoing")+" · "+safe(f.reason) : ""}</p>`).join("");
-    return `<article class="report-item"><strong>${safe(item.date)} · ${safe(item.slot)} Supply Position · ${safe(item.reportTime)}</strong><p>Running: ${Number(item.runningCount||0)} · Breakdown: ${Number(item.breakdownCount||0)} · Shutdown: ${Number(item.shutdownCount||0)}</p>${details}</article>`;
+    const details = (item.feeders || []).map(f => {
+      const status = f.status === "Direct Shutdown" ? "Shutdown" : f.status;
+      return `<p><strong>${safe(f.feederName)}</strong> — ${safe(status)}${f.status === "Breakdown" ? " · Breakdown Time: "+safe(f.startTime)+" · PTW: "+safe(f.ptwTakenOnTime||"—") : ""}</p>`;
+    }).join("");
+    const legacy = item.slot ? " · "+safe(item.slot)+" Supply Position"+(item.reportTime ? " · "+safe(item.reportTime) : "") : "";
+    return `<article class="report-item"><strong>${safe(item.date)}${legacy}</strong>${details}</article>`;
   }).join("") : "<p class='muted'>No supply position reports yet.</p>");
 }
 $("supplyPositionForm")?.addEventListener("submit", async event => {
   event.preventDefault();
   try {
     const feeders = [...$("supplyPositionFeederRows").querySelectorAll(".supply-feeder-row")].map(row => {
-      const status = row.querySelector(".supply-feeder-status").value, value = {feederId:row.dataset.feederId,status};
-      if (status !== "Running") {
+      const opened = row.querySelector(".supply-opened").checked;
+      const value = {feederId:row.dataset.feederId,status:opened ? "Breakdown" : "Running"};
+      if (opened) {
         value.startTime = row.querySelector(".supply-start-time").value;
-        value.endTime = row.querySelector(".supply-end-time").value;
-        value.reason = row.querySelector(".supply-reason").value.trim();
-        if (status === "Breakdown") value.ptwTakenOnTime = row.querySelector(".supply-ptw-time").value;
+        value.ptwTakenOnTime = row.querySelector(".supply-ptw-time").value;
       }
       return value;
     });
     if (!feeders.length) throw new Error("No active feeders available.");
+    if (feeders.some(f => f.status === "Breakdown" && (!f.startTime || !f.ptwTakenOnTime))) throw new Error("Opened feeder ke liye Breakdown Time aur PTW Taken on Time dono bharein.");
     message("supplyPositionMessage","Saving supply position...");
-    const saved = await recordsRequest("createSupplyPosition",{date:$("supplyPositionDate").value,slot:$("supplyPositionSlot").value,reportTime:$("supplyPositionTime").value,feeders});
-    event.target.reset(); setOperationalDates(); setSupplyPositionTime(); renderSupplyPositionFeederRows();
+    const saved = await recordsRequest("createSupplyPosition",{date:$("supplyPositionDate").value,feeders});
+    event.target.reset(); setOperationalDates(); renderSupplyPositionFeederRows();
     await refreshOperationalRecordsPreservingHistory();
     message("supplyPositionMessage",saved.queued ? "Supply position saved offline; it will sync when internet returns." : "Supply position saved successfully.");
   } catch(error) { message("supplyPositionMessage",error.message,true); }
@@ -859,7 +864,7 @@ function renderRecordHistory() {
     const supplyDetails = x.kind === "Supply Position" ? (x.feeders || []).map(f =>
       `<p><strong>${safe(f.feederName)}</strong> — ${safe(f.status)}${f.status !== "Running" ? " · Start: "+safe(f.startTime)+" · "+(f.status==="Breakdown" ? "PTW: "+safe(f.ptwTakenOnTime||"—")+" · " : "")+"End: "+safe(f.endTime||"Ongoing")+" · "+safe(f.reason) : ""}</p>`
     ).join("") : "";
-    return `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Slot: "+x.slot+" · Time: "+x.reportTime+" · Running: "+x.runningCount+" · Breakdown: "+x.breakdownCount+" · Shutdown: "+x.shutdownCount : ""))}</p>${supplyDetails}${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" && x.kind!=="Supply Position" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`;
+    return `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Feeder-wise Supply Position" : ""))}</p>${supplyDetails}${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" && x.kind!=="Supply Position" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`;
   }).join("") : "<p>No records in selected date range.</p>";
   if ($("recordsInsights")) {
     const outageRows = [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))].filter(inside);
@@ -1056,7 +1061,7 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
     {name:"Shutdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.shutdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
     {name:"Tripping",headers:["Date","Power House","Trippings","Feeders","Staff"],rows:operational.trippings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.trippingCount,x.feederCount,x.createdByUserId])},
     {name:"Consumption",headers:["Date","Power House","AP Feeder","Rural Domestic","Urban","Industrial","Independent","Total"],rows:operational.consumption_readings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.apFeeder,x.ruralDomestic,x.urban,x.industrial,x.independent,x.total])},
-    {name:"Supply Position",headers:["Date","Power House","Slot","Report Time","Feeder","Status","Start Time","PTW Taken on Time","End Time","Reason","Staff"],rows:operational.supply_positions.filter(x=>inRange(x)).flatMap(x=>(x.feeders||[]).map(f=>[x.date,x.houseName,x.slot,x.reportTime,f.feederName,f.status,f.startTime,f.ptwTakenOnTime,f.endTime,f.reason,x.createdByUserId]))},
+    {name:"Supply Position",headers:["Date","Power House","Feeder","Status","Breakdown Time","PTW Taken on Time","Staff"],rows:operational.supply_positions.filter(x=>inRange(x)).flatMap(x=>(x.feeders||[]).map(f=>[x.date,x.houseName,f.feederName,f.status==="Direct Shutdown"?"Shutdown":f.status,f.startTime,f.ptwTakenOnTime,x.createdByUserId]))},
     {name:"Daily Reports",headers:["Date","Power House","Feeder","Breaker","Event","Fault","Duration","Restoration","Remarks","Staff"],rows:operational.daily_reports.filter(x=>inRange(x,"reportDate")).map(x=>[x.reportDate,x.houseName,x.feederName,x.breakerStatus,x.eventType,x.faultDetails,x.duration,x.restorationTime,x.remarks,x.createdByUserId])}
   ];
   const worksheets=sheets.map(sheet=>{
@@ -1494,7 +1499,7 @@ Object.assign(hindiWords, {
   "Trippings:":"ट्रिपिंग:",
   "Feeders:":"फीडर:",
   "Total:":"कुल:",
-  "PTW Taken on Time":"PTW लेने का समय","Supply Position":"सप्लाई पोजीशन","Daily Supply Position":"दैनिक सप्लाई पोजीशन","Consumption Data":"कंजम्प्शन डेटा","1st Supply Position":"पहली सप्लाई पोजीशन","2nd Supply Position":"दूसरी सप्लाई पोजीशन","3rd Supply Position":"तीसरी सप्लाई पोजीशन","Running":"चालू","Direct Shutdown":"सीधा शटडाउन","Save Supply Position":"सप्लाई पोजीशन सेव करें","Supply Position History":"सप्लाई पोजीशन हिस्ट्री","Report Time":"रिपोर्ट का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
+  "PTW Taken on Time":"PTW लेने का समय","Supply Position":"सप्लाई पोजीशन","Daily Supply Position":"दैनिक सप्लाई पोजीशन","Consumption Data":"कंजम्प्शन डेटा","1st Supply Position":"पहली सप्लाई पोजीशन","2nd Supply Position":"दूसरी सप्लाई पोजीशन","3rd Supply Position":"तीसरी सप्लाई पोजीशन","Running":"चालू","Direct Shutdown":"शटडाउन","Shutdown":"शटडाउन","Closed":"बंद","Opened":"खुला","Save Supply Position":"सप्लाई पोजीशन सेव करें","Supply Position History":"सप्लाई पोजीशन हिस्ट्री","Report Time":"रिपोर्ट का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
 });
  
 const hindiPlaceholders = {
