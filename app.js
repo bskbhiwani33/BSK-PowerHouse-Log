@@ -360,14 +360,14 @@ function renderDashboard() {
 
   if ($("houseList")) {
     $("houseList").innerHTML = houses.length
-      ? houses.map(h => `<article class="report-item"><strong>${safe(h.name)}</strong> — ${h.active ? "Active" : "Inactive"}<div class="row correction-actions"><button type="button" class="action-edit" data-correct-house="${safe(h.id)}">Edit</button><button type="button" class="action-state" data-toggle-house="${safe(h.id)}" data-active="${String(h.active === true)}">${h.active ? "Deactivate" : "Restore"}</button></div></article>`).join("")
+      ? houses.map(h => {
+          const houseFeeders = feeders.filter(f => f.houseId === h.id);
+          const feederMarkup = houseFeeders.length
+            ? houseFeeders.map(f => `<article class="nested-feeder-item"><div><strong>${safe(f.name)}</strong><span class="muted"> · ${f.active ? "Active" : "Inactive"}</span></div><div class="row correction-actions"><button type="button" class="action-edit" data-correct-feeder="${safe(f.id)}">Edit Feeder</button><button type="button" class="action-state ${f.active ? "" : "action-restore"}" data-toggle-feeder="${safe(f.id)}" data-active="${String(f.active === true)}">${f.active ? "Deactivate" : "Restore"}</button></div></article>`).join("")
+            : '<p class="muted">Is Power House mein abhi koi Feeder nahi hai.</p>';
+          return `<details class="house-group"><summary><span><strong>${safe(h.name)}</strong><span class="muted"> · ${h.active ? "Active" : "Inactive"} · ${houseFeeders.length} Feeders</span></span></summary><div class="row correction-actions"><button type="button" class="action-edit" data-correct-house="${safe(h.id)}">Edit Power House</button><button type="button" class="action-state ${h.active ? "" : "action-restore"}" data-toggle-house="${safe(h.id)}" data-active="${String(h.active === true)}">${h.active ? "Deactivate" : "Restore"}</button></div><div class="nested-feeder-list">${feederMarkup}</div></details>`;
+        }).join("")
       : "<p>No Power Houses added.</p>";
-  }
-
-  if ($("feederList")) {
-    $("feederList").innerHTML = feeders.length
-      ? feeders.map(f => `<article class="report-item"><strong>${safe(f.name)}</strong> — ${safe(f.houseName || "")} — ${f.active ? "Active" : "Inactive"}<div class="row correction-actions"><button type="button" class="action-edit" data-correct-feeder="${safe(f.id)}">Edit</button><button type="button" class="action-state" data-toggle-feeder="${safe(f.id)}" data-active="${String(f.active === true)}">${f.active ? "Deactivate" : "Restore"}</button></div></article>`).join("")
-      : "<p>No Feeders added.</p>";
   }
 
   if ($("staffList")) {
@@ -419,32 +419,27 @@ function fillHouseDropdowns() {
 }
 
 // Admin correction tools: rename or safely deactivate/restore Power Houses and Feeders.
+// Admin correction tools: Power House accordion contains its own Feeder controls.
 $("houseList")?.addEventListener("click", async event => {
-  const edit = event.target.closest("[data-correct-house]");
-  const toggle = event.target.closest("[data-toggle-house]");
+  const editHouse = event.target.closest("[data-correct-house]");
+  const toggleHouse = event.target.closest("[data-toggle-house]");
+  const editFeeder = event.target.closest("[data-correct-feeder]");
+  const toggleFeeder = event.target.closest("[data-toggle-feeder]");
   try {
-    if (edit) {
-      const house = dashboardData.houses.find(x => x.id === edit.dataset.correctHouse);
+    if (editHouse) {
+      const house = dashboardData.houses.find(x => x.id === editHouse.dataset.correctHouse);
       if (!house) return;
       const name = window.prompt("Correct Power House name:", house.name);
       if (name === null || name.trim() === house.name) return;
       await adminRequest("updateHouse", { houseId: house.id, houseName: name.trim() });
       message("houseMessage", "Power House updated. Change history saved.");
-    } else if (toggle) {
-      const active = toggle.dataset.active === "true";
+    } else if (toggleHouse) {
+      const active = toggleHouse.dataset.active === "true";
       if (!window.confirm(active ? "Deactivate this Power House? Old records will remain safe." : "Restore this Power House?")) return;
-      await adminRequest("setHouseActive", { houseId: toggle.dataset.toggleHouse, active: !active });
+      await adminRequest("setHouseActive", { houseId: toggleHouse.dataset.toggleHouse, active: !active });
       message("houseMessage", active ? "Power House deactivated. Old records are safe." : "Power House restored.");
-    } else return;
-    await refreshDashboard();
-  } catch (error) { message("houseMessage", error.message, true); }
-});
-$("feederList")?.addEventListener("click", async event => {
-  const edit = event.target.closest("[data-correct-feeder]");
-  const toggle = event.target.closest("[data-toggle-feeder]");
-  try {
-    if (edit) {
-      const feeder = dashboardData.feeders.find(x => x.id === edit.dataset.correctFeeder);
+    } else if (editFeeder) {
+      const feeder = dashboardData.feeders.find(x => x.id === editFeeder.dataset.correctFeeder);
       if (!feeder) return;
       const name = window.prompt("Correct Feeder name:", feeder.name);
       if (name === null) return;
@@ -457,14 +452,16 @@ $("feederList")?.addEventListener("click", async event => {
       if (name.trim() === feeder.name && house.id === feeder.houseId) return;
       await adminRequest("updateFeeder", { feederId: feeder.id, feederName: name.trim(), houseId: house.id });
       message("feederMessage", "Feeder updated. Change history saved.");
-    } else if (toggle) {
-      const active = toggle.dataset.active === "true";
+    } else if (toggleFeeder) {
+      const active = toggleFeeder.dataset.active === "true";
       if (!window.confirm(active ? "Deactivate this Feeder? Existing reports will remain safe." : "Restore this Feeder?")) return;
-      await adminRequest("setFeederActive", { feederId: toggle.dataset.toggleFeeder, active: !active });
-      message("feederMessage", active ? "Feeder deactivated. Old records are safe." : "Feeder restored.");
+      await adminRequest("setFeederActive", { feederId: toggleFeeder.dataset.toggleFeeder, active: !active });
+      message("feederMessage", active ? "Feeder deactivated. Existing reports are safe." : "Feeder restored.");
     } else return;
     await refreshDashboard();
-  } catch (error) { message("feederMessage", error.message, true); }
+  } catch (error) {
+    message(editHouse || toggleHouse ? "houseMessage" : "feederMessage", error.message, true);
+  }
 });
 
 // Admin: Create Power House
