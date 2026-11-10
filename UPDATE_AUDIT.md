@@ -231,3 +231,11 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - Power House rename propagates its display name to associated Feeder and Staff profile documents. Each correction/status change creates an Admin audit-history event with before/after snapshots.
 - Correction controls use distinct semantic colours (blue Edit, slate Deactivate, green Restore; destructive red reserved for any future confirmed permanent-delete action).
 - Source-level implementation only; verify on the Netlify Preview with Admin credentials and Firebase test data before the one final Production release. No Production deploy or Firestore Rules publication performed.
+
+
+## 2026-11-10 — Power House feeder accordion and dashboard exports
+- Removed the standalone Feeder List panel. Each Power House row is now expandable; its own feeders, active/inactive state, Edit, Deactivate and Restore controls are rendered inside that Power House.
+- Feeder correction controls now use the Power House List event handler, keeping the feeder's management context attached to its parent.
+- Moved Breakdown Excel, Shutdown Excel, Consumption Excel and All Records Excel actions into the Live Outage Dashboard in four clearly labelled export panels; removed duplicate buttons from the lower records/history panel.
+- Existing export handlers and complete-history guard are retained; the All Records workbook still requires the full history to be loaded before export.
+- Source-only change. Production has not been deployed; Firebase/Netlify live interactive testing remains outstanding.
