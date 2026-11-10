@@ -210,3 +210,11 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - Supply Position history is shown to Staff and Admin record history. Combined Excel and JSON backup include the new collection. Offline queue supports Supply Position submissions.
 - Supply Position history uses the stable document-ID order with the existing houseId equality filter; the client sorts the loaded reports by date. This avoids requiring a new composite Firestore index or a separate Firebase index deployment.
 - Incremented Service Worker cache version to v6. No Production deploy, Firestore Rules publication, main update, or APK build was performed.
+
+
+## Simplified Daily Supply Position (2026-11-10)
+- Removed the 1st/2nd/3rd selector and Report Time from the Staff Supply Position form. Staff now selects the date and marks every active feeder with mutually exclusive **Closed** or **Opened** checkboxes.
+- Closed is stored as the existing Running status (supply position OK). Opened is stored as Breakdown and reveals required Breakdown Time and PTW Taken on Time fields. The server continues validating the authenticated Staff Power House and requires every active feeder exactly once.
+- Supply Position history and Excel now show feeder-level status, Breakdown Time and PTW time without slot/report-time labels. Previously saved records with legacy slot/time fields remain readable.
+- Legacy “Direct Shutdown” values are displayed/exported as “Shutdown”; the backend remains compatible with legacy Shutdown rows.
+- No Production deploy, Firestore Rules publication, main-branch update, or APK build was performed.
