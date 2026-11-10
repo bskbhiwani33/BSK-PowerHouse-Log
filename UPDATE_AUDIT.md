@@ -224,3 +224,10 @@ Known scope limits (not to be mistaken for completed runtime checks):
 ## Legacy Supply Position history compatibility
 - Staff and Admin history now normalize legacy `Direct Shutdown` to the displayed `Shutdown` status before choosing the detail fields, so legacy shutdown rows also show their saved PTW time and reason.
 - This is a source-level compatibility fix; it must pass the same CI and refreshed Netlify Preview checks as the release candidate.
+
+
+## Admin correction and recovery controls
+- Added Admin-only Power House and Feeder correction actions in their dashboard lists: rename, move a Feeder to another active Power House, deactivate an accidental item, and restore it later. These are soft-deactivation controls; existing reports and linked history are retained rather than hard-deleted.
+- Power House rename propagates its display name to associated Feeder and Staff profile documents. Each correction/status change creates an Admin audit-history event with before/after snapshots.
+- Correction controls use distinct semantic colours (blue Edit, slate Deactivate, green Restore; destructive red reserved for any future confirmed permanent-delete action).
+- Source-level implementation only; verify on the Netlify Preview with Admin credentials and Firebase test data before the one final Production release. No Production deploy or Firestore Rules publication performed.
