@@ -36,26 +36,33 @@ async function rateLimit(db, userId, success = false, checkOnly = false) {
 
 export default async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+  let stage = "read_request";
   try {
     const { userId, pin } = await req.json();
     if (typeof userId !== "string" || !/^[A-Za-z0-9_-]{3,40}$/.test(userId) ||
         typeof pin !== "string" || !/^[0-9]{4}$/.test(pin)) {
       return Response.json({ error: "Invalid User ID or PIN" }, { status: 400 });
     }
+    stage = "initialize_firebase";
     const fb = getAdmin();
+    stage = "initialize_firestore";
     const db = fb.firestore();
+    stage = "check_rate_limit";
     const allowed = await rateLimit(db, userId, false, true);
     if (!allowed) return Response.json({ error: "Too many attempts. Please try again after 15 minutes." }, { status: 429 });
+    stage = "find_user";
     const snap = await db.collection("users").where("userId", "==", userId).limit(1).get();
     if (snap.empty) {
       await rateLimit(db, userId);
       return Response.json({ error: "Invalid User ID or PIN" }, { status: 401 });
     }
+    stage = "read_user_profile";
     const userDoc = snap.docs[0];
     const profile = userDoc.data();
     if (profile.active !== true || !profile.pinSalt || !profile.pinHash) {
       return Response.json({ error: "Account is not active. Contact Admin." }, { status: 403 });
     }
+    stage = "verify_pin";
     const calculated = crypto.scryptSync(pin, profile.pinSalt, 64).toString("hex");
     const expected = Buffer.from(profile.pinHash, "hex");
     const actual = Buffer.from(calculated, "hex");
@@ -77,8 +84,10 @@ export default async (req) => {
       }
     }
 
+    stage = "clear_rate_limit";
     await rateLimit(db, userId, true);
     const uid = userDoc.id;
+    stage = "create_custom_token";
     const customToken = await fb.auth().createCustomToken(uid, {
       role: profile.role, houseId
     });
@@ -105,7 +114,7 @@ export default async (req) => {
     return Response.json({
       error: `Login service error. Please try again. Diagnostic: ${diagnosticCode}. Reference: ${requestId}`,
       requestId,
-      diagnostic: { code: diagnosticCode }
+      diagnostic: { code: diagnosticCode, stage }
     }, { status: 500 });
   }
 
