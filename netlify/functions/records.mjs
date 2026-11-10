@@ -226,6 +226,48 @@ async function createDailyReport(db, actor, body) {
   });
 }
 
+async function createSupplyPosition(db, actor, body) {
+  requireRole(actor, "staff");
+  if (!validDate(body.date) || !["1st","2nd","3rd"].includes(body.slot) || !validTime(body.reportTime) || !Array.isArray(body.feeders) || !body.feeders.length) throw Object.assign(new Error("Date, supply position slot, report time and feeder details are required"),{status:400});
+  const activeSnap = await db.collection("feeders").where("houseId","==",actor.houseId).where("active","==",true).get();
+  const active = new Map(activeSnap.docs.map(d=>[d.id,d.data().name]));
+  if (!active.size) throw Object.assign(new Error("No active feeders found"),{status:409});
+  const seen = new Set(), rows = [];
+  for (const input of body.feeders) {
+    const id=clean(input.feederId), status=clean(input.status);
+    if (!id || seen.has(id) || !active.has(id)) throw Object.assign(new Error("Feeder list is invalid. Refresh and try again."),{status:400});
+    seen.add(id);
+    if (!["Running","Breakdown","Shutdown"].includes(status)) throw Object.assign(new Error("Select a valid feeder status"),{status:400});
+    const row={feederId:id,feederName:active.get(id),status};
+    if (status!=="Running") {
+      if (!validTime(input.startTime) || !validText(input.reason,1000)) throw Object.assign(new Error("Start time and reason are required for a stopped feeder"),{status:400});
+      if (input.endTime && !validTime(input.endTime)) throw Object.assign(new Error("Invalid end time"),{status:400});
+      row.startTime=input.startTime; row.endTime=input.endTime||null; row.reason=clean(input.reason);
+      if (status==="Breakdown") {
+        if (!validTime(input.ptwTakenOnTime)) throw Object.assign(new Error("PTW Taken on Time is required for Breakdown"),{status:400});
+        row.ptwTakenOnTime=input.ptwTakenOnTime;
+      }
+    }
+    rows.push(row);
+  }
+  if (seen.size!==active.size) throw Object.assign(new Error("Select the status of every active feeder"),{status:400});
+  const counts={runningCount:rows.filter(x=>x.status==="Running").length,breakdownCount:rows.filter(x=>x.status==="Breakdown").length,shutdownCount:rows.filter(x=>x.status==="Shutdown").length};
+  const clientId=typeof body.clientEntryId==="string"&&/^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId)?body.clientEntryId:"";
+  const ref=clientId?db.collection("supply_positions").doc(clientId):db.collection("supply_positions").doc();
+  const houseSnap=await db.collection("powerhouses").doc(actor.houseId).get();
+  if(!houseSnap.exists||houseSnap.data().active!==true) throw Object.assign(new Error("Power House inactive"),{status:409});
+  const saved={houseId:actor.houseId,houseName:houseSnap.data().name,date:body.date,slot:body.slot,reportTime:body.reportTime,feeders:rows,...counts,createdBy:actor.uid,createdByUserId:actor.userId,createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()};
+  const hist=db.collection("entry_history").doc(),note=db.collection("notifications").doc();
+  return db.runTransaction(async tx=>{
+    const duplicate=await tx.get(ref);
+    if(duplicate.exists){if(duplicate.data().houseId!==actor.houseId)throw Object.assign(new Error("Entry ID already used"),{status:409});return{id:ref.id,duplicate:true};}
+    tx.set(ref,saved);
+    tx.set(hist,{recordCollection:"supply_positions",recordId:ref.id,houseId:actor.houseId,action:"created",before:null,after:{...saved,createdAt:null,updatedAt:null},actorUid:actor.uid,actorUserId:actor.userId,actorRole:actor.role,createdAt:FieldValue.serverTimestamp()});
+    tx.set(note,{houseId:actor.houseId,type:"new_entry",title:"Supply Position entry",message:body.date+" · "+body.slot,recordCollection:"supply_positions",recordId:ref.id,read:false,createdAt:FieldValue.serverTimestamp()});
+    return{id:ref.id,...counts};
+  });
+}
+
 async function createSimpleRecord(db, actor, body, collectionName) {
   requireRole(actor, "staff");
   if (!validText(actor.houseId, 128)) throw Object.assign(new Error("Staff Power House missing hai"), { status: 403 });
@@ -285,9 +327,10 @@ export default async req => {
       case "createDailyReport": return json({ success: true, ...(await createDailyReport(db, actor, body)) });
       case "createTripping": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "trippings")) });
       case "createConsumption": return json({ success: true, ...(await createSimpleRecord(db, actor, body, "consumption_readings")) });
+      case "createSupplyPosition": return json({ success: true, ...(await createSupplyPosition(db, actor, body)) });
       case "exportBackupPage": {
         requireRole(actor, "admin");
-        const allowed = ["powerhouses","feeders","users","staff_house_assignments","staff_user_id_claims","admin_setup_guard","breakdowns","shutdowns","trippings","consumption_readings","daily_reports","feeder_status","notifications","entry_history"];
+        const allowed = ["powerhouses","feeders","users","staff_house_assignments","staff_user_id_claims","admin_setup_guard","breakdowns","shutdowns","trippings","consumption_readings","supply_positions","daily_reports","feeder_status","notifications","entry_history"];
         const name = clean(body.collection);
         if (!allowed.includes(name)) return json({ error: "Invalid backup collection" }, 400);
         const pageSize = 400;
@@ -313,7 +356,7 @@ export default async req => {
       case "getRecords": {
         const requestedHouse = clean(body.houseId);
         const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
-        const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports", "feeder_status", "notifications", "entry_history"];
+        const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"];
         const output = {};
         const pageSize = 100;
         const nextCursors = {};
