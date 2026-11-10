@@ -210,10 +210,10 @@ $("logoutBtn")?.addEventListener("click", async () => {
   $("pin").value = "";
 });
 
-// Staff: Load assigned Power House feeders
+// Staff: Load assigned feeders for Breakdown / Shutdown forms only.
+// The Daily Feeder Report form and its Staff-side submit handler are removed.
 async function loadStaffFeeders() {
-  const feederField = $("feederName");
-  if (!feederField || !currentProfile?.houseId) return;
+  if (!currentProfile?.houseId) return;
   let feeders = [];
   try {
     const feederQuery = query(
@@ -227,69 +227,13 @@ async function loadStaffFeeders() {
   } catch (error) {
     try {
       feeders = JSON.parse(localStorage.getItem("bsk-feeders-"+currentProfile.houseId) || "[]");
-      message("reportMessage", "Offline mode: cached feeder list loaded.");
+      message("staffStatusMessage", "Offline mode: cached feeder list loaded.");
     } catch { feeders = []; }
   }
   operational.feeders = feeders;
-  const select = document.createElement("select");
-  select.id = "feederName";
-  select.name = "feederName";
-  select.required = true;
-  select.className = feederField.className;
-  select.innerHTML = '<option value="">Select Feeder</option>';
-  feeders.forEach(feeder => {
-    const option = document.createElement("option");
-    option.value = feeder.id;
-    option.textContent = feeder.name;
-    option.dataset.name = feeder.name;
-    select.appendChild(option);
-  });
-  feederField.replaceWith(select);
-  if (!feeders.length) message("reportMessage", "No active feeder found. Contact Admin.", true);
+  fillOperationalFeederLists();
+  if (!feeders.length) message("staffStatusMessage", "No active feeder found. Contact Admin.", true);
 }
-
-// Staff: Submit daily report
-$("reportForm")?.addEventListener("submit", async event => {
-  event.preventDefault();
-
-  if (!auth.currentUser || currentProfile?.role !== "staff") {
-    return;
-  }
-
-  message("reportMessage", "Submitting report...");
-
-  try {
-    const feederSelect = $("feederName");
-    const selectedOption =
-      feederSelect.options[feederSelect.selectedIndex];
-
-    if (!selectedOption || !selectedOption.value) {
-      throw new Error("Please select a Feeder.");
-    }
-
-    const saved = await recordsRequest("createDailyReport", {
-      feederId: selectedOption.value,
-      reportDate: $("reportDate").value,
-      breakerStatus: $("breakerStatus").value,
-      eventType: $("eventType").value,
-      faultDetails: $("faultDetails").value.trim(),
-      duration: $("duration").value.trim(),
-      restorationTime: $("restorationTime").value,
-      remarks: $("remarks").value.trim()
-    });
-
-    $("reportForm").reset();
-    setToday();
-    // Refresh operational records immediately so a newly saved Staff report
-    // appears in history and the Admin dashboard without waiting for polling.
-    await refreshOperationalRecordsPreservingHistory();
-
-    message("reportMessage", saved.queued ? "Report saved offline. It will sync when internet returns." : "Report submitted successfully.");
-
-  } catch (error) {
-    message("reportMessage", error.message, true);
-  }
-});
 
 // Admin: Refresh dashboard
 async function refreshDashboard(options = {}) {
@@ -536,19 +480,16 @@ function setOperationalDates() {
 }
 
 function fillOperationalFeederLists() {
-  const source = $("feederName");
-  // The Staff feeder field starts as a text input and becomes a select after login.
-  // Do not read .options until that replacement has happened.
-  if (!source || !source.options) return;
+  const feeders = operational.feeders || [];
   ["breakdownFeeder","shutdownFeeder"].forEach(id => {
     const target = $(id);
     if (!target) return;
     const selected = target.value;
     target.innerHTML = '<option value="">Select Feeder</option>';
-    [...source.options].slice(1).forEach(opt => {
+    feeders.forEach(feeder => {
       const item = document.createElement("option");
-      item.value = opt.value;
-      item.textContent = opt.textContent;
+      item.value = feeder.id;
+      item.textContent = feeder.name;
       target.appendChild(item);
     });
     target.value = selected;
@@ -626,7 +567,7 @@ async function loadOperationalRecords(options = {}) {
     } catch {}
     const button = $("loadMoreHistory");
     if (button) { button.disabled = false; button.textContent = "Retry Loading History"; }
-    const historyErrorTarget = currentProfile?.role === "staff" ? "reportMessage" : "adminMessage";
+    const historyErrorTarget = currentProfile?.role === "staff" ? "staffStatusMessage" : "adminMessage";
     if ($(historyErrorTarget)) message(historyErrorTarget, "Could not load the next history page. Check connection and retry.", true);
     return false;
   }
@@ -831,7 +772,7 @@ function renderRecordHistory() {
     return Math.floor(minutes/60)+"h "+(minutes%60)+"m";
   };
   if ($("adminRecordsList")) $("adminRecordsList").innerHTML = rows.length ? rows.map(x =>
-    `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : ""))}</p><p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`
+    `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : ""))}</p>${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`
   ).join("") : "<p>No records in selected date range.</p>";
   if ($("recordsInsights")) {
     const outageRows = [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))].filter(inside);
@@ -933,8 +874,8 @@ async function submitOperational(formId, action, payload, messageId) {
 
 submitOperational("breakdownForm", "createBreakdown", () => ({
   date:$("breakdownDate").value, feederId:$("breakdownFeeder").value,
-  startTime:$("breakdownStart").value, endTime:$("breakdownEnd").value,
-  reason:$("breakdownReason").value.trim()
+  startTime:$("breakdownStart").value, ptwTakenOnTime:$("breakdownPtwTime").value,
+  endTime:$("breakdownEnd").value, reason:$("breakdownReason").value.trim()
 }), "breakdownMessage");
 
 submitOperational("shutdownForm", "createShutdown", () => ({
@@ -1002,7 +943,7 @@ function downloadExcelXml(kind) {
   let rows = [], filename = "";
   const xml = xmlEscape;
   if (kind === "breakdowns") {
-    rows = [["Date","Power House","Feeder","Start Time","End Time","Status","Reason"], ...operational.breakdowns.filter(inRange).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])]; filename="BSK_Breakdown_Report.xls";
+    rows = [["Date","Power House","Feeder","Start Time","PTW Taken on Time","End Time","Status","Reason"], ...operational.breakdowns.filter(inRange).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.ptwTakenOnTime,x.endTime,x.status,x.reason])]; filename="BSK_Breakdown_Report.xls";
   } else if (kind === "shutdowns") {
     rows = [["Date","Power House","Feeder","Start Time","End Time","Status","Reason"], ...operational.shutdowns.filter(inRange).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])]; filename="BSK_Shutdown_Report.xls";
   } else {
@@ -1024,7 +965,7 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
   const xml=xmlEscape;
   const inRange=(x,dateKey="date")=>(!from||String(x[dateKey]||"")>=from)&&(!to||String(x[dateKey]||"")<=to)&&(!search||[x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search)));
   const sheets=[
-    {name:"Breakdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.breakdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
+    {name:"Breakdown",headers:["Date","Power House","Feeder","Start","PTW Taken on Time","End","Status","Reason"],rows:operational.breakdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.ptwTakenOnTime,x.endTime,x.status,x.reason])},
     {name:"Shutdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.shutdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
     {name:"Tripping",headers:["Date","Power House","Trippings","Feeders","Staff"],rows:operational.trippings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.trippingCount,x.feederCount,x.createdByUserId])},
     {name:"Consumption",headers:["Date","Power House","AP Feeder","Rural Domestic","Urban","Industrial","Independent","Total"],rows:operational.consumption_readings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.apFeeder,x.ruralDomestic,x.urban,x.industrial,x.independent,x.total])},
@@ -1051,8 +992,6 @@ $("downloadPdf")?.addEventListener("click",()=>{
 });
 
 // Make selected feeders available to all operational forms after initial feeder load.
-const feederObserver = new MutationObserver(fillOperationalFeederLists);
-if ($("feederName")) feederObserver.observe($("feederName"), {childList:true, subtree:true});
 fillOperationalFeederLists();
 setOperationalDates();
 
@@ -1117,7 +1056,7 @@ async function syncOutbox() {
     writeOutbox(remaining);
     if (syncedIds.size) {
       await refreshOperationalRecordsPreservingHistory();
-      if ($("reportMessage")) message("reportMessage", remaining.length ? "Some offline entries are waiting to sync." : "Offline entries synced successfully.");
+      if ($("reportMessage")) message("staffStatusMessage", remaining.length ? "Some offline entries are waiting to sync." : "Offline entries synced successfully.");
     }
   } finally {
     outboxSyncInProgress = false;
@@ -1164,7 +1103,7 @@ $("loadMoreStaffHistory")?.addEventListener("click", async () => {
     await loadOperationalRecords({append:true});
     const hasMore=Object.values(recordPageCursors||{}).some(Boolean);
     if(button){button.disabled=!hasMore;button.textContent=hasMore?"Load Older Records":"All Records Loaded";}
-    if(JSON.stringify(recordPageCursors||{})===before && hasMore) message("reportMessage","Could not load older history. Check connection and retry.",true);
+    if(JSON.stringify(recordPageCursors||{})===before && hasMore) message("staffStatusMessage","Could not load older history. Check connection and retry.",true);
   } finally {
     historyLoadInProgress=false;
   }
@@ -1467,7 +1406,7 @@ Object.assign(hindiWords, {
   "Trippings:":"ट्रिपिंग:",
   "Feeders:":"फीडर:",
   "Total:":"कुल:",
-  "BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
+  "PTW Taken on Time":"PTW लेने का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
 });
  
 const hindiPlaceholders = {
