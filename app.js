@@ -1056,7 +1056,7 @@ async function syncOutbox() {
     writeOutbox(remaining);
     if (syncedIds.size) {
       await refreshOperationalRecordsPreservingHistory();
-      if ($("reportMessage")) message("staffStatusMessage", remaining.length ? "Some offline entries are waiting to sync." : "Offline entries synced successfully.");
+      if ($("staffStatusMessage")) message("staffStatusMessage", remaining.length ? "Some offline entries are waiting to sync." : "Offline entries synced successfully.");
     }
   } finally {
     outboxSyncInProgress = false;
