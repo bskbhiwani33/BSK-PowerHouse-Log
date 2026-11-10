@@ -55,6 +55,32 @@
       <section id="staffPanel" class="card hidden">
         <h2>Staff Operations</h2>
         <p id="staffStatusMessage" class="message" role="status"></p>
+        <div class="row" style="flex-wrap:wrap;gap:10px">
+          <button type="button" id="showSupplyPosition" aria-pressed="true">Supply Position</button>
+          <button type="button" id="showConsumptionData" class="secondary" aria-pressed="false">Consumption Data</button>
+        </div>
+        <section id="supplyPositionPanel" class="card">
+          <h2>Daily Supply Position</h2>
+          <p class="muted">Record the status of every active feeder three times each day.</p>
+          <form id="supplyPositionForm">
+            <label for="supplyPositionDate">Date</label><input id="supplyPositionDate" type="date" required>
+            <label for="supplyPositionSlot">Supply Position</label>
+            <select id="supplyPositionSlot" required>
+              <option value="">Select time</option>
+              <option value="1st">1st Supply Position</option>
+              <option value="2nd">2nd Supply Position</option>
+              <option value="3rd">3rd Supply Position</option>
+            </select>
+            <label for="supplyPositionTime">Report Time</label><input id="supplyPositionTime" type="time" required>
+            <div id="supplyPositionFeederRows"></div>
+            <button type="submit">Save Supply Position</button>
+            <p id="supplyPositionMessage" class="message" role="status"></p>
+          </form>
+          <div id="supplyPositionHistory"></div>
+        </section>
+        <section id="consumptionDataPanel" class="hidden">
+        <h2>Consumption Data & Other Operations</h2>
+        <p class="muted">Consumption, Breakdown, Shutdown, Resolve and Tripping forms.</p>
         <h2>Breakdown Entry</h2>
         <form id="breakdownForm">
           <label>Date</label><input id="breakdownDate" type="date" required>
@@ -100,6 +126,7 @@
         </form>
         <div id="staffOngoing" class="card"><h2>Ongoing Breakdown / Shutdown</h2><div id="staffOngoingList"></div></div>
         <div class="card"><div id="staffEntryHistory"></div><button type="button" id="loadMoreStaffHistory" class="secondary" disabled>All Records Loaded</button></div>
+        </section>
       </section>
 
       <section id="adminPanel" class="hidden">
