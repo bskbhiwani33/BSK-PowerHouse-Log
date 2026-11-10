@@ -124,6 +124,67 @@ export default async (req) => {
       });
     }
 
+    if (body.action === "updateHouse" || body.action === "setHouseActive") {
+      const houseId = body.houseId;
+      if (!validDocId(houseId)) return response({ error: "Invalid Power House" }, 400);
+      const ref = db.collection("powerhouses").doc(houseId);
+      const snap = await ref.get();
+      if (!snap.exists) return response({ error: "Power House not found" }, 404);
+      const old = snap.data(), changes = {};
+      if (body.action === "updateHouse") {
+        if (!validName(body.houseName)) return response({ error: "Invalid Power House name" }, 400);
+        const name = body.houseName.trim();
+        const duplicate = await db.collection("powerhouses").where("name", "==", name).limit(5).get();
+        if (duplicate.docs.some(d => d.id !== houseId)) return response({ error: "Power House name already exists" }, 409);
+        changes.name = name;
+      } else {
+        if (typeof body.active !== "boolean") return response({ error: "Invalid active status" }, 400);
+        changes.active = body.active;
+      }
+      const history = db.collection("entry_history").doc();
+      const batch = db.batch();
+      batch.update(ref, { ...changes, updatedAt: FieldValue.serverTimestamp() });
+      if (changes.name) {
+        const [feeders, users] = await Promise.all([
+          db.collection("feeders").where("houseId", "==", houseId).get(),
+          db.collection("users").where("houseId", "==", houseId).get()
+        ]);
+        feeders.docs.forEach(d => batch.update(d.ref, { houseName: changes.name, updatedAt: FieldValue.serverTimestamp() }));
+        users.docs.forEach(d => batch.update(d.ref, { houseName: changes.name, updatedAt: FieldValue.serverTimestamp() }));
+      }
+      batch.set(history, { recordCollection: "powerhouses", recordId: houseId, houseId, action: body.action === "updateHouse" ? "updated" : "status_changed", before: old, after: { ...old, ...changes }, actorUid: decoded.uid, actorUserId: adminDoc.data().userId || "admin", actorRole: "admin", createdAt: FieldValue.serverTimestamp() });
+      await batch.commit();
+      return response({ success: true });
+    }
+
+    if (body.action === "updateFeeder" || body.action === "setFeederActive") {
+      const feederId = body.feederId;
+      if (!validDocId(feederId)) return response({ error: "Invalid Feeder" }, 400);
+      const ref = db.collection("feeders").doc(feederId);
+      const snap = await ref.get();
+      if (!snap.exists) return response({ error: "Feeder not found" }, 404);
+      const old = snap.data(), changes = {};
+      if (body.action === "updateFeeder") {
+        if (!validName(body.feederName) || !validDocId(body.houseId)) return response({ error: "Valid Feeder name and Power House required" }, 400);
+        const houseSnap = await db.collection("powerhouses").doc(body.houseId).get();
+        if (!houseSnap.exists || houseSnap.data().active !== true) return response({ error: "Select an active Power House" }, 404);
+        const name = body.feederName.trim();
+        const duplicate = await db.collection("feeders").where("houseId", "==", body.houseId).where("name", "==", name).limit(5).get();
+        if (duplicate.docs.some(d => d.id !== feederId)) return response({ error: "Feeder name already exists in this Power House" }, 409);
+        changes.name = name; changes.houseId = body.houseId; changes.houseName = houseSnap.data().name;
+      } else {
+        if (typeof body.active !== "boolean") return response({ error: "Invalid active status" }, 400);
+        changes.active = body.active;
+      }
+      const history = db.collection("entry_history").doc();
+      const after = { ...old, ...changes };
+      const batch = db.batch();
+      batch.update(ref, { ...changes, updatedAt: FieldValue.serverTimestamp() });
+      batch.set(history, { recordCollection: "feeders", recordId: feederId, houseId: old.houseId, action: body.action === "updateFeeder" ? "updated" : "status_changed", before: old, after, actorUid: decoded.uid, actorUserId: adminDoc.data().userId || "admin", actorRole: "admin", createdAt: FieldValue.serverTimestamp() });
+      await batch.commit();
+      return response({ success: true });
+    }
+
     if (body.action === "createHouse") {
       if (!validName(body.houseName)) {
         return response({ error: "Invalid Power House name" }, 400);
