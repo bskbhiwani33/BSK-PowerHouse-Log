@@ -91,8 +91,19 @@ export default async (req) => {
     });
   
   } catch (error) {
-    console.error("LOGIN FUNCTION ERROR:", error);
-    return Response.json({ error: "Login service error. Please try again." }, { status: 500 });
+    // Correlate a failed login attempt without exposing credentials or Firebase
+    // service-account details to the browser.
+    const requestId = crypto.randomUUID();
+    console.error("LOGIN FUNCTION ERROR", {
+      requestId,
+      name: error?.name || "Error",
+      code: error?.code || "UNKNOWN",
+      message: error?.message || "Unknown login failure"
+    });
+    return Response.json({
+      error: `Login service error. Please try again. Reference: ${requestId}`,
+      requestId
+    }, { status: 500 });
   }
 
 };
