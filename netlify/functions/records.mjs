@@ -234,10 +234,10 @@ async function createSupplyPosition(db, actor, body) {
   if (!active.size) throw Object.assign(new Error("No active feeders found"),{status:409});
   const seen = new Set(), rows = [];
   for (const input of body.feeders) {
-    const id=clean(input.feederId), status=clean(input.status);
+    const id=clean(input.feederId);
+    const status=clean(input.status)==="Direct Shutdown" ? "Shutdown" : clean(input.status);
     if (!id || seen.has(id) || !active.has(id)) throw Object.assign(new Error("Feeder list is invalid. Refresh and try again."),{status:400});
     seen.add(id);
-    if (status === "Direct Shutdown") input.status = "Shutdown";
     if (!["Running","Breakdown","Shutdown"].includes(status)) throw Object.assign(new Error("Select a valid feeder status"),{status:400});
     const row={feederId:id,feederName:active.get(id),status};
     if (status==="Breakdown") {
