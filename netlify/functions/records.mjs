@@ -244,11 +244,9 @@ async function createSupplyPosition(db, actor, body) {
       if (!validTime(input.startTime) || !validTime(input.ptwTakenOnTime)) throw Object.assign(new Error("Breakdown Time and PTW Taken on Time are required"),{status:400});
       row.startTime=input.startTime; row.ptwTakenOnTime=input.ptwTakenOnTime;
     } else if (status==="Shutdown") {
-      if (!validTime(input.startTime)) throw Object.assign(new Error("Shutdown Time is required"),{status:400});
-      row.startTime=input.startTime;
-      if (input.endTime && !validTime(input.endTime)) throw Object.assign(new Error("Invalid end time"),{status:400});
-      row.endTime=input.endTime||null;
-      if (input.reason) row.reason=clean(input.reason).slice(0,1000);
+      if (!validTime(input.ptwTakenOnTime) || !validText(input.reason,1000)) throw Object.assign(new Error("PTW Taken on Time and reason are required for Shutdown"),{status:400});
+      row.ptwTakenOnTime=input.ptwTakenOnTime;
+      row.reason=clean(input.reason);
     }
     rows.push(row);
   }
