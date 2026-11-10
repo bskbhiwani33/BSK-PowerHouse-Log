@@ -100,13 +100,12 @@ export default async (req) => {
       code: error?.code || "UNKNOWN",
       message: error?.message || "Unknown login failure"
     });
+    const diagnosticCode = String(error?.code || error?.name || "UNKNOWN")
+      .replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 80) || "UNKNOWN";
     return Response.json({
-      error: `Login service error. Please try again. Reference: ${requestId}`,
+      error: `Login service error. Please try again. Diagnostic: ${diagnosticCode}. Reference: ${requestId}`,
       requestId,
-      diagnostic: {
-        name: error?.name || "Error",
-        code: error?.code || "UNKNOWN"
-      }
+      diagnostic: { code: diagnosticCode }
     }, { status: 500 });
   }
 
