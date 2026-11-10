@@ -208,5 +208,5 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - Breakdown requires start time, PTW Taken on Time and reason; end time may be blank while ongoing. Direct Shutdown requires start time and reason; end time may be blank. Running needs no outage details.
 - Supply Position is saved separately in `supply_positions`, with Power House/date/slot/time, feeder details and counts, and generates audit history and an Admin notification. The server verifies the authenticated Staff house and requires every active feeder exactly once.
 - Supply Position history is shown to Staff and Admin record history. Combined Excel and JSON backup include the new collection. Offline queue supports Supply Position submissions.
-- Added houseId + date descending index for Supply Position history. It is staged only; verify it exists and is READY in Firebase before release.
+- Supply Position history uses the stable document-ID order with the existing houseId equality filter; the client sorts the loaded reports by date. This avoids requiring a new composite Firestore index or a separate Firebase index deployment.
 - Incremented Service Worker cache version to v6. No Production deploy, Firestore Rules publication, main update, or APK build was performed.
