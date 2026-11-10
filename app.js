@@ -273,7 +273,7 @@ function renderSupplyPositionHistory() {
   host.innerHTML = "<h3>Supply Position History</h3>" + (rows.length ? rows.map(item => {
     const details = (item.feeders || []).map(f => {
       const status = f.status === "Direct Shutdown" ? "Shutdown" : f.status;
-      return `<p><strong>${safe(f.feederName)}</strong> — ${safe(status)}${f.status === "Breakdown" ? " · Breakdown Time: "+safe(f.startTime)+" · PTW: "+safe(f.ptwTakenOnTime||"—") : f.status === "Shutdown" ? " · PTW: "+safe(f.ptwTakenOnTime||"—")+" · Reason: "+safe(f.reason||"—") : ""}</p>`;
+      return `<p><strong>${safe(f.feederName)}</strong> — ${safe(status)}${status === "Breakdown" ? " · Breakdown Time: "+safe(f.startTime)+" · PTW: "+safe(f.ptwTakenOnTime||"—") : status === "Shutdown" ? " · PTW: "+safe(f.ptwTakenOnTime||"—")+" · Reason: "+safe(f.reason||"—") : ""}</p>`;
     }).join("");
     const legacy = item.slot ? " · "+safe(item.slot)+" Supply Position"+(item.reportTime ? " · "+safe(item.reportTime) : "") : "";
     return `<article class="report-item"><strong>${safe(item.date)}${legacy}</strong>${details}</article>`;
@@ -874,7 +874,7 @@ function renderRecordHistory() {
   if ($("adminRecordsList")) $("adminRecordsList").innerHTML = rows.length ? rows.map(x => {
     const supplyDetails = x.kind === "Supply Position" ? (x.feeders || []).map(f => {
       const status = f.status === "Direct Shutdown" ? "Shutdown" : f.status;
-      return `<p><strong>${safe(f.feederName)}</strong> — ${safe(status)}${f.status === "Breakdown" ? " · Breakdown Time: "+safe(f.startTime)+" · PTW Taken on Time: "+safe(f.ptwTakenOnTime||"—") : f.status === "Shutdown" ? " · PTW Taken on Time: "+safe(f.ptwTakenOnTime||"—")+" · Reason: "+safe(f.reason||"—") : ""}</p>`;
+      return `<p><strong>${safe(f.feederName)}</strong> — ${safe(status)}${status === "Breakdown" ? " · Breakdown Time: "+safe(f.startTime)+" · PTW Taken on Time: "+safe(f.ptwTakenOnTime||"—") : status === "Shutdown" ? " · PTW Taken on Time: "+safe(f.ptwTakenOnTime||"—")+" · Reason: "+safe(f.reason||"—") : ""}</p>`;
     }).join("") : "";
     return `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Feeder-wise Supply Position" : ""))}</p>${supplyDetails}${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" && x.kind!=="Supply Position" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`;
   }).join("") : "<p>No records in selected date range.</p>";
