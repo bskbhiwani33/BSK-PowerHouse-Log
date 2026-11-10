@@ -220,3 +220,7 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - No Production deploy, Firestore Rules publication, main-branch update, or APK build was performed.
 
 - Follow-up refinement: when a feeder is marked Opened, Staff must choose Breakdown or Shutdown. Breakdown requires Breakdown Time and PTW Taken on Time; Shutdown requires PTW Taken on Time and Reason only (no Breakdown Time). Both values appear in history and Excel.
+
+## Legacy Supply Position history compatibility
+- Staff and Admin history now normalize legacy `Direct Shutdown` to the displayed `Shutdown` status before choosing the detail fields, so legacy shutdown rows also show their saved PTW time and reason.
+- This is a source-level compatibility fix; it must pass the same CI and refreshed Netlify Preview checks as the release candidate.
