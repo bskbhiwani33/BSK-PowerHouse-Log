@@ -1,4 +1,4 @@
-import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getApps, getApp, initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
 
@@ -8,7 +8,7 @@ function fbAdmin() {
     if (!raw) throw new Error("Server configuration unavailable");
     initializeApp({ credential: cert(JSON.parse(raw)) });
   }
-  return admin;
+  return getApp();
 }
 
 const json = (data, status = 200) => Response.json(data, { status });
