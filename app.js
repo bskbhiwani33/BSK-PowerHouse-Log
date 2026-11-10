@@ -123,10 +123,19 @@ $("loginForm")?.addEventListener("submit", async event => {
       body: JSON.stringify({ userId, pin })
     });
 
-    const result = await response.json();
+    let result = {};
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error(`Login request failed (HTTP ${response.status}). Please retry once.`);
+    }
 
     if (!response.ok) {
-      throw new Error(result.error || "Login failed");
+      const detail = result.error || result.message || "No error detail returned by the server";
+      throw new Error(`Login failed (HTTP ${response.status}): ${detail}`);
+    }
+    if (!result.token || !result.profile) {
+      throw new Error("Login response is incomplete. Please contact Admin with this message.");
     }
 
     await signInWithCustomToken(auth, result.token);
