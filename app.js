@@ -854,9 +854,12 @@ function renderRecordHistory() {
     const minutes = Math.max(0,Math.floor((end-start)/60000));
     return Math.floor(minutes/60)+"h "+(minutes%60)+"m";
   };
-  if ($("adminRecordsList")) $("adminRecordsList").innerHTML = rows.length ? rows.map(x =>
-    `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Slot: "+x.slot+" · Time: "+x.reportTime+" · Running: "+x.runningCount+" · Breakdown: "+x.breakdownCount+" · Shutdown: "+x.shutdownCount : ""))}</p>${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`
-  ).join("") : "<p>No records in selected date range.</p>";
+  if ($("adminRecordsList")) $("adminRecordsList").innerHTML = rows.length ? rows.map(x => {
+    const supplyDetails = x.kind === "Supply Position" ? (x.feeders || []).map(f =>
+      `<p><strong>${safe(f.feederName)}</strong> — ${safe(f.status)}${f.status !== "Running" ? " · Start: "+safe(f.startTime)+" · "+(f.status==="Breakdown" ? "PTW: "+safe(f.ptwTakenOnTime||"—")+" · " : "")+"End: "+safe(f.endTime||"Ongoing")+" · "+safe(f.reason) : ""}</p>`
+    ).join("") : "";
+    return `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Slot: "+x.slot+" · Time: "+x.reportTime+" · Running: "+x.runningCount+" · Breakdown: "+x.breakdownCount+" · Shutdown: "+x.shutdownCount : ""))}</p>${supplyDetails}${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" && x.kind!=="Supply Position" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`;
+  }).join("") : "<p>No records in selected date range.</p>";
   if ($("recordsInsights")) {
     const outageRows = [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))].filter(inside);
     const breakdownCounts = new Map();
