@@ -168,6 +168,13 @@ export default async (req) => {
         if (!validName(body.feederName) || !validDocId(body.houseId)) return response({ error: "Valid Feeder name and Power House required" }, 400);
         const houseSnap = await db.collection("powerhouses").doc(body.houseId).get();
         if (!houseSnap.exists || houseSnap.data().active !== true) return response({ error: "Select an active Power House" }, 404);
+        if (body.houseId !== old.houseId) {
+          const [activeBreakdowns, activeShutdowns] = await Promise.all([
+            db.collection("breakdowns").where("feederId", "==", feederId).where("status", "==", "ongoing").limit(1).get(),
+            db.collection("shutdowns").where("feederId", "==", feederId).where("status", "==", "ongoing").limit(1).get()
+          ]);
+          if (!activeBreakdowns.empty || !activeShutdowns.empty) return response({ error: "Ongoing Breakdown/Shutdown wale Feeder ko doosre Power House me move nahi kar sakte. Pehle event resolve karein." }, 409);
+        }
         const name = body.feederName.trim();
         const duplicate = await db.collection("feeders").where("houseId", "==", body.houseId).where("name", "==", name).limit(5).get();
         if (duplicate.docs.some(d => d.id !== feederId)) return response({ error: "Feeder name already exists in this Power House" }, 409);
