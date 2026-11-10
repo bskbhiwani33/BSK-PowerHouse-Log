@@ -218,3 +218,5 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - Supply Position history and Excel now show feeder-level status, Breakdown Time and PTW time without slot/report-time labels. Previously saved records with legacy slot/time fields remain readable.
 - Legacy “Direct Shutdown” values are displayed/exported as “Shutdown”; the backend remains compatible with legacy Shutdown rows.
 - No Production deploy, Firestore Rules publication, main-branch update, or APK build was performed.
+
+- Follow-up refinement: when a feeder is marked Opened, Staff must choose Breakdown or Shutdown. Breakdown requires Breakdown Time and PTW Taken on Time; Shutdown requires PTW Taken on Time and Reason only (no Breakdown Time). Both values appear in history and Excel.
