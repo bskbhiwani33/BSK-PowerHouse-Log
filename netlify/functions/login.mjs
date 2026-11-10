@@ -1,12 +1,14 @@
-import admin from "firebase-admin";
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import crypto from "node:crypto";
 
 function getAdmin() {
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) throw new Error("Server is not configured");
     const serviceAccount = JSON.parse(raw);
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    initializeApp({ credential: cert(serviceAccount) });
   }
   return admin;
 }
@@ -28,7 +30,7 @@ async function rateLimit(db, userId, success = false, checkOnly = false) {
       attempts: locked ? 0 : attempts,
       windowStart: locked ? now : (withinWindow ? data.windowStart : now),
       lockUntil: locked ? now + 15 * 60 * 1000 : 0,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     });
     return !locked;
   });
@@ -46,7 +48,7 @@ export default async (req) => {
     stage = "initialize_firebase";
     const fb = getAdmin();
     stage = "initialize_firestore";
-    const db = fb.firestore();
+    const db = getFirestore(fb);
     stage = "check_rate_limit";
     const allowed = await rateLimit(db, userId, false, true);
     if (!allowed) return Response.json({ error: "Too many attempts. Please try again after 15 minutes." }, { status: 429 });
@@ -88,7 +90,7 @@ export default async (req) => {
     await rateLimit(db, userId, true);
     const uid = userDoc.id;
     stage = "create_custom_token";
-    const customToken = await fb.auth().createCustomToken(uid, {
+    const customToken = await getAuth(fb).createCustomToken(uid, {
       role: profile.role, houseId
     });
     return Response.json({
