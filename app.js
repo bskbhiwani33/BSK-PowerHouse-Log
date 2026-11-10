@@ -823,7 +823,8 @@ function renderRecordHistory() {
   const to = $("recordsTo")?.value || "";
   const search = ($("recordsSearch")?.value || "").toLowerCase().trim();
   const inside = x => (!from || x.date >= from) && (!to || x.date <= to) &&
-    (!search || [x.feederName,x.createdByUserId,x.houseName].some(v => String(v || "").toLowerCase().includes(search)));
+    (!search || [x.feederName,x.createdByUserId,x.houseName].some(v => String(v || "").toLowerCase().includes(search)) ||
+      (x.feeders || []).some(f => String(f.feederName || "").toLowerCase().includes(search)));
   const auditDate = h => {
     const record = h.after || h.before || {};
     const storedDate = record.date || record.reportDate;
@@ -1049,7 +1050,7 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
   const from=$("recordsFrom")?.value||"",to=$("recordsTo")?.value||"";
   const search=($("recordsSearch")?.value||"").toLowerCase().trim();
   const xml=xmlEscape;
-  const inRange=(x,dateKey="date")=>(!from||String(x[dateKey]||"")>=from)&&(!to||String(x[dateKey]||"")<=to)&&(!search||[x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search)));
+  const inRange=(x,dateKey="date")=>(!from||String(x[dateKey]||"")>=from)&&(!to||String(x[dateKey]||"")<=to)&&(!search||[x.feederName,x.createdByUserId,x.houseName].some(v=>String(v||"").toLowerCase().includes(search))||(x.feeders||[]).some(f=>String(f.feederName||"").toLowerCase().includes(search)));
   const sheets=[
     {name:"Breakdown",headers:["Date","Power House","Feeder","Start","PTW Taken on Time","End","Status","Reason"],rows:operational.breakdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.ptwTakenOnTime,x.endTime,x.status,x.reason])},
     {name:"Shutdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.shutdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
