@@ -102,7 +102,11 @@ export default async (req) => {
     });
     return Response.json({
       error: `Login service error. Please try again. Reference: ${requestId}`,
-      requestId
+      requestId,
+      diagnostic: {
+        name: error?.name || "Error",
+        code: error?.code || "UNKNOWN"
+      }
     }, { status: 500 });
   }
 
