@@ -1,14 +1,16 @@
 
-import admin from "firebase-admin";
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import crypto from "node:crypto";
 
 function getAdmin() {
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) throw new Error("Server not configured");
 
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(raw))
+    initializeApp({
+      credential: cert(JSON.parse(raw))
     });
   }
   return admin;
@@ -39,7 +41,7 @@ export default async (req) => {
 
   try {
     const fb = getAdmin();
-    const db = fb.firestore();
+    const db = getFirestore(fb);
 
     const authHeader = req.headers.get("authorization") || "";
     const idToken = authHeader.startsWith("Bearer ")
@@ -49,7 +51,7 @@ export default async (req) => {
       return response({ error: "Login required" }, 401);
     }
 
-    const decoded = await fb.auth().verifyIdToken(idToken);
+    const decoded = await getAuth(fb).verifyIdToken(idToken);
     const adminDoc = await db.collection("users").doc(decoded.uid).get();
 
     if (!adminDoc.exists ||
@@ -140,7 +142,7 @@ export default async (req) => {
       await ref.set({
         name: houseName,
         active: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
       });
 
       return response({
@@ -183,7 +185,7 @@ export default async (req) => {
         houseId,
         houseName: houseDoc.data().name,
         active: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
       });
 
       return response({
@@ -256,17 +258,17 @@ export default async (req) => {
           active: true,
           houseId,
           houseName: houseSnap.data().name,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
+          createdAt: FieldValue.serverTimestamp()
         });
         tx.set(assignmentRef, {
           houseId,
           staffUid: ref.id,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          updatedAt: FieldValue.serverTimestamp()
         });
         tx.create(userIdClaimRef, {
           userId,
           staffUid: ref.id,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
+          createdAt: FieldValue.serverTimestamp()
         });
       });
 
