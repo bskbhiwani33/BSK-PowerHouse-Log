@@ -8,7 +8,7 @@ Status meanings:
 - **Partial**: some implementation exists, but the requested feature needs completion or stronger verification.
 - **Not found**: no corresponding implementation was found in the reviewed source.
 
-Current source-audit count: **30 Present · 0 Partial · 0 Not found**. This is not a production sign-off; live Firebase/Netlify and Android device checks remain release gates.
+Current source-audit count: **32 Present · 0 Partial · 0 Not found** (including the two additional Staff/Breakdown requests added on 2026-11-10). This is not a production sign-off; live Firebase/Netlify and Android device checks remain release gates.
 
 | # | Requested update | Source audit status | Notes / remaining work |
 |---|---|---|---|
@@ -193,3 +193,10 @@ Known scope limits (not to be mistaken for completed runtime checks):
 ## Backup coverage correction
 - The Admin backup export allowlist now includes `staff_house_assignments`, `staff_user_id_claims`, and `admin_setup_guard`, in addition to operational collections. These metadata collections are needed to preserve the one-Staff-per-house, normalized User ID reservation, and single-Admin setup safeguards in a complete export.
 - User PIN salts and hashes remain excluded from the export. This change is committed on `bsk-complete-update-prep` only; backup/restore is still export-only and has not been tested against live Firebase data.
+
+
+## Additional Staff / Breakdown requests (2026-11-10)
+- **31. Remove Daily Feeder Report from Staff login:** Removed the complete Daily Feeder Report form from the Staff screen and removed its Staff-side submit handler. The Admin's legacy Daily Reports/history/export view and existing stored records are retained for backward compatibility; no existing data is deleted.
+- **32. Breakdown PTW time:** Added a required Staff input labelled “PTW Taken on Time” between Start Time and End Time. The time is saved in the Breakdown document and creation audit snapshot, can be edited by Admin with an audit event, appears in Breakdown history, and is included in the dedicated Breakdown Excel and combined Excel export. Backend validates the time format when supplied.
+- Updated the service-worker shell cache version so the hosted WebView/PWA refreshes the changed HTML and JavaScript assets. Device-level refresh verification remains pending.
+- Source edits are on the preparation branch only. No Production deployment, Firestore Rules publication, main-branch update, or APK build was performed.
