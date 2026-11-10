@@ -1,10 +1,12 @@
-import admin from "firebase-admin";
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
 
 function fbAdmin() {
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) throw new Error("Server configuration unavailable");
-    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
+    initializeApp({ credential: cert(JSON.parse(raw)) });
   }
   return admin;
 }
@@ -23,7 +25,7 @@ const clean = v => String(v ?? "").trim();
 async function actorFor(req, fb, db) {
   const h = req.headers.get("authorization") || "";
   if (!h.startsWith("Bearer ")) throw Object.assign(new Error("Login required"), { status: 401 });
-  const decoded = await fb.auth().verifyIdToken(h.slice(7));
+  const decoded = await getAuth(fb).verifyIdToken(h.slice(7));
   const snap = await db.collection("users").doc(decoded.uid).get();
   if (!snap.exists || snap.data().active !== true) throw Object.assign(new Error("Account inactive"), { status: 403 });
   const user = snap.data();
@@ -68,8 +70,8 @@ async function createOutage(db, actor, body, type) {
   const data = {
     ...feeder, date: body.date, startTime: body.startTime, endTime: body.endTime || null,
     reason: clean(body.reason), status, createdBy: actor.uid, createdByUserId: actor.userId,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
   };
   return db.runTransaction(async tx => {
     const [duplicate, activeBreakdowns, activeShutdowns, feederStatusGuard] = await Promise.all([
@@ -97,7 +99,7 @@ async function createOutage(db, actor, body, type) {
       tx.set(statusRef, {
         houseId: feeder.houseId, feederId: feeder.feederId, feederName: feeder.feederName,
         status: type, activeRecordId: ref.id, activeCollection: collectionName,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: FieldValue.serverTimestamp()
       });
     }
     tx.set(historyRef, {
@@ -105,12 +107,12 @@ async function createOutage(db, actor, body, type) {
       action: "created", before: null,
       after: { ...data, createdAt: null, updatedAt: null },
       actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: FieldValue.serverTimestamp()
     });
     tx.set(notificationRef, {
       houseId: feeder.houseId, type: "new_entry", title: type + " entry",
       message: feeder.feederName + " · " + body.date, recordCollection: collectionName,
-      recordId: ref.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp()
+      recordId: ref.id, read: false, createdAt: FieldValue.serverTimestamp()
     });
     return { id: ref.id, status };
   });
@@ -130,15 +132,15 @@ async function resolveOutage(db, actor, body, type) {
     const statusRef = db.collection("feeder_status").doc(old.feederId);
     const statusSnap = await tx.get(statusRef);
     const after = { ...old, endTime: body.endTime, status: "resolved", resolvedBy: actor.uid, resolvedByUserId: actor.userId, updatedAt: null };
-    tx.update(ref, { endTime: body.endTime, status: "resolved", resolvedBy: actor.uid, resolvedByUserId: actor.userId, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    tx.update(ref, { endTime: body.endTime, status: "resolved", resolvedBy: actor.uid, resolvedByUserId: actor.userId, updatedAt: FieldValue.serverTimestamp() });
     if (statusSnap.exists && statusSnap.data().activeRecordId === ref.id) {
-      tx.set(statusRef, { ...statusSnap.data(), status: "Running", activeRecordId: null, activeCollection: null, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      tx.set(statusRef, { ...statusSnap.data(), status: "Running", activeRecordId: null, activeCollection: null, updatedAt: FieldValue.serverTimestamp() });
     }
     tx.set(historyRef, {
       recordCollection: collectionName, recordId: ref.id, houseId: old.houseId,
       action: "resolved", before: old, after,
       actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: FieldValue.serverTimestamp()
     });
     return { id: ref.id, status: "resolved" };
   });
@@ -178,8 +180,8 @@ async function updateRecord(db, actor, body) {
   await db.runTransaction(async tx=>{
     const current=await tx.get(ref);if(!current.exists)throw Object.assign(new Error("Record not found"),{status:404});
     const before=current.data(), after={...before,...next};
-    tx.update(ref,{...next,updatedAt:admin.firestore.FieldValue.serverTimestamp(),updatedBy:actor.uid,updatedByUserId:actor.userId});
-    tx.set(history,{recordCollection:name,recordId:ref.id,houseId:before.houseId,action:"updated",before,after,actorUid:actor.uid,actorUserId:actor.userId,actorRole:actor.role,createdAt:admin.firestore.FieldValue.serverTimestamp()});
+    tx.update(ref,{...next,updatedAt:FieldValue.serverTimestamp(),updatedBy:actor.uid,updatedByUserId:actor.userId});
+    tx.set(history,{recordCollection:name,recordId:ref.id,houseId:before.houseId,action:"updated",before,after,actorUid:actor.uid,actorUserId:actor.userId,actorRole:actor.role,createdAt:FieldValue.serverTimestamp()});
   });
   return {id:ref.id,updated:true};
 }
@@ -204,7 +206,7 @@ async function createDailyReport(db, actor, body) {
     eventType: body.eventType, faultDetails: clean(body.faultDetails).slice(0,2000),
     duration: clean(body.duration).slice(0,100), restorationTime,
     remarks: clean(body.remarks).slice(0,2000), submittedBy: actor.uid,
-    createdByUserId: actor.userId, createdAt: admin.firestore.FieldValue.serverTimestamp()
+    createdByUserId: actor.userId, createdAt: FieldValue.serverTimestamp()
   };
   const historyRef = db.collection("entry_history").doc();
   const notificationRef = db.collection("notifications").doc();
@@ -215,8 +217,8 @@ async function createDailyReport(db, actor, body) {
       return { id: ref.id, duplicate: true };
     }
     tx.set(ref, data);
-    tx.set(historyRef, { recordCollection:"daily_reports", recordId:ref.id, houseId:feeder.houseId, action:"created", before:null, after:{...data,createdAt:null}, actorUid:actor.uid, actorUserId:actor.userId, actorRole:actor.role, createdAt:admin.firestore.FieldValue.serverTimestamp() });
-    tx.set(notificationRef, { houseId:feeder.houseId, type:"new_entry", title:"Daily feeder report", message:feeder.feederName+" · "+body.reportDate, recordCollection:"daily_reports", recordId:ref.id, read:false, createdAt:admin.firestore.FieldValue.serverTimestamp() });
+    tx.set(historyRef, { recordCollection:"daily_reports", recordId:ref.id, houseId:feeder.houseId, action:"created", before:null, after:{...data,createdAt:null}, actorUid:actor.uid, actorUserId:actor.userId, actorRole:actor.role, createdAt:FieldValue.serverTimestamp() });
+    tx.set(notificationRef, { houseId:feeder.houseId, type:"new_entry", title:"Daily feeder report", message:feeder.feederName+" · "+body.reportDate, recordCollection:"daily_reports", recordId:ref.id, read:false, createdAt:FieldValue.serverTimestamp() });
     return { id: ref.id };
   });
 }
@@ -248,7 +250,7 @@ async function createSimpleRecord(db, actor, body, collectionName) {
   }
   const clientId = typeof body.clientEntryId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(body.clientEntryId) ? body.clientEntryId : "";
   const ref = clientId ? db.collection(collectionName).doc(clientId) : db.collection(collectionName).doc();
-  const saved = { ...data, createdBy: actor.uid, createdByUserId: actor.userId, createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  const saved = { ...data, createdBy: actor.uid, createdByUserId: actor.userId, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() };
   const hist = db.collection("entry_history").doc();
   const note = db.collection("notifications").doc();
   return db.runTransaction(async tx => {
@@ -258,8 +260,8 @@ async function createSimpleRecord(db, actor, body, collectionName) {
       return { id: ref.id, duplicate: true, total: duplicate.data().total };
     }
     tx.set(ref, saved);
-    tx.set(hist, { recordCollection: collectionName, recordId: ref.id, houseId: actor.houseId, action: "created", before: null, after: { ...saved, createdAt: null, updatedAt: null }, actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role, createdAt: admin.firestore.FieldValue.serverTimestamp() });
-    tx.set(note, { houseId: actor.houseId, type: "new_entry", title: collectionName === "trippings" ? "Tripping entry" : "Consumption entry", message: data.date, recordCollection: collectionName, recordId: ref.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    tx.set(hist, { recordCollection: collectionName, recordId: ref.id, houseId: actor.houseId, action: "created", before: null, after: { ...saved, createdAt: null, updatedAt: null }, actorUid: actor.uid, actorUserId: actor.userId, actorRole: actor.role, createdAt: FieldValue.serverTimestamp() });
+    tx.set(note, { houseId: actor.houseId, type: "new_entry", title: collectionName === "trippings" ? "Tripping entry" : "Consumption entry", message: data.date, recordCollection: collectionName, recordId: ref.id, read: false, createdAt: FieldValue.serverTimestamp() });
     return { id: ref.id, total: data.total };
   });
 }
@@ -268,7 +270,7 @@ export default async req => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     const fb = fbAdmin();
-    const db = fb.firestore();
+    const db = getFirestore(fb);
     const actor = await actorFor(req, fb, db);
     const body = await req.json();
     switch (body.action) {
@@ -286,7 +288,7 @@ export default async req => {
         const name = clean(body.collection);
         if (!allowed.includes(name)) return json({ error: "Invalid backup collection" }, 400);
         const pageSize = 400;
-        let q = db.collection(name).orderBy(admin.firestore.FieldPath.documentId()).limit(pageSize);
+        let q = db.collection(name).orderBy(FieldPath.documentId()).limit(pageSize);
         if (body.cursor !== undefined && body.cursor !== null && body.cursor !== "") {
           if (!validDocId(body.cursor)) {
             throw Object.assign(new Error("Invalid backup cursor"), { status: 400 });
@@ -330,7 +332,7 @@ export default async req => {
           }
           if (name === "entry_history" || name === "notifications") q = q.orderBy("createdAt", "desc");
           else if (name !== "feeder_status") q = q.orderBy(name === "daily_reports" ? "reportDate" : "date", "desc");
-          else q = q.orderBy(admin.firestore.FieldPath.documentId());
+          else q = q.orderBy(FieldPath.documentId());
 
           const cursor = body.cursors && typeof body.cursors[name] === "string"
             ? body.cursors[name] : "";
@@ -376,7 +378,7 @@ export default async req => {
         const ref = db.collection("notifications").doc(clean(body.id));
         const snap = await ref.get();
         if (!snap.exists) return json({ error: "Notification not found" }, 404);
-        await ref.update({ read: true, readAt: admin.firestore.FieldValue.serverTimestamp(), readBy: actor.uid });
+        await ref.update({ read: true, readAt: FieldValue.serverTimestamp(), readBy: actor.uid });
         return json({ success: true });
       }
       default: return json({ error: "Invalid action" }, 400);
