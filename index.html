@@ -61,19 +61,11 @@
         </div>
         <section id="supplyPositionPanel" class="card">
           <h2>Daily Supply Position</h2>
-          <p class="muted">Record the status of every active feeder three times each day.</p>
+          <p class="muted">Har feeder ke saamne Closed ya Opened select karein. Opened feeder ke liye Breakdown aur PTW time bharein.</p>
           <form id="supplyPositionForm">
             <label for="supplyPositionDate">Date</label><input id="supplyPositionDate" type="date" required>
-            <label for="supplyPositionSlot">Supply Position</label>
-            <select id="supplyPositionSlot" required>
-              <option value="">Select time</option>
-              <option value="1st">1st Supply Position</option>
-              <option value="2nd">2nd Supply Position</option>
-              <option value="3rd">3rd Supply Position</option>
-            </select>
-            <label for="supplyPositionTime">Report Time</label><input id="supplyPositionTime" type="time" required>
             <div id="supplyPositionFeederRows"></div>
-            <button type="submit">Save Supply Position</button>
+            <button type="submit">Submit Supply Position</button>
             <p id="supplyPositionMessage" class="message" role="status"></p>
           </form>
           <div id="supplyPositionHistory"></div>
