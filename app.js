@@ -162,6 +162,8 @@ $("loginForm")?.addEventListener("submit", async event => {
 
     message("loginMessage", "Login successful. Loading your data...");
     setOperationalDates();
+    setSupplyPositionTime();
+    showStaffSection("supply");
 
     // Start independent data requests together so the app does not wait for
     // feeder, records, offline-sync and dashboard requests one after another.
@@ -184,6 +186,8 @@ $("loginForm")?.addEventListener("submit", async event => {
     Promise.allSettled(startupTasks).then(() => {
       if (currentProfile?.role === "staff") {
         fillOperationalFeederLists();
+        renderSupplyPositionFeederRows();
+        renderSupplyPositionHistory();
       }
       renderOfflineQueueStatus();
       message("loginMessage", "");
@@ -210,6 +214,81 @@ $("logoutBtn")?.addEventListener("click", async () => {
   $("pin").value = "";
 });
 
+// Staff navigation: separate the three-times-daily supply report from other forms.
+function showStaffSection(section) {
+  const supply = section === "supply";
+  $("supplyPositionPanel")?.classList.toggle("hidden", !supply);
+  $("consumptionDataPanel")?.classList.toggle("hidden", supply);
+  $("showSupplyPosition")?.classList.toggle("secondary", !supply);
+  $("showConsumptionData")?.classList.toggle("secondary", supply);
+  $("showSupplyPosition")?.setAttribute("aria-pressed", String(supply));
+  $("showConsumptionData")?.setAttribute("aria-pressed", String(!supply));
+}
+$("showSupplyPosition")?.addEventListener("click", () => showStaffSection("supply"));
+$("showConsumptionData")?.addEventListener("click", () => showStaffSection("consumption"));
+function setSupplyPositionTime() {
+  const now = new Date();
+  if ($("supplyPositionTime") && !$("supplyPositionTime").value) $("supplyPositionTime").value = String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+}
+function renderSupplyPositionFeederRows() {
+  const host = $("supplyPositionFeederRows");
+  if (!host) return;
+  const feeders = operational.feeders || [];
+  if (!feeders.length) { host.innerHTML = "<p class='muted'>No active feeders found.</p>"; return; }
+  host.innerHTML = feeders.map(feeder => `
+    <article class="report-item supply-feeder-row" data-feeder-id="${safe(feeder.id)}">
+      <strong>${safe(feeder.name)}</strong>
+      <label>Status</label><select class="supply-feeder-status" required>
+        <option value="Running">Running</option><option value="Breakdown">Breakdown</option><option value="Shutdown">Direct Shutdown</option>
+      </select>
+      <div class="supply-event-details hidden">
+        <label>Start Time</label><input class="supply-start-time" type="time">
+        <div class="supply-ptw-field hidden"><label>PTW Taken on Time</label><input class="supply-ptw-time" type="time"></div>
+        <label>End Time (blank if ongoing)</label><input class="supply-end-time" type="time">
+        <label>Reason</label><textarea class="supply-reason" rows="2" maxlength="1000"></textarea>
+      </div>
+    </article>`).join("");
+}
+$("supplyPositionFeederRows")?.addEventListener("change", event => {
+  if (!event.target.matches(".supply-feeder-status")) return;
+  const row = event.target.closest(".supply-feeder-row"), status = event.target.value;
+  row.querySelector(".supply-event-details").classList.toggle("hidden", status === "Running");
+  row.querySelector(".supply-ptw-field").classList.toggle("hidden", status !== "Breakdown");
+  row.querySelector(".supply-start-time").required = status !== "Running";
+  row.querySelector(".supply-reason").required = status !== "Running";
+  row.querySelector(".supply-ptw-time").required = status === "Breakdown";
+});
+function renderSupplyPositionHistory() {
+  const host = $("supplyPositionHistory");
+  if (!host) return;
+  const rows = [...(operational.supply_positions || [])].sort((a,b) => String(b.date).localeCompare(String(a.date)) || String(b.reportTime).localeCompare(String(a.reportTime)));
+  host.innerHTML = "<h3>Supply Position History</h3>" + (rows.length ? rows.map(item => {
+    const details = (item.feeders || []).map(f => `<p><strong>${safe(f.feederName)}</strong> — ${safe(f.status)}${f.status !== "Running" ? " · Start: "+safe(f.startTime)+" · "+(f.status==="Breakdown" ? "PTW: "+safe(f.ptwTakenOnTime||"—")+" · " : "")+"End: "+safe(f.endTime||"Ongoing")+" · "+safe(f.reason) : ""}</p>`).join("");
+    return `<article class="report-item"><strong>${safe(item.date)} · ${safe(item.slot)} Supply Position · ${safe(item.reportTime)}</strong><p>Running: ${Number(item.runningCount||0)} · Breakdown: ${Number(item.breakdownCount||0)} · Shutdown: ${Number(item.shutdownCount||0)}</p>${details}</article>`;
+  }).join("") : "<p class='muted'>No supply position reports yet.</p>");
+}
+$("supplyPositionForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  try {
+    const feeders = [...$("supplyPositionFeederRows").querySelectorAll(".supply-feeder-row")].map(row => {
+      const status = row.querySelector(".supply-feeder-status").value, value = {feederId:row.dataset.feederId,status};
+      if (status !== "Running") {
+        value.startTime = row.querySelector(".supply-start-time").value;
+        value.endTime = row.querySelector(".supply-end-time").value;
+        value.reason = row.querySelector(".supply-reason").value.trim();
+        if (status === "Breakdown") value.ptwTakenOnTime = row.querySelector(".supply-ptw-time").value;
+      }
+      return value;
+    });
+    if (!feeders.length) throw new Error("No active feeders available.");
+    message("supplyPositionMessage","Saving supply position...");
+    const saved = await recordsRequest("createSupplyPosition",{date:$("supplyPositionDate").value,slot:$("supplyPositionSlot").value,reportTime:$("supplyPositionTime").value,feeders});
+    event.target.reset(); setOperationalDates(); setSupplyPositionTime(); renderSupplyPositionFeederRows();
+    await refreshOperationalRecordsPreservingHistory();
+    message("supplyPositionMessage",saved.queued ? "Supply position saved offline; it will sync when internet returns." : "Supply position saved successfully.");
+  } catch(error) { message("supplyPositionMessage",error.message,true); }
+});
+
 // Staff: Load assigned feeders for Breakdown / Shutdown forms only.
 // The Daily Feeder Report form and its Staff-side submit handler are removed.
 async function loadStaffFeeders() {
@@ -232,6 +311,8 @@ async function loadStaffFeeders() {
   }
   operational.feeders = feeders;
   fillOperationalFeederLists();
+  renderSupplyPositionFeederRows();
+  renderSupplyPositionHistory();
   if (!feeders.length) message("staffStatusMessage", "No active feeder found. Contact Admin.", true);
 }
 
@@ -450,14 +531,14 @@ setToday();
 
 
 // ---------------- Operational records (direct save; no approval workflow) ----------------
-let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [], feeders: [] };
+let operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], supply_positions: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [], feeders: [] };
 function resetOperationalSessionState() {
-  operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [], feeders: [] };
+  operational = { breakdowns: [], shutdowns: [], trippings: [], consumption_readings: [], supply_positions: [], daily_reports: [], feeder_status: [], notifications: [], entry_history: [], feeders: [] };
   recordPageCursors = null;
   recordPagesLoaded = 0;
   historyLoadInProgress = false;
 }
-const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "daily_reports"];
+const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports"];
 
 async function recordsRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
@@ -474,7 +555,7 @@ async function recordsRequest(action, data = {}) {
 
 function setOperationalDates() {
   const today = new Date().toLocaleDateString("en-CA");
-  ["breakdownDate","shutdownDate","trippingDate","consumptionDate"].forEach(id => {
+  ["breakdownDate","shutdownDate","trippingDate","consumptionDate","supplyPositionDate"].forEach(id => {
     if ($(id) && !$(id).value) $(id).value = today;
   });
 }
@@ -688,6 +769,7 @@ function renderOperational() {
   }
   renderRecordHistory();
   renderReports();
+  renderSupplyPositionHistory();
 }
 
 
@@ -760,6 +842,7 @@ function renderRecordHistory() {
     ...operational.shutdowns.filter(inside).map(x => ({...x, kind:"Shutdown", collection:"shutdowns"})),
     ...operational.trippings.filter(inside).map(x => ({...x, kind:"Tripping", collection:"trippings"})),
     ...operational.consumption_readings.filter(inside).map(x => ({...x, kind:"Consumption", collection:"consumption_readings"})),
+    ...operational.supply_positions.filter(inside).map(x => ({...x, kind:"Supply Position", collection:"supply_positions"})),
     ...(operational.daily_reports || []).map(x => ({...x, date:x.reportDate, kind:"Daily Feeder Report", collection:"daily_reports", reason:x.remarks || x.eventType})).filter(inside)
   ].sort((a,b) => String(b.date).localeCompare(String(a.date)));
   const durationFor = x => {
@@ -772,7 +855,7 @@ function renderRecordHistory() {
     return Math.floor(minutes/60)+"h "+(minutes%60)+"m";
   };
   if ($("adminRecordsList")) $("adminRecordsList").innerHTML = rows.length ? rows.map(x =>
-    `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : ""))}</p>${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`
+    `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Slot: "+x.slot+" · Time: "+x.reportTime+" · Running: "+x.runningCount+" · Breakdown: "+x.breakdownCount+" · Shutdown: "+x.shutdownCount : ""))}</p>${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`
   ).join("") : "<p>No records in selected date range.</p>";
   if ($("recordsInsights")) {
     const outageRows = [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))].filter(inside);
@@ -969,6 +1052,7 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
     {name:"Shutdown",headers:["Date","Power House","Feeder","Start","End","Status","Reason"],rows:operational.shutdowns.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.feederName,x.startTime,x.endTime,x.status,x.reason])},
     {name:"Tripping",headers:["Date","Power House","Trippings","Feeders","Staff"],rows:operational.trippings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.trippingCount,x.feederCount,x.createdByUserId])},
     {name:"Consumption",headers:["Date","Power House","AP Feeder","Rural Domestic","Urban","Industrial","Independent","Total"],rows:operational.consumption_readings.filter(x=>inRange(x)).map(x=>[x.date,x.houseName,x.apFeeder,x.ruralDomestic,x.urban,x.industrial,x.independent,x.total])},
+    {name:"Supply Position",headers:["Date","Power House","Slot","Report Time","Feeder","Status","Start Time","PTW Taken on Time","End Time","Reason","Staff"],rows:operational.supply_positions.filter(x=>inRange(x)).flatMap(x=>(x.feeders||[]).map(f=>[x.date,x.houseName,x.slot,x.reportTime,f.feederName,f.status,f.startTime,f.ptwTakenOnTime,f.endTime,f.reason,x.createdByUserId]))},
     {name:"Daily Reports",headers:["Date","Power House","Feeder","Breaker","Event","Fault","Duration","Restoration","Remarks","Staff"],rows:operational.daily_reports.filter(x=>inRange(x,"reportDate")).map(x=>[x.reportDate,x.houseName,x.feederName,x.breakerStatus,x.eventType,x.faultDetails,x.duration,x.restorationTime,x.remarks,x.createdByUserId])}
   ];
   const worksheets=sheets.map(sheet=>{
@@ -1072,7 +1156,7 @@ document.addEventListener("visibilitychange", async () => {
 });
 const originalRecordsRequest = recordsRequest;
 recordsRequest = async (action, data = {}) => {
-  const canQueue = ["createDailyReport","createBreakdown","createShutdown","createTripping","createConsumption"].includes(action);
+  const canQueue = ["createDailyReport","createBreakdown","createShutdown","createTripping","createConsumption","createSupplyPosition"].includes(action);
   if (!canQueue) return originalRecordsRequest(action, data);
   const hadClientEntryId = Boolean(data.clientEntryId);
   const payload = hadClientEntryId ? data : {...data, clientEntryId:newClientEntryId()};
@@ -1406,7 +1490,7 @@ Object.assign(hindiWords, {
   "Trippings:":"ट्रिपिंग:",
   "Feeders:":"फीडर:",
   "Total:":"कुल:",
-  "PTW Taken on Time":"PTW लेने का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
+  "PTW Taken on Time":"PTW लेने का समय","Supply Position":"सप्लाई पोजीशन","Daily Supply Position":"दैनिक सप्लाई पोजीशन","Consumption Data":"कंजम्प्शन डेटा","1st Supply Position":"पहली सप्लाई पोजीशन","2nd Supply Position":"दूसरी सप्लाई पोजीशन","3rd Supply Position":"तीसरी सप्लाई पोजीशन","Running":"चालू","Direct Shutdown":"सीधा शटडाउन","Save Supply Position":"सप्लाई पोजीशन सेव करें","Supply Position History":"सप्लाई पोजीशन हिस्ट्री","Report Time":"रिपोर्ट का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
 });
  
 const hindiPlaceholders = {
