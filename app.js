@@ -722,7 +722,7 @@ $("adminRecordsList")?.addEventListener("click", async event => {
   if(!button||currentProfile?.role!=="admin")return;
   const collection=button.dataset.recordCollection,id=button.dataset.editRecord,item=operational[collection]?.find(x=>x.id===id);
   if(!item)return;
-  const fields=["breakdowns","shutdowns"].includes(collection)?[["date","Date"],["startTime","Start time"],["reason","Reason"]]
+  const fields=["breakdowns","shutdowns"].includes(collection)?[["date","Date"],["startTime","Start time"],...(collection==="breakdowns"?[["ptwTakenOnTime","PTW Taken on Time"]]:[]),["reason","Reason"]]
     :collection==="daily_reports"?[["reportDate","Report date"],["breakerStatus","Breaker status"],["faultDetails","Fault details"],["duration","Duration"],["restorationTime","Restoration time"],["remarks","Remarks"]]
     :collection==="trippings"?[["date","Date"],["trippingCount","Tripping count"],["feederCount","Feeder count"]]
     :[["date","Date"],["apFeeder","AP Feeder"],["ruralDomestic","Rural Domestic"],["urban","Urban"],["industrial","Industrial"],["independent","Independent"]];
