@@ -1,14 +1,16 @@
 
-import admin from "firebase-admin";
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import crypto from "node:crypto";
 
 function getAdmin() {
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) throw new Error("Server not configured");
 
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(raw))
+    initializeApp({
+      credential: cert(JSON.parse(raw))
     });
   }
   return admin;
@@ -48,7 +50,7 @@ export default async (req) => {
     }
 
     const fb = getAdmin();
-    const db = fb.firestore();
+    const db = getFirestore(fb);
 
     const pinSalt = crypto.randomBytes(16).toString("hex");
     const pinHash = crypto.scryptSync(pin, pinSalt, 64).toString("hex");
@@ -73,11 +75,11 @@ export default async (req) => {
         active: true,
         houseId: "",
         houseName: "",
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
       });
       tx.create(setupGuardRef, {
         adminUid: userRef.id,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
       });
     });
 
