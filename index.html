@@ -53,52 +53,14 @@
       </div>
 
       <section id="staffPanel" class="card hidden">
-        <h2>Daily Feeder Report</h2>
-
-        <form id="reportForm">
-          <label for="reportDate">Report date</label>
-          <input id="reportDate" type="date" required>
-
-          <label for="feederName">Feeder</label>
-          <input id="feederName" required placeholder="Feeder name">
-
-          <label for="breakerStatus">Breaker status</label>
-          <select id="breakerStatus" required>
-            <option value="">Select status</option>
-            <option>ON</option>
-            <option>OFF</option>
-            <option>TRIPPED</option>
-            <option>UNDER MAINTENANCE</option>
-          </select>
-
-          <label for="eventType">Event type</label>
-          <select id="eventType" required>
-            <option value="">Select event</option>
-            <option>Normal</option>
-          </select>
-          <p class="muted tiny">Use the separate Breakdown / Shutdown forms below for outage entries.</p>
-
-          <label for="faultDetails">Fault details</label>
-          <textarea id="faultDetails" rows="3"></textarea>
-
-          <label for="duration">Duration</label>
-          <input id="duration" placeholder="e.g. 45 minutes">
-
-          <label for="restorationTime">Restoration time</label>
-          <input id="restorationTime" type="time">
-
-          <label for="remarks">Remarks</label>
-          <textarea id="remarks" rows="3"></textarea>
-
-          <button type="submit">Submit report</button>
-          <p id="reportMessage" class="message" role="status"></p>
-        </form>
-
-        <hr><h2>Breakdown Entry</h2>
+        <h2>Staff Operations</h2>
+        <p id="staffStatusMessage" class="message" role="status"></p>
+        <h2>Breakdown Entry</h2>
         <form id="breakdownForm">
           <label>Date</label><input id="breakdownDate" type="date" required>
           <label>Feeder</label><select id="breakdownFeeder" required><option value="">Select Feeder</option></select>
           <label>Start Time</label><input id="breakdownStart" type="time" required>
+          <label for="breakdownPtwTime">PTW Taken on Time</label><input id="breakdownPtwTime" type="time" required>
           <label>End Time (blank if ongoing)</label><input id="breakdownEnd" type="time">
           <label>Reason</label><textarea id="breakdownReason" required maxlength="1000"></textarea>
           <button type="submit">Save Breakdown</button><p id="breakdownMessage" class="message"></p>
