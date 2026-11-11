@@ -2,11 +2,15 @@ package com.bsk.powerhouselog
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
+import android.print.PrintAttributes
+import android.print.PrintManager
+import android.widget.Toast
 import android.webkit.WebChromeClient
 import android.webkit.ServiceWorkerClient
 import android.webkit.ServiceWorkerController
@@ -22,6 +26,7 @@ class MainActivity : Activity() {
     private lateinit var assetBundles: BskAssetBundleManager
     private var lastAssetCheckAt = 0L
     private var serviceWorkerCleanupStarted = false
+    private val printWebViews = mutableListOf<WebView>()
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,7 +140,10 @@ class MainActivity : Activity() {
             }
         }
         webView.webChromeClient = WebChromeClient()
-        webView.addJavascriptInterface(BskDownloadBridge(this), "BSKAndroidBridge")
+        webView.addJavascriptInterface(
+            BskDownloadBridge(this) { title, html -> runOnUiThread { openPrintView(title, html) } },
+            "BSKAndroidBridge"
+        )
 
         // The UI opens from APK/app-private assets, never from Netlify.
         // DOM storage is intentionally preserved for the login session and offline queue.
@@ -143,6 +151,38 @@ class MainActivity : Activity() {
 
         // The first page load checks for updates; subsequent page refreshes
         // recheck at most once per minute without interrupting active entry work.
+    }
+
+    private fun openPrintView(title: String, html: String) {
+        val printView = WebView(this)
+        printWebViews.add(printView)
+        printView.settings.javaScriptEnabled = false
+        printView.webViewClient = object : WebViewClient() {
+            private var printStarted = false
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                if (printStarted || view == null) return
+                printStarted = true
+                try {
+                    val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
+                    printManager.print(
+                        title,
+                        view.createPrintDocumentAdapter(title),
+                        PrintAttributes.Builder().build()
+                    )
+                } catch (error: Exception) {
+                    Toast.makeText(this@MainActivity, "Could not open PDF print: ${error.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        printView.loadDataWithBaseURL(
+            "https://bsk-powerhouse-log-bhiwani.netlify.app/",
+            html,
+            "text/html",
+            "UTF-8",
+            null
+        )
     }
 
     private fun interceptLocalAsset(uri: Uri): WebResourceResponse? {
@@ -188,6 +228,8 @@ class MainActivity : Activity() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             ServiceWorkerController.getInstance().setServiceWorkerClient(null)
         }
+        printWebViews.forEach { it.stopLoading(); it.destroy() }
+        printWebViews.clear()
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.webChromeClient = null
