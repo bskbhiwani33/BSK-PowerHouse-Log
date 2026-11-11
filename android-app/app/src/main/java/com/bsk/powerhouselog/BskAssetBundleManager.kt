@@ -41,6 +41,22 @@ internal class BskAssetBundleManager(private val context: Context) {
     private val busy = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    init {
+        if (!preferences.contains("active_version")) {
+            val bundledVersion = try {
+                JSONObject(context.assets.open("bsk-release.json").bufferedReader().use { it.readText() })
+                    .optLong("version", 0L)
+                    .coerceAtLeast(0L)
+            } catch (_: Exception) {
+                0L
+            }
+            preferences.edit()
+                .putLong("active_version", bundledVersion)
+                .putLong("previous_version", 0L)
+                .apply()
+        }
+    }
+
     fun openAsset(requestPath: String): java.io.InputStream? {
         val clean = requestPath.substringBefore("?").trimStart('/')
         if (clean.isBlank() || clean.split('/').any { it == ".." } || clean.contains('\\')) return null
