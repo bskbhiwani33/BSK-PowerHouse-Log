@@ -28,7 +28,7 @@ internal class BskAssetBundleManager(private val context: Context) {
         private const val TAG = "BSKAssetUpdate"
         private const val MANIFEST_URL = "https://testing-app-8af35.web.app/bsk-updates/manifest.json"
         private const val TRUSTED_HOST = "testing-app-8af35.web.app"
-        private const val NATIVE_VERSION = 1
+        private const val NATIVE_VERSION = 2L
         private const val MAX_MANIFEST_BYTES = 64 * 1024
         private const val MAX_BUNDLE_BYTES = 25L * 1024L * 1024L
         private const val MAX_UNPACKED_BYTES = 50L * 1024L * 1024L
