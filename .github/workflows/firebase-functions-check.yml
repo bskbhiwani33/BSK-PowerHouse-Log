@@ -6,8 +6,15 @@ on:
       - "functions/**"
       - "firebase.json"
       - "scripts/**"
-      - "scripts/**"
+      - "package.json"
+      - "app.js"
+      - "index.html"
+      - "style.css"
+      - "bsk-config.js"
+      - "manifest.webmanifest"
+      - "sw.js"
       - ".github/workflows/firebase-functions-check.yml"
+      - "scripts/**"
   push:
     branches:
       - bsk-firebase-functions-prep
@@ -24,6 +31,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install web asset build dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build Firebase Hosting assets
+        run: npm run build:hosting
       - name: Install Firebase Functions dependencies
         working-directory: functions
         run: npm install --no-audit --no-fund
