@@ -55,7 +55,7 @@ class MainActivity : Activity() {
             ): WebResourceResponse? {
                 val uri = request?.url ?: return null
                 if (uri.scheme == "https" && uri.host == ASSET_HOST) {
-                    val path = uri.path.orEmpty().removePrefix("/").removePrefix("assets/")
+                    val path = uri.path.orEmpty().removePrefix("/").ifBlank { "index.html" }
                     val stream = assetBundles.openAsset(path)
                     if (stream != null) {
                         val mime = mimeType(path)
@@ -173,7 +173,7 @@ class MainActivity : Activity() {
     }
 
     companion object {
-        private const val ASSET_HOST = "appassets.androidplatform.net"
-        private const val APP_URL = "https://appassets.androidplatform.net/assets/index.html"
+        private const val ASSET_HOST = "bsk-powerhouse-log-bhiwani.netlify.app"
+        private const val APP_URL = "https://bsk-powerhouse-log-bhiwani.netlify.app/index.html?bskLocal=1"
     }
 }
