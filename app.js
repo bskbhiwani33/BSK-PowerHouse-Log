@@ -861,53 +861,68 @@ function renderFeederStatusSearch() {
 }
 $("feederStatusSearch")?.addEventListener("input",renderFeederStatusSearch);
 
-$("adminRecordsList")?.addEventListener("click", async event => {
+let activeRecordEdit = null;
+function openRecordEditor(collection,id,item) {
+  const host = $("recordEditWorkspace");
+  if (!host) return;
+  activeRecordEdit = {collection,id};
+  const input = (key,label,value,type="text") => `<label>${safe(label)}</label><input name="${key}" type="${type}" value="${safe(value ?? "")}" ${type==="number"?'step="any"':''}>`;
+  let fields = "";
+  if (["breakdowns","shutdowns"].includes(collection)) {
+    fields = input("date","Date",item.date,"date") +
+      input("startTime","Start Time",item.startTime,"time") +
+      (collection==="breakdowns" ? input("ptwTakenOnTime","PTW Taken on Time",item.ptwTakenOnTime,"time") : "") +
+      input("endTime","End Time (blank if ongoing)",item.endTime,"time") +
+      `<label>Reason</label><textarea name="reason" required maxlength="1000">${safe(item.reason)}</textarea>`;
+  } else if (collection==="trippings") {
+    fields = input("date","Date",item.date,"date")+input("trippingCount","Tripping Count",item.trippingCount,"number")+input("feederCount","Feeder Count",item.feederCount,"number");
+  } else if (collection==="consumption_readings") {
+    fields = input("date","Date",item.date,"date")+["apFeeder","ruralDomestic","urban","industrial","independent"].map(k=>input(k,({apFeeder:"AP Feeder",ruralDomestic:"Rural Domestic",urban:"Urban",industrial:"Industrial",independent:"Independent"})[k],item[k],"number")).join("");
+  } else if (collection==="supply_positions") {
+    const current = new Map((item.feeders||[]).map(f=>[f.feederId,f]));
+    const all = (dashboardData.feeders||[]).filter(f=>f.houseId===item.houseId || current.has(f.id));
+    fields = input("date","Date",item.date,"date") + all.map(f=>{
+      const old=current.get(f.id)||{status:"Running"};
+      const status=old.status==="Direct Shutdown"?"Shutdown":old.status;
+      return `<fieldset class="report-item supply-edit-row" data-feeder-id="${safe(f.id)}"><legend>${safe(f.name)}</legend><label>Status</label><select name="status"><option ${status==="Running"?"selected":""}>Running</option><option ${status==="Breakdown"?"selected":""}>Breakdown</option><option ${status==="Shutdown"?"selected":""}>Shutdown</option></select>${input("startTime","Breakdown Time",old.startTime,"time")}${input("ptwTakenOnTime","PTW Taken on Time",old.ptwTakenOnTime,"time")}<label>Reason</label><textarea name="reason" maxlength="1000">${safe(old.reason||"")}</textarea></fieldset>`;
+    }).join("");
+  }
+  host.innerHTML = `<section class="card" id="recordEditCard"><h3>Edit ${safe(collection.replaceAll("_"," "))}</h3><form id="recordEditForm">${fields}<div class="row"><button type="submit">Save Changes</button><button type="button" class="secondary" id="cancelRecordEdit">Cancel</button></div><p id="recordEditMessage" class="message" role="status"></p></form></section>`;
+  host.classList.remove("hidden");
+  host.scrollIntoView({behavior:"smooth",block:"start"});
+  $("cancelRecordEdit")?.addEventListener("click",closeRecordEditor);
+  $("recordEditForm")?.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const form=event.currentTarget, data=new FormData(form), changes={};
+    for(const key of ["date","startTime","ptwTakenOnTime","endTime","reason","trippingCount","feederCount","apFeeder","ruralDomestic","urban","industrial","independent"]) {
+      if(data.has(key)) changes[key]=data.get(key);
+    }
+    if(collection==="supply_positions") {
+      changes.feeders=[...form.querySelectorAll(".supply-edit-row")].map(row=>{
+        const status=row.querySelector('select[name="status"]').value;
+        const value={feederId:row.dataset.feederId,status};
+        if(status==="Breakdown"){value.startTime=row.querySelector('[name="startTime"]').value;value.ptwTakenOnTime=row.querySelector('[name="ptwTakenOnTime"]').value;}
+        if(status==="Shutdown"){value.ptwTakenOnTime=row.querySelector('[name="ptwTakenOnTime"]').value;value.reason=row.querySelector('[name="reason"]').value;}
+        return value;
+      });
+    }
+    try {
+      const button=form.querySelector('button[type="submit"]');button.disabled=true;
+      await recordsRequest("updateRecord",{recordCollection:collection,id,changes});
+      await refreshAllOperationalHistory();
+      closeRecordEditor();
+      message("adminMessage","Record updated successfully. Edit history saved.");
+    } catch(error) { message("recordEditMessage",error.message,true); }
+    finally { const button=form.querySelector('button[type="submit"]');if(button)button.disabled=false; }
+  });
+}
+function closeRecordEditor(){const host=$("recordEditWorkspace");if(host){host.innerHTML="";host.classList.add("hidden");}activeRecordEdit=null;}
+$("adminRecordsList")?.addEventListener("click",event=>{
   const button=event.target.closest("[data-edit-record]");
   if(!button||currentProfile?.role!=="admin")return;
   const collection=button.dataset.recordCollection,id=button.dataset.editRecord,item=operational[collection]?.find(x=>x.id===id);
   if(!item)return;
-  const fields=["breakdowns","shutdowns"].includes(collection)?[["date","Date"],["startTime","Start time"],...(collection==="breakdowns"?[["ptwTakenOnTime","PTW Taken on Time"]]:[]),["reason","Reason"]]
-    :collection==="daily_reports"?[["reportDate","Report date"],["breakerStatus","Breaker status"],["faultDetails","Fault details"],["duration","Duration"],["restorationTime","Restoration time"],["remarks","Remarks"]]
-    :collection==="trippings"?[["date","Date"],["trippingCount","Tripping count"],["feederCount","Feeder count"]]
-    :collection==="consumption_readings"?[["date","Date"],["apFeeder","AP Feeder"],["ruralDomestic","Rural Domestic"],["urban","Urban"],["industrial","Industrial"],["independent","Independent"]]
-    :[];
-  const changes={};
-  for(const [key,label] of fields){const value=window.prompt(label+" (blank = unchanged)",item[key]??"");if(value===null)return;if(value!=="")changes[key]=value;}
-  if(collection==="supply_positions"){
-    const date=window.prompt("Supply Position date:",item.date||"");
-    if(date===null)return;
-    if(date!==item.date)changes.date=date;
-    const feeders=[];
-    for(const feeder of (item.feeders||[])){
-      const currentStatus=feeder.status==="Direct Shutdown"?"Shutdown":feeder.status;
-      const status=window.prompt("Feeder: "+feeder.feederName+"\nStatus: Running / Breakdown / Shutdown",currentStatus);
-      if(status===null)return;
-      const normalized=status.trim().toLowerCase();
-      if(!["running","breakdown","shutdown"].includes(normalized)){message("adminMessage","Status Running, Breakdown ya Shutdown hona chahiye.",true);return;}
-      const row={feederId:feeder.feederId,status:normalized==="running"?"Running":normalized==="breakdown"?"Breakdown":"Shutdown"};
-      if(row.status==="Breakdown"){
-        const startTime=window.prompt(feeder.feederName+" — Breakdown Time:",feeder.startTime||"");
-        if(startTime===null)return;
-        const ptwTakenOnTime=window.prompt(feeder.feederName+" — PTW Taken on Time:",feeder.ptwTakenOnTime||"");
-        if(ptwTakenOnTime===null)return;
-        row.startTime=startTime;row.ptwTakenOnTime=ptwTakenOnTime;
-      } else if(row.status==="Shutdown"){
-        const ptwTakenOnTime=window.prompt(feeder.feederName+" — PTW Taken on Time:",feeder.ptwTakenOnTime||"");
-        if(ptwTakenOnTime===null)return;
-        const reason=window.prompt(feeder.feederName+" — Shutdown Reason:",feeder.reason||"");
-        if(reason===null)return;
-        row.ptwTakenOnTime=ptwTakenOnTime;row.reason=reason;
-      }
-      feeders.push(row);
-    }
-    changes.feeders=feeders;
-  }
-  if(!Object.keys(changes).length)return;
-  try{
-    await recordsRequest("updateRecord",{recordCollection:collection,id,changes});
-    await refreshAllOperationalHistory();
-    message("adminMessage","Record updated. Edit history saved.");
-  } catch(error){message("adminMessage",error.message,true);}
+  openRecordEditor(collection,id,item);
 });
 
 function renderRecordHistory() {
