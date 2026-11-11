@@ -83,6 +83,22 @@ class MainActivity : Activity() {
                 }
             }
 
+            override fun onReceivedHttpError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                errorResponse: WebResourceResponse?
+            ) {
+                super.onReceivedHttpError(view, request, errorResponse)
+                val uri = request?.url
+                if (request?.isForMainFrame == true &&
+                    uri?.scheme == "https" && uri.host == ASSET_HOST &&
+                    (errorResponse?.statusCode ?: 0) >= 400 &&
+                    assetBundles.rollbackToPrevious()
+                ) {
+                    view?.post { view.loadUrl(APP_URL) }
+                }
+            }
+
             override fun shouldOverrideUrlLoading(
                 view: WebView?,
                 request: WebResourceRequest?
