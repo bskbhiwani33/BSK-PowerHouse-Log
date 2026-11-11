@@ -72,6 +72,10 @@ Operational records, audit history, feeder status, and notifications are written
 - The frontend still calls the existing Netlify endpoints. No client cutover has been made. The new Firebase endpoints have not been deployed or runtime-tested against the live Firebase project.
 - Before deployment, the Firebase runtime service account must receive only the IAM permissions needed for Auth token creation/verification and Firestore Admin operations. Existing Admin accounts should be preserved and not recreated.
 
+- Added `api-config.js` with a single backend mode switch and the planned Firebase HTTPS URLs. It deliberately defaults to `netlify`; `app.js` now routes login/admin/records requests through this switch. The Firebase mode must not be enabled until the new endpoints are deployed and verified.
+- Updated the PWA shell cache to `bsk-shell-v10` and included `api-config.js` so the routing config is available offline with the app shell.
+- Extended the GitHub Actions workflow to syntax-check the frontend module, API config, service worker, and Firebase handler files.
+
 ## Required migration design
 
 - Keep Firebase as the system of record and preserve existing collection names/document shapes.
