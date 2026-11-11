@@ -184,6 +184,9 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            ServiceWorkerController.getInstance().setServiceWorkerClient(null)
+        }
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.webChromeClient = null
