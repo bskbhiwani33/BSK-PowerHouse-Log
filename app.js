@@ -1490,8 +1490,7 @@ const hindiWords = {
   "Resolve Ongoing Event":"चालू घटना समाप्त करें","Ongoing Breakdown / Shutdown":"चालू ब्रेकडाउन / शटडाउन",
   "Long-running alert (24+ hours)":"लंबे समय से चालू अलर्ट (24+ घंटे)",
   "Records Overview":"रिकॉर्ड सारांश","Monthly Activity":"मासिक गतिविधि",
-  ,,
-  ,"Save":"सेव करें","No matching feeder found.":"कोई मेल खाता फीडर नहीं मिला।",
+  "Save":"सेव करें","No matching feeder found.":"कोई मेल खाता फीडर नहीं मिला।",
   "New Entry Notifications · Unread:":"नई एंट्री सूचनाएँ · अपठित:","Recent Edit History (who / when)":"हाल का बदलाव इतिहास (किसने / कब)",
   "Repeat Breakdown / Feeder-wise Report":"दोहराए गए ब्रेकडाउन / फीडर-वार रिपोर्ट",
   "Daily Entry Summary":"दैनिक एंट्री सारांश","Monthly Entry Summary":"मासिक एंट्री सारांश",
@@ -1505,7 +1504,6 @@ const hindiWords = {
   "Ongoing Breakdown Alert (24+ hours)":"चालू ब्रेकडाउन अलर्ट (24+ घंटे)",
   "Ongoing Shutdown Alert (24+ hours)":"चालू शटडाउन अलर्ट (24+ घंटे)",
   "Repeat Breakdown Report":"दोहराए गए ब्रेकडाउन की रिपोर्ट","Feeder-wise Report":"फीडर-वार रिपोर्ट",
-  ,,
   "My Entry History":"मेरी एंट्री का इतिहास","Search a feeder to see its current status and history.":"स्थिति और इतिहास देखने के लिए फीडर खोजें।",
   "None crossed the 24-hour threshold.":"कोई भी 24 घंटे की सीमा पार नहीं हुआ।",
   "Signing in...":"लॉगिन हो रहा है...","Loading dashboard...":"डैशबोर्ड लोड हो रहा है...",
@@ -1611,7 +1609,7 @@ Object.assign(hindiWords, {
   "Trippings:":"ट्रिपिंग:",
   "Feeders:":"फीडर:",
   "Total:":"कुल:",
-  "PTW Taken on Time":"PTW लेने का समय","Supply Position":"सप्लाई पोजीशन","Daily Supply Position":"दैनिक सप्लाई पोजीशन","Consumption Data":"कंजम्प्शन डेटा","1st Supply Position":"पहली सप्लाई पोजीशन","2nd Supply Position":"दूसरी सप्लाई पोजीशन","3rd Supply Position":"तीसरी सप्लाई पोजीशन","Running":"चालू","Direct Shutdown":"शटडाउन",,"Closed":"बंद","Opened":"खुला","Save Supply Position":"सप्लाई पोजीशन सेव करें","Supply Position History":"सप्लाई पोजीशन हिस्ट्री","Report Time":"रिपोर्ट का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
+  "PTW Taken on Time":"PTW लेने का समय","Supply Position":"सप्लाई पोजीशन","Daily Supply Position":"दैनिक सप्लाई पोजीशन","Consumption Data":"कंजम्प्शन डेटा","1st Supply Position":"पहली सप्लाई पोजीशन","2nd Supply Position":"दूसरी सप्लाई पोजीशन","3rd Supply Position":"तीसरी सप्लाई पोजीशन","Running":"चालू","Direct Shutdown":"शटडाउन","Closed":"बंद","Opened":"खुला","Save Supply Position":"सप्लाई पोजीशन सेव करें","Supply Position History":"सप्लाई पोजीशन हिस्ट्री","Report Time":"रिपोर्ट का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
 });
  
 const hindiPlaceholders = {
