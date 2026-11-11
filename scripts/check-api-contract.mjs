@@ -59,6 +59,7 @@ if (actualHash !== updateManifest.sha256) throw new Error("Update bundle SHA-256
 if (!androidActivity.includes("bsk-powerhouse-log-bhiwani.netlify.app") || !androidActivity.includes("bskLocal=1") || !androidActivity.includes("assetBundles.openAsset")) throw new Error("Android local virtual-origin interception is missing");
 if (!read("bsk-config.js").includes("bskLocal") || !read("bsk-config.js").includes("asia-south1-testing-app-8af35.cloudfunctions.net")) throw new Error("Android Firebase API runtime config is missing");
 if (!androidUpdater.includes("MessageDigest.getInstance(\"SHA-256\")") || !androidUpdater.includes("renameTo(installed)") || !androidUpdater.includes("TRUSTED_HOST")) throw new Error("Android asset updater safety checks are incomplete");
+if (!androidActivity.includes("ServiceWorkerController") || !androidActivity.includes("getRegistrations()") || !androidActivity.includes("caches.delete")) throw new Error("Android migration does not retire the old PWA cache safely");
 if (!androidManifest.includes("android.permission.INTERNET")) throw new Error("Android manifest is missing internet permission");
 for (const collection of ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"]) {
   if (!records.includes(`"${collection}"`)) throw new Error("Records collection missing: " + collection);
