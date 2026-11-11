@@ -14,13 +14,20 @@ on:
       - "manifest.webmanifest"
       - "sw.js"
       - ".github/workflows/firebase-functions-check.yml"
-      - "scripts/**"
   push:
     branches:
       - bsk-firebase-functions-prep
     paths:
       - "functions/**"
       - "firebase.json"
+      - "scripts/**"
+      - "package.json"
+      - "app.js"
+      - "index.html"
+      - "style.css"
+      - "bsk-config.js"
+      - "manifest.webmanifest"
+      - "sw.js"
       - ".github/workflows/firebase-functions-check.yml"
 
 jobs:
