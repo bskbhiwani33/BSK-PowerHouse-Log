@@ -11,6 +11,6 @@
     "firebase-functions": "^6.4.0"
   },
   "scripts": {
-    "check": "node --check index.js && node --check handlers/login.mjs && node --check handlers/admin.mjs && node --check handlers/create-admin.mjs && node --check handlers/records.mjs"
+    "check": "node --check index.js && node --check handlers/login.mjs && node --check handlers/admin.mjs && node --check handlers/create-admin.mjs && node --check handlers/records.mjs && node --input-type=module -e \"await import('./index.js')\""
   }
 }
