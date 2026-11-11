@@ -127,7 +127,11 @@ internal class BskAssetBundleManager(private val context: Context) {
             val installed = File(versions, "v$version")
             installed.deleteRecursively()
             if (!staging.renameTo(installed)) throw IOException("Could not activate downloaded asset bundle")
-            if (!preferences.edit().putLong("active_version", version).commit()) {
+            if (!preferences.edit()
+                    .putLong("previous_version", currentVersion)
+                    .putLong("active_version", version)
+                    .commit()
+            ) {
                 installed.deleteRecursively()
                 throw IOException("Could not save active asset version")
             }
@@ -219,6 +223,16 @@ internal class BskAssetBundleManager(private val context: Context) {
         ) {
             throw IOException("Android runtime configuration is missing")
         }
+    }
+
+    fun rollbackToPrevious(): Boolean {
+        val current = preferences.getLong("active_version", 0L)
+        if (current <= 0L) return false
+        val previous = preferences.getLong("previous_version", 0L)
+        return preferences.edit()
+            .putLong("active_version", previous)
+            .putLong("previous_version", 0L)
+            .commit()
     }
 
     private fun keepCurrentAndPrevious(newVersion: Long, oldVersion: Long) {
