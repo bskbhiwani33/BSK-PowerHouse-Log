@@ -5,6 +5,7 @@ on:
     paths:
       - "functions/**"
       - "firebase.json"
+      - "scripts/**"
       - ".github/workflows/firebase-functions-check.yml"
   push:
     branches:
