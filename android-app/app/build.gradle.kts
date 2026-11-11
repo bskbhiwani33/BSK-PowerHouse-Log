@@ -20,13 +20,6 @@ android {
         versionName = "1.0"
     }
 
-    sourceSets {
-        getByName("main") {
-            assets.srcDir("../../public")
-            assets.exclude("bsk-updates/**")
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
