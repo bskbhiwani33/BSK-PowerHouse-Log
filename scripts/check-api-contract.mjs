@@ -9,6 +9,7 @@ const html = read("index.html");
 const admin = read("functions/handlers/admin.mjs");
 const records = read("functions/handlers/records.mjs");
 const functionsIndex = read("functions/index.js");
+const firebaseConfig = JSON.parse(read("firebase.json"));
 
 const expectedAdmin = [
   "getDashboardData", "updateHouse", "setHouseActive", "updateFeeder",
@@ -36,6 +37,11 @@ for (const route of ["login", "admin", "records"]) {
 }
 if (!(html.indexOf("/bsk-config.js") < html.indexOf('/app.js'))) {
   throw new Error("Runtime config must load before app.js");
+}
+if (firebaseConfig.functions?.source !== "functions") throw new Error("Firebase Functions source is not configured");
+if (firebaseConfig.hosting?.public !== ".") throw new Error("Firebase Hosting public root is not configured");
+for (const route of ["/.netlify/functions/login", "/.netlify/functions/admin", "/.netlify/functions/records"]) {
+  if (!firebaseConfig.hosting.rewrites?.some(x => x.source === route)) throw new Error("Firebase Hosting rewrite missing: " + route);
 }
 for (const collection of ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"]) {
   if (!records.includes(`"${collection}"`)) throw new Error("Records collection missing: " + collection);
