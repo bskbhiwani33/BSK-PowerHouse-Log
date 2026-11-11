@@ -135,6 +135,7 @@ class MainActivity : Activity() {
             }
         }
         webView.webChromeClient = WebChromeClient()
+        webView.addJavascriptInterface(BskDownloadBridge(this), "BSKAndroidBridge")
 
         // The UI opens from APK/app-private assets, never from Netlify.
         // DOM storage is intentionally preserved for the login session and offline queue.
