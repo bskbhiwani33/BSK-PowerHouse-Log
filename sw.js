@@ -1,5 +1,5 @@
-const CACHE_NAME = "bsk-shell-v9";
-const APP_SHELL = ["/", "/index.html", "/style.css", "/app.js", "/manifest.webmanifest"];
+const CACHE_NAME = "bsk-shell-v10";
+const APP_SHELL = ["/", "/index.html", "/style.css", "/app.js", "/manifest.webmanifest", "/api-config.js"];
 const FIREBASE_MODULES = [
   "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js",
   "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js",
