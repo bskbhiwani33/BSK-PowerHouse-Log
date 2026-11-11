@@ -29,6 +29,19 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 
+// Single switch for backend cutover. Keep Netlify active until Firebase HTTPS endpoints are deployed and verified.
+function apiUrl(name) {
+  const config = window.BSK_API_CONFIG || {};
+  if (config.mode === "firebase") {
+    const url = config.firebaseEndpoints?.[name];
+    if (typeof url !== "string" || !url.startsWith("https://")) throw new Error("Firebase API endpoint is not configured: " + name);
+    return url;
+  }
+  const paths = { login: "/.netlify/functions/login", admin: "/.netlify/functions/admin", records: "/.netlify/functions/records" };
+  if (!paths[name]) throw new Error("Unknown API endpoint: " + name);
+  return paths[name];
+}
+
 let currentProfile = null;
 // Keep language state initialized before any early login/status messages run.
 let hindiMode = false;
@@ -89,7 +102,7 @@ async function adminRequest(action, data = {}) {
 
   const token = await auth.currentUser.getIdToken();
 
-  const response = await fetch("/.netlify/functions/admin", {
+  const response = await fetch(apiUrl("admin"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -117,7 +130,7 @@ $("loginForm")?.addEventListener("submit", async event => {
   const pin = $("pin").value.trim();
 
   try {
-    const response = await fetch("/.netlify/functions/login", {
+    const response = await fetch(apiUrl("login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, pin })
@@ -604,7 +617,7 @@ const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_
 async function recordsRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
   const token = await auth.currentUser.getIdToken();
-  const response = await fetch("/.netlify/functions/records", {
+  const response = await fetch(apiUrl("records"), {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify({ action, ...data })
