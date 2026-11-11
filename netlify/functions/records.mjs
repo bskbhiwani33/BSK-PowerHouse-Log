@@ -151,8 +151,8 @@ async function resolveOutage(db, actor, body, type) {
 
 async function updateRecord(db, actor, body) {
   requireRole(actor, "admin");
-  const name=clean(body.recordCollection), allowed=["breakdowns","shutdowns","daily_reports","trippings","consumption_readings"];
-  if(!allowed.includes(name)||!validDocId(body.id)||!body.changes||typeof body.changes!=="object")throw Object.assign(new Error("Invalid record details"),{status:400});
+  const name=clean(body.recordCollection), allowed=["breakdowns","shutdowns","daily_reports","trippings","consumption_readings","supply_positions"];
+  if(!allowed.includes(name)||!validDocId(body.id)||!body.changes||typeof body.changes!=="object"||Array.isArray(body.changes))throw Object.assign(new Error("Invalid record details"),{status:400});
   const ref=db.collection(name).doc(clean(body.id)), snap=await ref.get();
   if(!snap.exists)throw Object.assign(new Error("Record not found"),{status:404});
   const old=snap.data(), input=body.changes, next={}, dateKey=name==="daily_reports"?"reportDate":"date";
@@ -169,6 +169,32 @@ async function updateRecord(db, actor, body) {
     const keys=["apFeeder","ruralDomestic","urban","industrial","independent"];
     for(const k of keys)if(input[k]!==undefined){const n=Number(input[k]);if(!Number.isFinite(n)||n<0||n>1e12)throw Object.assign(new Error("Invalid reading"),{status:400});next[k]=n;}
     next.total=keys.reduce((sum,k)=>sum+Number(next[k]??old[k]??0),0);
+  } else if(name==="supply_positions"){
+    if(input.feeders!==undefined){
+      if(!Array.isArray(input.feeders)||input.feeders.length!== (old.feeders||[]).length || !input.feeders.length)throw Object.assign(new Error("Supply Position mein sabhi existing feeders ki entry honi chahiye"),{status:400});
+      const seen=new Set(), rows=[];
+      for(const row of input.feeders){
+        const feederId=clean(row?.feederId), status=clean(row?.status)==="Direct Shutdown"?"Shutdown":clean(row?.status);
+        if(!validDocId(feederId)||seen.has(feederId)||!["Running","Breakdown","Shutdown"].includes(status))throw Object.assign(new Error("Supply Position feeder ya status sahi nahi hai"),{status:400});
+        seen.add(feederId);
+        const feederSnap=await db.collection("feeders").doc(feederId).get();
+        if(!feederSnap.exists||feederSnap.data().houseId!==old.houseId)throw Object.assign(new Error("Supply Position mein doosre Power House ka feeder nahi ho sakta"),{status:403});
+        const saved={feederId,feederName:feederSnap.data().name,status};
+        if(status==="Breakdown"){
+          if(!validTime(row.startTime)||!validTime(row.ptwTakenOnTime))throw Object.assign(new Error("Breakdown Time aur PTW Taken on Time zaroori hain"),{status:400});
+          saved.startTime=row.startTime;saved.ptwTakenOnTime=row.ptwTakenOnTime;
+        } else if(status==="Shutdown"){
+          if(!validTime(row.ptwTakenOnTime)||!validText(row.reason,1000))throw Object.assign(new Error("Shutdown ke liye PTW Time aur Reason zaroori hain"),{status:400});
+          saved.ptwTakenOnTime=row.ptwTakenOnTime;saved.reason=clean(row.reason);
+        }
+        rows.push(saved);
+      }
+      if(seen.size!==(old.feeders||[]).length)throw Object.assign(new Error("Supply Position ke sabhi feeders include karein"),{status:400});
+      next.feeders=rows;
+      next.runningCount=rows.filter(x=>x.status==="Running").length;
+      next.breakdownCount=rows.filter(x=>x.status==="Breakdown").length;
+      next.shutdownCount=rows.filter(x=>x.status==="Shutdown").length;
+    }
   } else {
     if(input.breakerStatus!==undefined){if(!["ON","OFF","TRIPPED","UNDER MAINTENANCE"].includes(input.breakerStatus))throw Object.assign(new Error("Invalid breaker status"),{status:400});next.breakerStatus=input.breakerStatus;}
     for(const k of ["faultDetails","duration","remarks"])if(input[k]!==undefined)next[k]=clean(input[k]).slice(0,2000);
