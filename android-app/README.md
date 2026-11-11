@@ -43,7 +43,7 @@ sourceSets {
 }
 ```
 
-If the Android Studio project is stored elsewhere, copy the generated `public/` files into `app/src/main/assets/` and remove the source-set override. Keep package/application ID `com.bsk.powerhouselog`. Do not replace the existing BSK theme or launcher icons.
+If the Android Studio project is stored elsewhere, copy the generated `public/` files into `app/src/main/assets/` and remove the source-set override. Keep package/application ID `com.bsk.powerhouselog`. Do not replace the existing BSK theme or launcher icons. If release shrinking/optimization is enabled, merge `android-app/app/proguard-rules.pro` into the app's R8 rules so the `@JavascriptInterface` bridge methods remain callable.
 
 ## Important release limitations
 
