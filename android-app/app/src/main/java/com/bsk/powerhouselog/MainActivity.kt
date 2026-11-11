@@ -129,7 +129,7 @@ class MainActivity : Activity() {
 
     private fun checkAssetUpdatesIfDue() {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastAssetCheckAt < 60_000L) return
+        if (lastAssetCheckAt != 0L && now - lastAssetCheckAt < 60_000L) return
         lastAssetCheckAt = now
         assetBundles.checkForUpdate { updated ->
             if (updated && !isFinishing) webView.post { webView.reload() }
