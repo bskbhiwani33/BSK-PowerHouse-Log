@@ -6,6 +6,12 @@ android {
     namespace = "com.bsk.powerhouselog"
     compileSdk = 37
 
+    buildTypes {
+        release {
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.bsk.powerhouselog"
         minSdk = 23
