@@ -3,7 +3,9 @@ package com.bsk.powerhouselog
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.SystemClock
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -15,6 +17,7 @@ import java.io.ByteArrayInputStream
 class MainActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var assetBundles: BskAssetBundleManager
+    private var lastAssetCheckAt = 0L
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +44,11 @@ class MainActivity : Activity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                if (url?.startsWith(APP_URL) == true) checkAssetUpdatesIfDue()
+            }
+
             override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?
@@ -115,8 +123,14 @@ class MainActivity : Activity() {
         // DOM storage is intentionally preserved for the login session and offline queue.
         webView.loadUrl(APP_URL)
 
-        // Routine UI/form/report updates arrive as a verified asset bundle.
-        // A failed or interrupted update leaves the previous bundle untouched.
+        // The first page load checks for updates; subsequent page refreshes
+        // recheck at most once per minute without interrupting active entry work.
+    }
+
+    private fun checkAssetUpdatesIfDue() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastAssetCheckAt < 60_000L) return
+        lastAssetCheckAt = now
         assetBundles.checkForUpdate { updated ->
             if (updated && !isFinishing) webView.post { webView.reload() }
         }
