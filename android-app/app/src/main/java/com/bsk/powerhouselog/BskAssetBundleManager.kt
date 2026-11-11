@@ -218,7 +218,7 @@ internal class BskAssetBundleManager(private val context: Context) {
             if (!file.isFile || file.length() == 0L) throw IOException("Update bundle is missing $name")
         }
         val config = File(folder, "bsk-config.js").readText()
-        if (!config.contains("appassets.androidplatform.net") ||
+        if (!config.contains("bskLocal") ||
             !config.contains("asia-south1-testing-app-8af35.cloudfunctions.net")
         ) {
             throw IOException("Android runtime configuration is missing")
