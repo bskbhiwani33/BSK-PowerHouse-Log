@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "minNativeVersion": 1,
+  "minNativeVersion": 2,
   "releaseNotes": "Initial standalone BSK asset bundle"
 }
