@@ -177,7 +177,7 @@ class MainActivity : Activity() {
             }
         }
         printView.loadDataWithBaseURL(
-            "https://bsk-powerhouse-log-bhiwani.netlify.app/",
+            "https://bsk-print.local/",
             html,
             "text/html",
             "UTF-8",
