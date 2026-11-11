@@ -20,8 +20,8 @@ const expectedRecords = [
   "createSupplyPosition", "exportBackupPage", "getRecords", "markNotificationRead"
 ];
 
-const adminActions = new Set([...admin.matchAll(/body\\.action\\s*===\\s*["']([^"']+)["']/g)].map(m => m[1]));
-const recordActions = new Set([...records.matchAll(/case\\s+["']([^"']+)["']/g)].map(m => m[1]));
+const adminActions = new Set([...admin.matchAll(/body\.action\s*===\s*["']([^"']+)["']/g)].map(m => m[1]));
+const recordActions = new Set([...records.matchAll(/case\s+["']([^"']+)["']/g)].map(m => m[1]));
 const frontendActions = new Set([...app.matchAll(/["'](getDashboardData|updateHouse|setHouseActive|updateFeeder|setFeederActive|createHouse|createFeeder|createStaff|createBreakdown|createShutdown|resolveBreakdown|resolveShutdown|updateRecord|createDailyReport|createTripping|createConsumption|createSupplyPosition|exportBackupPage|getRecords|markNotificationRead)["']/g)].map(m => m[1]));
 
 const missingAdmin = expectedAdmin.filter(x => !adminActions.has(x));
