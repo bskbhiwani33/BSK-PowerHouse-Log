@@ -420,48 +420,47 @@ function fillHouseDropdowns() {
 
 // Admin correction tools: rename or safely deactivate/restore Power Houses and Feeders.
 // Admin correction tools: Power House accordion contains its own Feeder controls.
-$("houseList")?.addEventListener("click", async event => {
-  const editHouse = event.target.closest("[data-correct-house]");
-  const toggleHouse = event.target.closest("[data-toggle-house]");
-  const editFeeder = event.target.closest("[data-correct-feeder]");
-  const toggleFeeder = event.target.closest("[data-toggle-feeder]");
-  try {
-    if (editHouse) {
-      const house = dashboardData.houses.find(x => x.id === editHouse.dataset.correctHouse);
-      if (!house) return;
-      const name = window.prompt("Correct Power House name:", house.name);
-      if (name === null || name.trim() === house.name) return;
-      await adminRequest("updateHouse", { houseId: house.id, houseName: name.trim() });
-      message("houseMessage", "Power House updated. Change history saved.");
-    } else if (toggleHouse) {
-      const active = toggleHouse.dataset.active === "true";
-      if (!window.confirm(active ? "Deactivate this Power House? Old records will remain safe." : "Restore this Power House?")) return;
-      await adminRequest("setHouseActive", { houseId: toggleHouse.dataset.toggleHouse, active: !active });
-      message("houseMessage", active ? "Power House deactivated. Old records are safe." : "Power House restored.");
-    } else if (editFeeder) {
-      const feeder = dashboardData.feeders.find(x => x.id === editFeeder.dataset.correctFeeder);
-      if (!feeder) return;
-      const name = window.prompt("Correct Feeder name:", feeder.name);
-      if (name === null) return;
-      const houses = dashboardData.houses.filter(x => x.active === true);
-      const options = houses.map((h,i) => (i+1)+". "+h.name).join("\n");
-      const selected = window.prompt("Power House number (same number keeps current):\n"+options, String(Math.max(1,houses.findIndex(h=>h.id===feeder.houseId)+1)));
-      if (selected === null) return;
-      const house = houses[Number(selected)-1];
-      if (!house) throw new Error("Valid Power House number select karein.");
-      if (name.trim() === feeder.name && house.id === feeder.houseId) return;
-      await adminRequest("updateFeeder", { feederId: feeder.id, feederName: name.trim(), houseId: house.id });
-      message("feederMessage", "Feeder updated. Change history saved.");
-    } else if (toggleFeeder) {
-      const active = toggleFeeder.dataset.active === "true";
-      if (!window.confirm(active ? "Deactivate this Feeder? Existing reports will remain safe." : "Restore this Feeder?")) return;
-      await adminRequest("setFeederActive", { feederId: toggleFeeder.dataset.toggleFeeder, active: !active });
-      message("feederMessage", active ? "Feeder deactivated. Existing reports are safe." : "Feeder restored.");
-    } else return;
+function openHouseFeederCorrection(kind,id) {
+  const host=$("houseCorrectionWorkspace"); if(!host)return;
+  const item=kind==="house"?dashboardData.houses.find(x=>x.id===id):dashboardData.feeders.find(x=>x.id===id);
+  if(!item)return;
+  const activeHouses=dashboardData.houses.filter(x=>x.active===true);
+  host.innerHTML=`<section class="card"><h3>Edit ${kind==="house"?"Power House":"Feeder"}</h3><form id="houseCorrectionForm">
+    <label>${kind==="house"?"Power House Name":"Feeder Name"}</label><input name="name" required maxlength="100" value="${safe(item.name)}">
+    ${kind==="feeder"?'<label>Power House</label><select name="houseId" required>'+activeHouses.map(x=>`<option value="${safe(x.id)}" ${x.id===item.houseId?"selected":""}>${safe(x.name)}</option>`).join("")+'</select>':""}
+    <div class="row"><button type="submit">Save Changes</button><button type="button" class="secondary" id="cancelHouseCorrection">Cancel</button></div><p id="houseCorrectionMessage" class="message"></p>
+  </form></section>`;
+  host.classList.remove("hidden");host.scrollIntoView({behavior:"smooth",block:"start"});
+  $("cancelHouseCorrection")?.addEventListener("click",()=>{host.innerHTML="";host.classList.add("hidden");});
+  $("houseCorrectionForm")?.addEventListener("submit",async event=>{
+    event.preventDefault();const data=new FormData(event.currentTarget);
+    try{
+      if(kind==="house")await adminRequest("updateHouse",{houseId:id,houseName:String(data.get("name")).trim()});
+      else await adminRequest("updateFeeder",{feederId:id,feederName:String(data.get("name")).trim(),houseId:String(data.get("houseId"))});
+      host.innerHTML="";host.classList.add("hidden");await refreshDashboard();
+      message(kind==="house"?"houseMessage":"feederMessage",kind==="house"?"Power House updated. Change history saved.":"Feeder updated. Change history saved.");
+    }catch(error){message("houseCorrectionMessage",error.message,true);}
+  });
+}
+$("houseList")?.addEventListener("click",async event=>{
+  const editHouse=event.target.closest("[data-correct-house]"),toggleHouse=event.target.closest("[data-toggle-house]");
+  const editFeeder=event.target.closest("[data-correct-feeder]"),toggleFeeder=event.target.closest("[data-toggle-feeder]");
+  try{
+    if(editHouse){openHouseFeederCorrection("house",editHouse.dataset.correctHouse);return;}
+    if(editFeeder){openHouseFeederCorrection("feeder",editFeeder.dataset.correctFeeder);return;}
+    if(toggleHouse){
+      const active=toggleHouse.dataset.active==="true";
+      if(!window.confirm(active?"Deactivate this Power House? Old records will remain safe.":"Restore this Power House?"))return;
+      await adminRequest("setHouseActive",{houseId:toggleHouse.dataset.toggleHouse,active:!active});
+      message("houseMessage",active?"Power House deactivated. Old records are safe.":"Power House restored.");
+    }else if(toggleFeeder){
+      const active=toggleFeeder.dataset.active==="true";
+      if(!window.confirm(active?"Deactivate this Feeder? Existing reports will remain safe.":"Restore this Feeder?"))return;
+      await adminRequest("setFeederActive",{feederId:toggleFeeder.dataset.toggleFeeder,active:!active});
+      message("feederMessage",active?"Feeder deactivated. Existing reports are safe.":"Feeder restored.");
+    }else return;
     await refreshDashboard();
-  } catch (error) {
-    message(editHouse || toggleHouse ? "houseMessage" : "feederMessage", error.message, true);
-  }
+  }catch(error){message(editHouse||toggleHouse?"houseMessage":"feederMessage",error.message,true);}
 });
 
 // Admin: Create Power House
