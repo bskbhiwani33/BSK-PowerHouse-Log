@@ -3,23 +3,12 @@ package com.bsk.powerhouselog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,21 +22,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-private const val LOGIN_API =
-    "https://bsk-powerhouse-log-bhiwani.netlify.app/.netlify/functions/login"
+private const val BASE_API = "https://bsk-powerhouse-log-bhiwani.netlify.app/.netlify/functions"
+private const val LOGIN_API = "$BASE_API/login"
+private const val ADMIN_API = "$BASE_API/admin"
+private const val RECORDS_API = "$BASE_API/records"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme {
-                BSKApp()
-            }
-        }
+        setContent { MaterialTheme { BSKApp() } }
     }
 }
 
@@ -58,6 +46,19 @@ private data class BSKProfile(
     val houseName: String
 )
 
+private data class DashboardData(
+    val houses: List<JSONObject> = emptyList(),
+    val feeders: List<JSONObject> = emptyList(),
+    val users: List<JSONObject> = emptyList(),
+    val reports: List<JSONObject> = emptyList(),
+    val breakdowns: List<JSONObject> = emptyList(),
+    val shutdowns: List<JSONObject> = emptyList(),
+    val trippings: List<JSONObject> = emptyList(),
+    val consumption: List<JSONObject> = emptyList(),
+    val supplyPositions: List<JSONObject> = emptyList(),
+    val error: String = ""
+)
+
 @Composable
 private fun BSKApp() {
     var userId by remember { mutableStateOf("") }
@@ -65,204 +66,258 @@ private fun BSKApp() {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var profile by remember { mutableStateOf<BSKProfile?>(null) }
+    var dashboard by remember { mutableStateOf(DashboardData()) }
     val scope = rememberCoroutineScope()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface
-    ) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         if (profile == null) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
+                Modifier.fillMaxSize().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "BSK",
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Power House Feeder Management",
-                    fontSize = 15.sp
-                )
+                Text("BSK", fontSize = 40.sp, fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary)
+                Text("Power House Feeder Management")
                 Spacer(Modifier.height(24.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                    Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text("Login", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = userId,
-                            onValueChange = { userId = it.trim(); error = "" },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("User ID") },
-                            singleLine = true,
-                            enabled = !loading
-                        )
-                        OutlinedTextField(
-                            value = pin,
-                            onValueChange = {
-                                if (it.length <= 4 && it.all(Char::isDigit)) {
-                                    pin = it
-                                    error = ""
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("4-digit PIN") },
-                            singleLine = true,
-                            enabled = !loading,
+                        OutlinedTextField(userId, { userId = it.trim(); error = "" },
+                            Modifier.fillMaxWidth(), label = { Text("User ID") },
+                            singleLine = true, enabled = !loading)
+                        OutlinedTextField(pin, {
+                            if (it.length <= 4 && it.all(Char::isDigit)) { pin = it; error = "" }
+                        }, Modifier.fillMaxWidth(), label = { Text("4-digit PIN") },
+                            singleLine = true, enabled = !loading,
                             visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.NumberPassword
-                            )
-                        )
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    loading = true
-                                    error = ""
-                                    try {
-                                        profile = authenticate(userId, pin)
-                                    } catch (e: Exception) {
-                                        error = e.message ?: "Login failed. Please try again."
-                                    } finally {
-                                        loading = false
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            enabled = !loading && userId.isNotBlank() && pin.length == 4
-                        ) {
-                            if (loading) {
-                                CircularProgressIndicator()
-                            } else {
-                                Text("LOGIN")
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                        Button(onClick = {
+                            scope.launch {
+                                loading = true; error = ""
+                                try {
+                                    profile = authenticate(userId, pin)
+                                    dashboard = loadDashboard(profile!!)
+                                } catch (e: Exception) {
+                                    FirebaseAuth.getInstance().signOut()
+                                    profile = null
+                                    error = e.message ?: "Login failed. Please try again."
+                                } finally { loading = false }
                             }
+                        }, Modifier.fillMaxWidth().height(52.dp),
+                            enabled = !loading && userId.isNotBlank() && pin.length == 4) {
+                            if (loading) CircularProgressIndicator(Modifier.size(22.dp))
+                            else Text("LOGIN")
                         }
-                        if (error.isNotBlank()) {
-                            Text(error, color = MaterialTheme.colorScheme.error)
-                        }
+                        if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                     }
                 }
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    "Standalone Android application",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(Modifier.height(16.dp))
+                Text("Standalone Android application", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            NativeHome(
+            NativeDashboard(
                 profile = profile!!,
+                data = dashboard,
+                loading = loading,
+                onRefresh = {
+                    scope.launch {
+                        loading = true
+                        dashboard = try { loadDashboard(profile!!) }
+                        catch (e: Exception) { dashboard.copy(error = e.message ?: "Refresh failed") }
+                        loading = false
+                    }
+                },
                 onSignOut = {
                     FirebaseAuth.getInstance().signOut()
-                    profile = null
-                    pin = ""
+                    profile = null; dashboard = DashboardData(); pin = ""
                 }
             )
         }
     }
 }
 
-private suspend fun authenticate(userId: String, pin: String): BSKProfile {
-    require(userId.matches(Regex("[A-Za-z0-9_-]{3,40}"))) {
-        "Enter a valid User ID."
-    }
-    require(pin.matches(Regex("[0-9]{4}"))) {
-        "Enter your 4-digit PIN."
-    }
-
-    val response = withContext(Dispatchers.IO) {
-        val connection = (URL(LOGIN_API).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 15000
-            readTimeout = 15000
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Accept", "application/json")
-        }
-        try {
-            val payload = JSONObject()
-                .put("userId", userId)
-                .put("pin", pin)
-                .toString()
-            connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-            val status = connection.responseCode
-            val stream = if (status in 200..299) {
-                connection.inputStream
-            } else {
-                connection.errorStream
+@Composable
+private fun NativeDashboard(
+    profile: BSKProfile,
+    data: DashboardData,
+    loading: Boolean,
+    onRefresh: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    val ongoingBreakdowns = data.breakdowns.filter { it.optString("status") == "ongoing" }
+    val ongoingShutdowns = data.shutdowns.filter { it.optString("status") == "ongoing" }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Text("BSK", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                    Text(if (profile.role == "admin") "Admin Dashboard" else "Staff Dashboard",
+                        fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                }
+                TextButton(onClick = onSignOut) { Text("LOG OUT") }
             }
-            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            val json = JSONObject(body.ifBlank { "{}" })
-            if (status !in 200..299) {
-                throw IllegalStateException(
-                    json.optString("error", "Login failed. Please try again.")
+            Text("User ID: ${profile.userId}")
+            if (profile.houseName.isNotBlank()) Text("Power House: ${profile.houseName}")
+            Spacer(Modifier.height(4.dp))
+            Button(onClick = onRefresh, enabled = !loading, modifier = Modifier.fillMaxWidth()) {
+                if (loading) CircularProgressIndicator(Modifier.size(18.dp))
+                else Text("REFRESH DATA")
+            }
+            if (data.error.isNotBlank()) Text(data.error, color = MaterialTheme.colorScheme.error)
+        }
+        item {
+            Text("Ongoing Feeder Status", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricCard("Breakdown", ongoingBreakdowns.size.toString(), Modifier.weight(1f))
+                MetricCard("Shutdown", ongoingShutdowns.size.toString(), Modifier.weight(1f))
+            }
+        }
+        item { Text("Ongoing Breakdown Feeders", fontWeight = FontWeight.SemiBold) }
+        if (ongoingBreakdowns.isEmpty()) item { EmptyLine("No ongoing Breakdown") }
+        items(ongoingBreakdowns) { OutageRow(it, "Breakdown") }
+        item { Text("Ongoing Shutdown Feeders", fontWeight = FontWeight.SemiBold) }
+        if (ongoingShutdowns.isEmpty()) item { EmptyLine("No ongoing Shutdown") }
+        items(ongoingShutdowns) { OutageRow(it, "Shutdown") }
+
+        if (profile.role == "admin") {
+            item { Text("Administration Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MetricCard("Power Houses", data.houses.size.toString(), Modifier.weight(1f))
+                    MetricCard("Feeders", data.feeders.size.toString(), Modifier.weight(1f))
+                    MetricCard("Staff", data.users.count { it.optString("role") == "staff" && it.optBoolean("active") }.toString(), Modifier.weight(1f))
+                }
+            }
+            item { Text("Recent Feeder Reports (${data.reports.size})", fontWeight = FontWeight.SemiBold) }
+            items(data.reports.take(20)) { report ->
+                InfoCard(
+                    report.optString("feederName", "Feeder"),
+                    "${report.optString("houseName")} • ${report.optString("reportDate")}\nBreaker: ${report.optString("breakerStatus")} • ${report.optString("remarks")}"
                 )
             }
-            json
-        } finally {
-            connection.disconnect()
+        } else {
+            item {
+                InfoCard("Assigned Power House", profile.houseName.ifBlank { "Not assigned" },
+                    "Only your assigned Power House records are requested from the backend.")
+            }
+            item { Text("Your Recent Entries", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+            item { InfoCard("Breakdown history", data.breakdowns.size.toString(), "Records returned by secure Records API") }
+            item { InfoCard("Shutdown history", data.shutdowns.size.toString(), "Records returned by secure Records API") }
+            item { InfoCard("Tripping entries", data.trippings.size.toString(), "Records returned by secure Records API") }
+            item { InfoCard("Consumption entries", data.consumption.size.toString(), "Records returned by secure Records API") }
+            item { InfoCard("Supply Position entries", data.supplyPositions.size.toString(), "Records returned by secure Records API") }
+        }
+        item {
+            Text("Data shown here is fetched from the existing secured BSK backend. Entry forms and management actions are still under development.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-
-    val token = response.optString("token")
-    check(token.isNotBlank()) { "Login service returned an invalid response." }
-
-    // Exchange the server-issued custom token for a Firebase Auth session.
-    FirebaseAuth.getInstance().signInWithCustomToken(token).await()
-
-    val data = response.getJSONObject("profile")
-    val role = data.optString("role")
-    check(role == "admin" || role == "staff") {
-        "Your account role is not configured. Contact Admin."
-    }
-
-    return BSKProfile(
-        userId = data.optString("userId", userId),
-        role = role,
-        houseId = data.optString("houseId"),
-        houseName = data.optString("houseName")
-    )
 }
 
 @Composable
-private fun NativeHome(profile: BSKProfile, onSignOut: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("BSK", fontSize = 34.sp, fontWeight = FontWeight.Bold)
-        Text(
-            if (profile.role == "admin") "Admin Dashboard" else "Staff Dashboard",
-            fontSize = 23.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Text("User ID: ${profile.userId}")
-        Text("Role: ${profile.role}")
-        if (profile.houseName.isNotBlank()) {
-            Text("Power House: ${profile.houseName}")
-        }
-        Text(
-            "Secure login is connected. Dashboard modules and reporting forms are the next build stage.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.weight(1f))
-        Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
-            Text("LOG OUT")
+private fun MetricCard(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(modifier) {
+        Column(Modifier.padding(14.dp)) {
+            Text(value, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Text(label, fontSize = 12.sp)
         }
     }
 }
+
+@Composable
+private fun InfoCard(title: String, value: String, detail: String) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(value)
+            if (detail.isNotBlank()) Text(detail, fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun EmptyLine(message: String) {
+    Text(message, Modifier.padding(start = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun OutageRow(record: JSONObject, type: String) {
+    InfoCard(
+        record.optString("feederName", "Feeder"),
+        "${record.optString("houseName")} • ${record.optString("date")} • ${record.optString("startTime")}",
+        "${type} • ${record.optString("reason")}"
+    )
+}
+
+private suspend fun authenticate(userId: String, pin: String): BSKProfile {
+    require(userId.matches(Regex("[A-Za-z0-9_-]{3,40}"))) { "Enter a valid User ID." }
+    require(pin.matches(Regex("[0-9]{4}"))) { "Enter your 4-digit PIN." }
+    val response = postJson(LOGIN_API, JSONObject().put("userId", userId).put("pin", pin))
+    val token = response.optString("token")
+    check(token.isNotBlank()) { "Login service returned an invalid response." }
+    FirebaseAuth.getInstance().signInWithCustomToken(token).await()
+    val p = response.getJSONObject("profile")
+    val role = p.optString("role")
+    check(role == "admin" || role == "staff") { "Account role is not configured. Contact Admin." }
+    return BSKProfile(p.optString("userId", userId), role, p.optString("houseId"), p.optString("houseName"))
+}
+
+private suspend fun loadDashboard(profile: BSKProfile): DashboardData {
+    val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
+    val token = user.getIdToken(false).await().token ?: error("Could not refresh secure session.")
+    val records = postJson(RECORDS_API, JSONObject().put("action", "getRecords"), token)
+    val breakdowns = jsonArray(records.optJSONArray("breakdowns"))
+    val shutdowns = jsonArray(records.optJSONArray("shutdowns"))
+    val trippings = jsonArray(records.optJSONArray("trippings"))
+    val consumption = jsonArray(records.optJSONArray("consumption_readings"))
+    val supply = jsonArray(records.optJSONArray("supply_positions"))
+    if (profile.role == "staff") {
+        return DashboardData(
+            breakdowns = breakdowns, shutdowns = shutdowns, trippings = trippings,
+            consumption = consumption, supplyPositions = supply
+        )
+    }
+    val admin = postJson(ADMIN_API, JSONObject().put("action", "getDashboardData"), token)
+    return DashboardData(
+        houses = jsonArray(admin.optJSONArray("houses")),
+        feeders = jsonArray(admin.optJSONArray("feeders")),
+        users = jsonArray(admin.optJSONArray("users")),
+        reports = jsonArray(admin.optJSONArray("reports")),
+        breakdowns = breakdowns, shutdowns = shutdowns, trippings = trippings,
+        consumption = consumption, supplyPositions = supply
+    )
+}
+
+private fun jsonArray(array: JSONArray?): List<JSONObject> =
+    (0 until (array?.length() ?: 0)).mapNotNull { array?.optJSONObject(it) }
+
+private suspend fun postJson(endpoint: String, payload: JSONObject, idToken: String? = null): JSONObject =
+    withContext(Dispatchers.IO) {
+        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 15000
+            readTimeout = 20000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("Accept", "application/json")
+            if (!idToken.isNullOrBlank()) setRequestProperty("Authorization", "Bearer $idToken")
+        }
+        try {
+            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            val json = JSONObject(body.ifBlank { "{}" })
+            if (status !in 200..299) throw IllegalStateException(
+                json.optString("error", "Request failed (HTTP $status).")
+            )
+            json
+        } finally { connection.disconnect() }
+    }
