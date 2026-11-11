@@ -63,11 +63,11 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-37"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.6.0"
-      - name: Install Android SDK platform
-        run: sdkmanager "platforms;android-37"
       - name: Build local Firebase asset bundle
         run: |
           npm install --no-audit --no-fund
