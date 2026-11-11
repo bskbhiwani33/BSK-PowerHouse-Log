@@ -153,10 +153,9 @@ internal class BskDownloadBridge(
     }
 
     private fun saveToAppDownloads(download: PendingDownload) {
-        val directory = File(
-            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
-            "BSK"
-        )
+        val baseDirectory = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: context.filesDir
+        val directory = File(baseDirectory, "BSK")
         if (!directory.exists() && !directory.mkdirs()) {
             throw IllegalStateException("Could not create download folder")
         }
