@@ -1,0 +1,77 @@
+// BSK Firestore Rules - staged for review only.
+// Do NOT publish until the complete application and emulator checks are finished.
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.role == "admin";
+    }
+
+    function isStaff() {
+      return signedIn() && request.auth.token.role == "staff";
+    }
+
+    function myHouse(houseId) {
+      return isStaff() && request.auth.token.houseId == houseId;
+    }
+
+    match /users/{uid} {
+      allow read, write: if false;
+    }
+
+    match /powerhouses/{houseId} {
+      allow read: if isAdmin() || myHouse(houseId);
+      allow write: if isAdmin();
+    }
+
+    match /feeders/{feederId} {
+      allow read: if isAdmin() || (isStaff() && resource.data.houseId == request.auth.token.houseId);
+      allow write: if isAdmin();
+    }
+
+    match /daily_reports/{reportId} {
+      allow read: if isAdmin() || myHouse(resource.data.houseId);
+      // All new daily reports pass through the audited Netlify API.
+      // Daily report mutations must pass through the audited Netlify API.
+      allow create, update, delete: if false;
+    }
+
+    // Operational records are written only by validated Netlify Functions
+    // using Firebase Admin SDK. No client-side approval or direct writes.
+    match /breakdowns/{recordId} {
+      allow read, write: if false;
+    }
+    match /shutdowns/{recordId} {
+      allow read, write: if false;
+    }
+    match /trippings/{recordId} {
+      allow read, write: if false;
+    }
+    match /consumption_readings/{recordId} {
+      allow read, write: if false;
+    }
+    match /feeder_status/{feederId} {
+      allow read, write: if false;
+    }
+    match /entry_history/{recordId} {
+      allow read, write: if false;
+    }
+    match /notifications/{recordId} {
+      allow read, write: if false;
+    }
+    match /login_attempt_limits/{recordId} {
+      allow read, write: if false;
+    }
+
+    // The old edit-request / approval queue is disabled.
+    match /edit_requests/{requestId} {
+      allow read, write: if false;
+    }
+  }
+}

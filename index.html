@@ -15,6 +15,8 @@
   <header class="topbar">
     <div class="brand">BSK</div>
     <div>Power House Feeder Log</div>
+    <button type="button" id="themeToggle" class="secondary">Dark Mode</button>
+    <button type="button" id="languageToggle" class="secondary">हिन्दी</button>
   </header>
 
   <main class="wrap">
@@ -45,53 +47,78 @@
         <div>
           <h1>Dashboard</h1>
           <p id="welcome" class="muted"></p>
+          <p id="offlineQueueStatus" class="muted"></p>
         </div>
         <button id="logoutBtn" class="secondary">Logout</button>
       </div>
 
       <section id="staffPanel" class="card hidden">
-        <h2>Daily Feeder Report</h2>
-
-        <form id="reportForm">
-          <label for="reportDate">Report date</label>
-          <input id="reportDate" type="date" required>
-
-          <label for="feederName">Feeder</label>
-          <input id="feederName" required placeholder="Feeder name">
-
-          <label for="breakerStatus">Breaker status</label>
-          <select id="breakerStatus" required>
-            <option value="">Select status</option>
-            <option>ON</option>
-            <option>OFF</option>
-            <option>TRIPPED</option>
-            <option>UNDER MAINTENANCE</option>
-          </select>
-
-          <label for="eventType">Event type</label>
-          <select id="eventType" required>
-            <option value="">Select event</option>
-            <option>Normal</option>
-            <option>Tripping</option>
-            <option>Breakdown</option>
-            <option>Shutdown</option>
-          </select>
-
-          <label for="faultDetails">Fault details</label>
-          <textarea id="faultDetails" rows="3"></textarea>
-
-          <label for="duration">Duration</label>
-          <input id="duration" placeholder="e.g. 45 minutes">
-
-          <label for="restorationTime">Restoration time</label>
-          <input id="restorationTime" type="time">
-
-          <label for="remarks">Remarks</label>
-          <textarea id="remarks" rows="3"></textarea>
-
-          <button type="submit">Submit report</button>
-          <p id="reportMessage" class="message" role="status"></p>
+        <h2>Staff Operations</h2>
+        <p id="staffStatusMessage" class="message" role="status"></p>
+        <div class="row" style="flex-wrap:wrap;gap:10px">
+          <button type="button" id="showSupplyPosition" aria-pressed="true">Supply Position</button>
+          <button type="button" id="showConsumptionData" class="secondary" aria-pressed="false">Consumption Data</button>
+        </div>
+        <section id="supplyPositionPanel" class="card">
+          <h2>Daily Supply Position</h2>
+          <p class="muted">Har feeder ke saamne Closed ya Opened select karein. Opened feeder ke liye Breakdown aur PTW time bharein.</p>
+          <form id="supplyPositionForm">
+            <label for="supplyPositionDate">Date</label><input id="supplyPositionDate" type="date" required>
+            <div id="supplyPositionFeederRows"></div>
+            <button type="submit">Submit Supply Position</button>
+            <p id="supplyPositionMessage" class="message" role="status"></p>
+          </form>
+          <div id="supplyPositionHistory"></div>
+        </section>
+        <section id="consumptionDataPanel" class="hidden">
+        <h2>Consumption Data & Other Operations</h2>
+        <p class="muted">Consumption, Breakdown, Shutdown, Resolve and Tripping forms.</p>
+        <h2>Breakdown Entry</h2>
+        <form id="breakdownForm">
+          <label>Date</label><input id="breakdownDate" type="date" required>
+          <label>Feeder</label><select id="breakdownFeeder" required><option value="">Select Feeder</option></select>
+          <label>Start Time</label><input id="breakdownStart" type="time" required>
+          <label for="breakdownPtwTime">PTW Taken on Time</label><input id="breakdownPtwTime" type="time" required>
+          <label>End Time (blank if ongoing)</label><input id="breakdownEnd" type="time">
+          <label>Reason</label><textarea id="breakdownReason" required maxlength="1000"></textarea>
+          <button type="submit">Save Breakdown</button><p id="breakdownMessage" class="message"></p>
         </form>
+        <h2>Shutdown Entry</h2>
+        <form id="shutdownForm">
+          <label>Date</label><input id="shutdownDate" type="date" required>
+          <label>Feeder</label><select id="shutdownFeeder" required><option value="">Select Feeder</option></select>
+          <label>Start Time</label><input id="shutdownStart" type="time" required>
+          <label>End Time (blank if ongoing)</label><input id="shutdownEnd" type="time">
+          <label>Reason</label><textarea id="shutdownReason" required maxlength="1000"></textarea>
+          <button type="submit">Save Shutdown</button><p id="shutdownMessage" class="message"></p>
+        </form>
+        <h2>Resolve Ongoing Event</h2>
+        <form id="resolveForm">
+          <label>Ongoing event</label><select id="resolveRecord" required><option value="">Select event</option></select>
+          <label>End Time</label><input id="resolveEnd" type="time" required>
+          <button type="submit">Mark Resolved</button><p id="resolveMessage" class="message"></p>
+        </form>
+        <h2>Tripping Entry</h2>
+        <form id="trippingForm">
+          <input id="trippingDate" type="hidden" required>
+          <label>How many trippings occurred?</label><input id="trippingCount" type="number" min="0" step="1" required>
+          <label>On how many feeders?</label><input id="trippingFeederCount" type="number" min="0" step="1" required>
+          <button type="submit">Save Tripping</button><p id="trippingMessage" class="message"></p>
+        </form>
+        <h2>Power House Consumption Readings</h2>
+        <form id="consumptionForm">
+          <input id="consumptionDate" type="hidden" required>
+          <label>AP Feeder</label><input id="apFeeder" type="number" min="0" step="any" required>
+          <label>Rural Domestic</label><input id="ruralDomestic" type="number" min="0" step="any" required>
+          <label>Urban</label><input id="urban" type="number" min="0" step="any" required>
+          <label>Industrial</label><input id="industrial" type="number" min="0" step="any" required>
+          <label>Independent</label><input id="independent" type="number" min="0" step="any" required>
+          <p><strong>Total (automatic): <span id="consumptionTotal">0</span></strong></p>
+          <button type="submit">Save Consumption</button><p id="consumptionMessage" class="message"></p>
+        </form>
+        <div id="staffOngoing" class="card"><h2>Ongoing Breakdown / Shutdown</h2><div id="staffOngoingList"></div></div>
+        <div class="card"><div id="staffEntryHistory"></div><button type="button" id="loadMoreStaffHistory" class="secondary" disabled>All Records Loaded</button></div>
+        </section>
       </section>
 
       <section id="adminPanel" class="hidden">
@@ -104,27 +131,16 @@
         </div>
 
         <div class="card">
-          <h2>Summary</h2>
-          <div class="row" style="justify-content:space-around;flex-wrap:wrap">
-            <div>
-              <h3 id="houseCount">0</h3>
-              <p class="muted">Power Houses</p>
-            </div>
-            <div>
-              <h3 id="feederCount">0</h3>
-              <p class="muted">Feeders</p>
-            </div>
-            <div>
-              <h3 id="staffCount">0</h3>
-              <p class="muted">Staff</p>
-            </div>
-            <div>
-              <h3 id="reportCount">0</h3>
-              <p class="muted">Reports Loaded</p>
-            </div>
+          <h2>Live Outage Dashboard</h2>
+          <div class="outage-export-grid">
+            <div class="outage-export-item"><div><h3 id="ongoingBreakdownCount">0</h3><p class="muted">Ongoing Breakdown</p></div><button type="button" id="downloadBreakdowns" class="export-breakdown">Breakdown Excel</button></div>
+            <div class="outage-export-item"><div><h3 id="ongoingShutdownCount">0</h3><p class="muted">Ongoing Shutdown</p></div><button type="button" id="downloadShutdowns" class="export-shutdown">Shutdown Excel</button></div>
+            <div class="outage-export-item"><div><h3>Consumption</h3><p class="muted">Consumption readings</p></div><button type="button" id="downloadConsumption" class="export-consumption">Consumption Excel</button></div>
+            <div class="outage-export-item"><div><h3>All Records</h3><p class="muted">Complete record workbook</p></div><button type="button" id="downloadAllRecords" class="export-all">All Records Excel</button></div>
           </div>
+          <h3>Breakdown Feeders</h3><div id="adminBreakdownList"></div>
+          <h3>Shutdown Feeders</h3><div id="adminShutdownList"></div>
         </div>
-
         <div class="card">
           <h2>Add Power House</h2>
           <form id="houseForm">
@@ -177,13 +193,16 @@
         </div>
 
         <div class="card">
-          <h2>Power House List</h2>
-          <div id="houseList">No data loaded.</div>
+          <h2>Galti Sudharein — Power House / Feeder</h2>
+          <p class="muted">Naam edit karein, galat entry deactivate karein, ya zarurat par restore karein. Purane reports delete nahi honge.</p>
+          <p id="correctionMessage" class="message" role="status"></p>
         </div>
 
         <div class="card">
-          <h2>Feeder List</h2>
-          <div id="feederList">No data loaded.</div>
+          <h2>Power House List</h2>
+          <p class="muted">Kisi Power House par click karein; uske sabhi Feeders neeche khul jayenge. Feeder ko wahin se edit, deactivate ya restore karein.</p>
+          <div id="houseCorrectionWorkspace" class="hidden"></div>
+          <div id="houseList">No data loaded.</div>
         </div>
 
         <div class="card">
@@ -203,6 +222,7 @@
           <input id="filterDate" type="date">
 
           <button type="button" id="applyReportFilter">Apply Filter</button>
+          <button type="button" id="downloadDailyReports">Daily Feeder Reports Excel</button>
           <button type="button" id="clearReportFilter" class="secondary">
             Clear Filter
           </button>
@@ -210,16 +230,30 @@
           <div id="reportList">No reports loaded.</div>
         </div>
 
-        <div class="card">
-          <h2>Staff Edit Requests</h2>
-          <div id="editRequestList">No requests loaded.</div>
-        </div>
 
+        <div class="card">
+          <h2>Reports & Downloads</h2>
+          <label>From date</label><input id="recordsFrom" type="date">
+          <label>To date</label><input id="recordsTo" type="date">
+          <label>Search feeder / staff</label><input id="recordsSearch" placeholder="Search feeder or staff ID">
+          <button type="button" id="backupRecords">Download Backup JSON</button>
+          <div id="longRunningAlerts"></div>
+          <div id="recordsChart"></div>
+          <div id="recordsInsights"></div>
+          <label>Feeder Status / History Search</label><input id="feederStatusSearch" placeholder="Enter feeder name">
+          <div id="feederStatusResult"></div>
+          <button type="button" id="refreshRecords">Refresh Records</button>
+          <button type="button" id="loadMoreHistory" class="secondary" disabled>Load All History</button>
+          <button type="button" id="downloadPdf">PDF Report</button>
+          <div id="recordEditWorkspace" class="hidden"></div>
+          <div id="adminRecordsList"></div><div id="historyList"></div><div id="notificationList"></div>
+        </div>
       </section>
     </section>
   </main>
 
   <footer>BSK · Power House Feeder Log</footer>
+  <script src="/api-config.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -1,21 +1,27 @@
 
-import admin from "firebase-admin";
+import { getApps, getApp, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import crypto from "node:crypto";
 
 function getAdmin() {
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) throw new Error("Server not configured");
 
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(raw))
+    initializeApp({
+      credential: cert(JSON.parse(raw))
     });
   }
-  return admin;
+  return getApp();
 }
 
 function response(data, status = 200) {
   return Response.json(data, { status });
+}
+
+function validDocId(value) {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 }
 
 function validName(value) {
@@ -35,7 +41,7 @@ export default async (req) => {
 
   try {
     const fb = getAdmin();
-    const db = fb.firestore();
+    const db = getFirestore(fb);
 
     const authHeader = req.headers.get("authorization") || "";
     const idToken = authHeader.startsWith("Bearer ")
@@ -45,7 +51,7 @@ export default async (req) => {
       return response({ error: "Login required" }, 401);
     }
 
-    const decoded = await fb.auth().verifyIdToken(idToken);
+    const decoded = await getAuth(fb).verifyIdToken(idToken);
     const adminDoc = await db.collection("users").doc(decoded.uid).get();
 
     if (!adminDoc.exists ||
@@ -57,15 +63,13 @@ export default async (req) => {
     const body = await req.json();
 
     if (body.action === "getDashboardData") {
-      const [housesSnap, feedersSnap, usersSnap, reportsSnap, requestsSnap] =
+      const [housesSnap, feedersSnap, usersSnap, reportsSnap] =
         await Promise.all([
           db.collection("powerhouses").get(),
           db.collection("feeders").get(),
           db.collection("users").get(),
           db.collection("daily_reports")
-            .orderBy("reportDate", "desc").limit(300).get(),
-          db.collection("edit_requests")
-            .orderBy("createdAt", "desc").limit(200).get()
+            .orderBy("reportDate", "desc").limit(100).get()
         ]);
 
       const houses = housesSnap.docs.map(doc => ({
@@ -106,24 +110,86 @@ export default async (req) => {
           restorationTime: d.restorationTime || "",
           remarks: d.remarks || "",
           submittedBy: d.submittedBy || "",
+          createdByUserId: d.createdByUserId || "",
           createdAt: cleanDate(d.createdAt)
         };
       });
-
-      const editRequests = requestsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: cleanDate(doc.data().createdAt)
-      }));
 
       return response({
         success: true,
         houses,
         feeders,
         users,
-        reports,
-        editRequests
+        reports
       });
+    }
+
+    if (body.action === "updateHouse" || body.action === "setHouseActive") {
+      const houseId = body.houseId;
+      if (!validDocId(houseId)) return response({ error: "Invalid Power House" }, 400);
+      const ref = db.collection("powerhouses").doc(houseId);
+      const snap = await ref.get();
+      if (!snap.exists) return response({ error: "Power House not found" }, 404);
+      const old = snap.data(), changes = {};
+      if (body.action === "updateHouse") {
+        if (!validName(body.houseName)) return response({ error: "Invalid Power House name" }, 400);
+        const name = body.houseName.trim();
+        const duplicate = await db.collection("powerhouses").where("name", "==", name).limit(5).get();
+        if (duplicate.docs.some(d => d.id !== houseId)) return response({ error: "Power House name already exists" }, 409);
+        changes.name = name;
+      } else {
+        if (typeof body.active !== "boolean") return response({ error: "Invalid active status" }, 400);
+        changes.active = body.active;
+      }
+      const history = db.collection("entry_history").doc();
+      const batch = db.batch();
+      batch.update(ref, { ...changes, updatedAt: FieldValue.serverTimestamp() });
+      if (changes.name) {
+        const [feeders, users] = await Promise.all([
+          db.collection("feeders").where("houseId", "==", houseId).get(),
+          db.collection("users").where("houseId", "==", houseId).get()
+        ]);
+        feeders.docs.forEach(d => batch.update(d.ref, { houseName: changes.name, updatedAt: FieldValue.serverTimestamp() }));
+        users.docs.forEach(d => batch.update(d.ref, { houseName: changes.name, updatedAt: FieldValue.serverTimestamp() }));
+      }
+      batch.set(history, { recordCollection: "powerhouses", recordId: houseId, houseId, action: body.action === "updateHouse" ? "updated" : "status_changed", before: old, after: { ...old, ...changes }, actorUid: decoded.uid, actorUserId: adminDoc.data().userId || "admin", actorRole: "admin", createdAt: FieldValue.serverTimestamp() });
+      await batch.commit();
+      return response({ success: true });
+    }
+
+    if (body.action === "updateFeeder" || body.action === "setFeederActive") {
+      const feederId = body.feederId;
+      if (!validDocId(feederId)) return response({ error: "Invalid Feeder" }, 400);
+      const ref = db.collection("feeders").doc(feederId);
+      const snap = await ref.get();
+      if (!snap.exists) return response({ error: "Feeder not found" }, 404);
+      const old = snap.data(), changes = {};
+      if (body.action === "updateFeeder") {
+        if (!validName(body.feederName) || !validDocId(body.houseId)) return response({ error: "Valid Feeder name and Power House required" }, 400);
+        const houseSnap = await db.collection("powerhouses").doc(body.houseId).get();
+        if (!houseSnap.exists || houseSnap.data().active !== true) return response({ error: "Select an active Power House" }, 404);
+        if (body.houseId !== old.houseId) {
+          const [activeBreakdowns, activeShutdowns] = await Promise.all([
+            db.collection("breakdowns").where("feederId", "==", feederId).where("status", "==", "ongoing").limit(1).get(),
+            db.collection("shutdowns").where("feederId", "==", feederId).where("status", "==", "ongoing").limit(1).get()
+          ]);
+          if (!activeBreakdowns.empty || !activeShutdowns.empty) return response({ error: "Ongoing Breakdown/Shutdown wale Feeder ko doosre Power House me move nahi kar sakte. Pehle event resolve karein." }, 409);
+        }
+        const name = body.feederName.trim();
+        const duplicate = await db.collection("feeders").where("houseId", "==", body.houseId).where("name", "==", name).limit(5).get();
+        if (duplicate.docs.some(d => d.id !== feederId)) return response({ error: "Feeder name already exists in this Power House" }, 409);
+        changes.name = name; changes.houseId = body.houseId; changes.houseName = houseSnap.data().name;
+      } else {
+        if (typeof body.active !== "boolean") return response({ error: "Invalid active status" }, 400);
+        changes.active = body.active;
+      }
+      const history = db.collection("entry_history").doc();
+      const after = { ...old, ...changes };
+      const batch = db.batch();
+      batch.update(ref, { ...changes, updatedAt: FieldValue.serverTimestamp() });
+      batch.set(history, { recordCollection: "feeders", recordId: feederId, houseId: old.houseId, action: body.action === "updateFeeder" ? "updated" : "status_changed", before: old, after, actorUid: decoded.uid, actorUserId: adminDoc.data().userId || "admin", actorRole: "admin", createdAt: FieldValue.serverTimestamp() });
+      await batch.commit();
+      return response({ success: true });
     }
 
     if (body.action === "createHouse") {
@@ -144,7 +210,7 @@ export default async (req) => {
       await ref.set({
         name: houseName,
         active: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
       });
 
       return response({
@@ -157,7 +223,7 @@ export default async (req) => {
     if (body.action === "createFeeder") {
       const { houseId } = body;
 
-      if (typeof houseId !== "string" || !houseId) {
+      if (!validDocId(houseId)) {
         return response({ error: "Select a Power House" }, 400);
       }
 
@@ -187,7 +253,7 @@ export default async (req) => {
         houseId,
         houseName: houseDoc.data().name,
         active: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
       });
 
       return response({
@@ -204,47 +270,74 @@ export default async (req) => {
           !/^[A-Za-z0-9_-]{3,40}$/.test(userId) ||
           typeof pin !== "string" ||
           !/^[0-9]{4}$/.test(pin) ||
-          typeof houseId !== "string" || !houseId) {
+          !validDocId(houseId)) {
         return response({ error: "Invalid Staff details" }, 400);
-      }
-
-      const houseDoc = await db.collection("powerhouses").doc(houseId).get();
-
-      if (!houseDoc.exists || houseDoc.data().active !== true) {
-        return response({ error: "Power House not found or inactive" }, 404);
-      }
-
-      const existingUser = await db.collection("users")
-        .where("userId", "==", userId).limit(1).get();
-
-      if (!existingUser.empty) {
-        return response({ error: "User ID already exists" }, 409);
-      }
-
-      const existingStaff = await db.collection("users")
-        .where("houseId", "==", houseId)
-        .where("role", "==", "staff")
-        .where("active", "==", true).limit(1).get();
-
-      if (!existingStaff.empty) {
-        return response({
-          error: "This Power House already has an active Staff member"
-        }, 409);
       }
 
       const pinSalt = crypto.randomBytes(16).toString("hex");
       const pinHash = crypto.scryptSync(pin, pinSalt, 64).toString("hex");
       const ref = db.collection("users").doc();
+      const assignmentRef = db.collection("staff_house_assignments").doc(houseId);
+      const userIdClaimRef = db.collection("staff_user_id_claims")
+        .doc(crypto.createHash("sha256").update(userId.toLowerCase()).digest("hex"));
 
-      await ref.set({
-        userId,
-        pinSalt,
-        pinHash,
-        role: "staff",
-        active: true,
-        houseId,
-        houseName: houseDoc.data().name,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      await db.runTransaction(async tx => {
+        const [houseSnap, existingUsers, staffInHouse, assignmentSnap, userIdClaimSnap] = await Promise.all([
+          tx.get(db.collection("powerhouses").doc(houseId)),
+          tx.get(db.collection("users").where("userId", "==", userId).limit(1)),
+          tx.get(db.collection("users").where("houseId", "==", houseId)),
+          tx.get(assignmentRef),
+          tx.get(userIdClaimRef)
+        ]);
+
+        if (!houseSnap.exists || houseSnap.data().active !== true) {
+          throw Object.assign(new Error("Power House not found or inactive"), { status: 404 });
+        }
+        if (!existingUsers.empty || userIdClaimSnap.exists) {
+          throw Object.assign(new Error("User ID already exists"), { status: 409 });
+        }
+
+        let assignedStaffActive = false;
+        if (assignmentSnap.exists && validDocId(assignmentSnap.data().staffUid)) {
+          const assignedUser = await tx.get(
+            db.collection("users").doc(assignmentSnap.data().staffUid)
+          );
+          assignedStaffActive = assignedUser.exists &&
+            assignedUser.data().role === "staff" &&
+            assignedUser.data().active === true &&
+            assignedUser.data().houseId === houseId;
+        }
+
+        const legacyStaffActive = staffInHouse.docs.some(doc =>
+          doc.data().role === "staff" && doc.data().active === true
+        );
+        if (assignedStaffActive || legacyStaffActive) {
+          throw Object.assign(
+            new Error("Is Power House ke liye Staff account pehle se maujood hai"),
+            { status: 409 }
+          );
+        }
+
+        tx.create(ref, {
+          userId,
+          pinSalt,
+          pinHash,
+          role: "staff",
+          active: true,
+          houseId,
+          houseName: houseSnap.data().name,
+          createdAt: FieldValue.serverTimestamp()
+        });
+        tx.set(assignmentRef, {
+          houseId,
+          staffUid: ref.id,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+        tx.create(userIdClaimRef, {
+          userId,
+          staffUid: ref.id,
+          createdAt: FieldValue.serverTimestamp()
+        });
       });
 
       return response({
@@ -259,9 +352,10 @@ export default async (req) => {
   } catch (error) {
     console.error("ADMIN FUNCTION ERROR:", error);
 
-    return response({
-      error: error.message || "Unknown admin service error"
-    }, 500);
+    return response(
+      { error: error.status ? error.message : "Server error. Please try again." },
+      error.status || 500
+    );
   }
 
 };
