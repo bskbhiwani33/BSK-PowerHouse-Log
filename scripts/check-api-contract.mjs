@@ -23,6 +23,8 @@ const androidUpdater = read("android-app/app/src/main/java/com/bsk/powerhouselog
 const androidManifest = read("android-app/app/src/main/AndroidManifest.xml");
 const androidDownloadBridge = read("android-app/app/src/main/java/com/bsk/powerhouselog/BskDownloadBridge.kt");
 const androidProguard = read("android-app/app/proguard-rules.pro");
+const androidGradle = read("android-app/app/build.gradle.kts");
+const releaseConfig = JSON.parse(read("bsk-release.json"));
 
 const expectedAdmin = [
   "getDashboardData", "updateHouse", "setHouseActive", "updateFeeder",
@@ -67,6 +69,12 @@ if (!read("bsk-config.js").includes("bskLocal") || !read("bsk-config.js").includ
 if (!androidUpdater.includes("MessageDigest.getInstance(\"SHA-256\")") || !androidUpdater.includes("renameTo(installed)") || !androidUpdater.includes("TRUSTED_HOST")) throw new Error("Android asset updater safety checks are incomplete");
 if (!androidActivity.includes("ServiceWorkerController") || !androidActivity.includes("getRegistrations()") || !androidActivity.includes("caches.delete")) throw new Error("Android migration does not retire the old PWA cache safely");
 if (!androidManifest.includes("android.permission.INTERNET")) throw new Error("Android manifest is missing internet permission");
+const nativeVersion = Number(androidUpdater.match(/NATIVE_VERSION\\s*=\\s*(\\d+)L/)?.[1]);
+const apkVersion = Number(androidGradle.match(/versionCode\\s*=\\s*(\\d+)/)?.[1]);
+if (!nativeVersion || nativeVersion !== apkVersion || Number(updateManifest.minNativeVersion) !== nativeVersion || Number(releaseConfig.minNativeVersion) !== nativeVersion) {
+  throw new Error("APK, native updater, and remote bundle minimum versions do not match");
+}
+
 if (!androidProguard.includes("@android.webkit.JavascriptInterface")) throw new Error("Android R8 keep rule for JavaScript bridge is missing");
 if (!app.includes("function bskDownloadBlob") || !app.includes("window.BSKAndroidBridge") || !app.includes("appendFileChunk")) throw new Error("Web export helper is not connected to chunked Android downloads");
 if (!app.includes("window.BSKAndroidBridge.printHtml")) throw new Error("Android PDF/print bridge is not connected");
