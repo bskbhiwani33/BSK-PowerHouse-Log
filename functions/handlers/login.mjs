@@ -1,4 +1,4 @@
-import { getApps, getApp, initializeApp, cert } from "firebase-admin/app";
+import { getApps, getApp, initializeApp, cert, applicationDefault } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import crypto from "node:crypto";
@@ -6,9 +6,13 @@ import crypto from "node:crypto";
 function getAdmin() {
   if (!getApps().length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (!raw) throw new Error("Server is not configured");
-    const serviceAccount = JSON.parse(raw);
-    initializeApp({ credential: cert(serviceAccount) });
+    // Netlify keeps using its service-account secret. Firebase Functions use
+    // the runtime service identity through Application Default Credentials.
+    if (raw) {
+      initializeApp({ credential: cert(JSON.parse(raw)) });
+    } else {
+      initializeApp({ credential: applicationDefault() });
+    }
   }
   return getApp();
 }
