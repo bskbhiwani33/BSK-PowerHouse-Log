@@ -64,6 +64,7 @@ await mkdir(androidAssets, { recursive: true });
 for (const file of bundleFiles) {
   await copyFile(resolve(output, file), resolve(androidAssets, file));
 }
+await copyFile(resolve(root, "bsk-release.json"), resolve(androidAssets, "bsk-release.json"));
 
 
 const builtHtml = await readFile(resolve(output, "index.html"), "utf8");
