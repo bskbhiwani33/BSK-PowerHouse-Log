@@ -85,8 +85,8 @@ internal class BskAssetBundleManager(private val context: Context) {
         val manifestBytes = downloadHttps(URL(MANIFEST_URL), MAX_MANIFEST_BYTES)
         val manifest = JSONObject(String(manifestBytes, Charsets.UTF_8))
         val version = manifest.getLong("version")
-        val minimumNative = manifest.optInt("minNativeVersion", 1)
-        if (version <= 0L || minimumNative <= 0) throw IOException("Invalid update version")
+        val minimumNative = manifest.optLong("minNativeVersion", 1L)
+        if (version <= 0L || minimumNative <= 0L) throw IOException("Invalid update version")
         if (minimumNative > NATIVE_VERSION) {
             Log.w(TAG, "Update requires a newer BSK Android container")
             return false
