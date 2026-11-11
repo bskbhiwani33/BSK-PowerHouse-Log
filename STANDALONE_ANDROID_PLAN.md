@@ -34,6 +34,7 @@ Status: implementation staged on branch `bsk-firebase-functions-prep`; not deplo
 - Added a local-asset WebView shell. It intercepts the existing Netlify hostname and serves all app files locally, retaining that hostname only as a virtual WebView origin so existing localStorage and Firebase Auth IndexedDB are not stranded during migration.
 - Added a Firebase Hosting update downloader that checks the trusted HTTPS host, verifies SHA-256, rejects ZIP path traversal, extracts into a staging directory, validates required files, and atomically activates the new version.
 - Retains the previous bundle and APK-bundled fallback if an update fails.
+- Adds bounded chunked native downloads for Excel-compatible exports and JSON backups, plus Android PrintManager support for Save as PDF.
 - A `bskLocal=1` runtime marker routes API calls directly to Firebase HTTPS Functions and disables the PWA service worker in the native shell. The normal browser Netlify site remains unchanged.
 - Routine web asset changes can update without an APK reinstall. Native Android code, permissions, SDK or library changes still require a new APK.
 
@@ -59,6 +60,6 @@ Status: implementation staged on branch `bsk-firebase-functions-prep`; not deplo
 1. Deploy to a separate Firebase staging project and verify Authentication, Firestore, Functions IAM, Hosting rewrites, and the first-admin secret.
 2. Test all login/admin/record API actions against staging, including staff house scoping, duplicate staff prevention, audit history, ongoing outages, exports, and backup paging.
 3. Compare all agreed BSK features and every operational collection with the current live app; verify live Firestore data remains unchanged.
-4. Build the Android module in Android Studio and test on a physical device: fresh install, sign-in, asset update, failed download, wrong checksum, ZIP path traversal, rollback, offline launch, offline queue sync, and session persistence.
+4. Build the Android module in Android Studio and test on a physical device: fresh install, sign-in, asset update, failed download, wrong checksum, ZIP path traversal, rollback, offline launch, offline queue sync, session persistence, Excel/JSON downloads, and print-to-PDF.
 5. Add cryptographic signature verification for update manifests before broad rollout.
 6. Only after the staging tests pass, prepare one controlled production cutover. Keep the current Netlify site available until Firebase Hosting and the Android APK are confirmed.
