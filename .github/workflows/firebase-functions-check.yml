@@ -5,7 +5,6 @@ on:
     paths:
       - "functions/**"
       - "firebase.json"
-      - "android-app/**"
       - "scripts/**"
       - "package.json"
       - "bsk-release.json"
@@ -31,6 +30,7 @@ on:
       - "bsk-config.js"
       - "manifest.webmanifest"
       - "sw.js"
+      - "android-app/**"
       - ".github/workflows/firebase-functions-check.yml"
 
 jobs:
