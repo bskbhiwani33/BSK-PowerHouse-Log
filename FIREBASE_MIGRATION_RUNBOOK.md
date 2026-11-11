@@ -66,3 +66,14 @@ Only after all endpoint tests pass:
 - Firebase Functions source scaffold exists on `bsk-complete-update-prep`.
 - Frontend still uses Netlify endpoints.
 - No Firebase Functions deployment, IAM change, Firestore Rules deployment, live data migration, Netlify shutdown, or APK build has occurred.
+
+
+## Deployment IAM checklist (verified for 2nd gen)
+
+- The person running deployment needs Cloud Functions Admin (or an equivalent deployment role) and Service Account User on the runtime service account and Cloud Build service account. A Cloud Functions Developer role alone may still need the Service Account User grant.
+- If using the default 2nd-gen runtime identity, it is the Compute Engine default service account: `PROJECT_NUMBER-compute@developer.gserviceaccount.com`. Prefer a dedicated runtime service account with only the Firestore/Auth permissions these handlers require.
+- The runtime identity used by `login` must be able to sign Firebase custom tokens. Grant `roles/iam.serviceAccountTokenCreator` to the runtime identity on the service account whose identity is used to sign (for the default ADC flow, verify the actual discovered service account and grant `iam.serviceAccounts.signBlob` there). Do not assume this permission is already present.
+- Keep the functions publicly invokable at the HTTPS layer only because the handlers enforce application-level authorization: Admin and Staff Firebase ID tokens are verified inside the handlers, and role/house checks are applied before records are returned or changed. Do not bypass those checks.
+- Confirm the project is on the Blaze plan and required Cloud Functions, Cloud Build, Artifact Registry, Cloud Run, Secret Manager, and IAM APIs are enabled before deploying.
+- After deploy, first call each endpoint with an invalid/no-auth request to confirm the function responds with the expected controlled HTTP status; then test valid Admin and Staff flows using existing accounts. Do not switch `api-config.js` away from `netlify` until every live test passes.
+
