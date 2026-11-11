@@ -1,11 +1,11 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
     namespace = "com.bsk.powerhouselog"
-    compileSdk { version = release(37) }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.bsk.powerhouselog"
@@ -15,8 +15,6 @@ android {
         versionName = "1.0"
     }
 
-    // The root build:hosting task generates this folder with a local Firebase
-    // SDK bundle and the initial offline-capable BSK app shell.
     sourceSets {
         getByName("main") {
             assets.srcDir("../../public")
@@ -27,9 +25,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    buildFeatures { compose = true }
-}
 
-dependencies {
-    implementation(libs.androidx.core.ktx)
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 }
