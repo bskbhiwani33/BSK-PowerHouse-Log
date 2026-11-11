@@ -1141,23 +1141,35 @@ function requireCompleteHistoryForExport() {
 }
 function bskDownloadBlob(blob, filename) {
   const bridge = window.BSKAndroidBridge;
-  if (bridge && typeof bridge.saveBase64File === "function") {
-    if (blob.size > 15 * 1024 * 1024) {
-      alert("This export is too large for direct Android download. Please narrow the date filter.");
+  if (bridge && typeof bridge.beginFile === "function" &&
+      typeof bridge.appendFileChunk === "function" && typeof bridge.finishFile === "function") {
+    const fileId = bridge.beginFile(filename, blob.type || "application/octet-stream");
+    if (!fileId) {
+      alert("Could not start the Android export.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      const comma = dataUrl.indexOf(",");
-      if (comma < 0) {
-        alert("Unable to prepare the export file.");
-        return;
+    (async () => {
+      try {
+        const chunkSize = 256 * 1024;
+        for (let offset = 0; offset < blob.size; offset += chunkSize) {
+          const part = blob.slice(offset, Math.min(offset + chunkSize, blob.size));
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("Unable to read export data"));
+            reader.readAsDataURL(part);
+          });
+          const comma = dataUrl.indexOf(",");
+          if (comma < 0 || !bridge.appendFileChunk(fileId, dataUrl.slice(comma + 1))) {
+            throw new Error("Could not write an export chunk");
+          }
+        }
+        if (!bridge.finishFile(fileId)) throw new Error("Could not finish saving the export");
+      } catch (error) {
+        bridge.cancelFile(fileId);
+        alert("Export could not be saved: " + error.message);
       }
-      bridge.saveBase64File(filename, blob.type || "application/octet-stream", dataUrl.slice(comma + 1));
-    };
-    reader.onerror = () => alert("Unable to prepare the export file.");
-    reader.readAsDataURL(blob);
+    })();
     return;
   }
   const url = URL.createObjectURL(blob);
