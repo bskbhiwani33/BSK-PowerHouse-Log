@@ -1,0 +1,30 @@
+name: Firebase Functions validation
+
+on:
+  pull_request:
+    paths:
+      - "functions/**"
+      - "firebase.json"
+      - ".github/workflows/firebase-functions-check.yml"
+  push:
+    branches:
+      - bsk-firebase-functions-prep
+    paths:
+      - "functions/**"
+      - "firebase.json"
+      - ".github/workflows/firebase-functions-check.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Firebase Functions dependencies
+        working-directory: functions
+        run: npm install --no-audit --no-fund
+      - name: Check handler syntax
+        working-directory: functions
+        run: npm run check
