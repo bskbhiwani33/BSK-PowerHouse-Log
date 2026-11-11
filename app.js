@@ -1139,6 +1139,35 @@ function requireCompleteHistoryForExport() {
   message("adminMessage", "Refresh records and load all history before downloading a complete report.", true);
   return false;
 }
+function bskDownloadBlob(blob, filename) {
+  const bridge = window.BSKAndroidBridge;
+  if (bridge && typeof bridge.saveBase64File === "function") {
+    if (blob.size > 15 * 1024 * 1024) {
+      alert("This export is too large for direct Android download. Please narrow the date filter.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      const comma = dataUrl.indexOf(",");
+      if (comma < 0) {
+        alert("Unable to prepare the export file.");
+        return;
+      }
+      bridge.saveBase64File(filename, blob.type || "application/octet-stream", dataUrl.slice(comma + 1));
+    };
+    reader.onerror = () => alert("Unable to prepare the export file.");
+    reader.readAsDataURL(blob);
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
 function downloadExcelXml(kind) {
   if (!requireCompleteHistoryForExport()) return;
   const from = $("recordsFrom")?.value || "", to = $("recordsTo")?.value || "";
@@ -1156,8 +1185,7 @@ function downloadExcelXml(kind) {
   const table = rows.map(row => "<Row>"+row.map(v=>"<Cell><Data ss:Type=\""+(typeof v === "number" ? "Number" : "String")+"\">"+xml(v)+"</Data></Cell>").join("")+"</Row>").join("");
   const workbook = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Report"><Table>'+table+'</Table></Worksheet></Workbook>';
   const blob = new Blob([workbook], {type:"application/vnd.ms-excel"});
-  const url = URL.createObjectURL(blob), a=document.createElement("a");
-  a.href=url; a.download=filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1500);
+  bskDownloadBlob(blob, filename);
 }
 $("downloadBreakdowns")?.addEventListener("click",()=>downloadExcelXml("breakdowns"));
 $("downloadShutdowns")?.addEventListener("click",()=>downloadExcelXml("shutdowns"));
@@ -1182,9 +1210,8 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
     return "<Worksheet ss:Name=\""+sheet.name+"\"><Table>"+table+"</Table></Worksheet>";
   }).join("");
   const workbook='<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+worksheets+"</Workbook>";
-  const url=URL.createObjectURL(new Blob([workbook],{type:"application/vnd.ms-excel"}));
-  const link=document.createElement("a");link.href=url;link.download="BSK_All_Records_"+new Date().toISOString().slice(0,10)+".xls";link.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  const blob = new Blob([workbook], {type:"application/vnd.ms-excel"});
+  bskDownloadBlob(blob, "BSK_All_Records_"+new Date().toISOString().slice(0,10)+".xls");
 });
 $("downloadPdf")?.addEventListener("click",()=>{
   if (!requireCompleteHistoryForExport()) return;
@@ -1378,12 +1405,7 @@ $("backupRecords")?.addEventListener("click", async () => {
       backup.collectionCounts[collection] = rows.length;
     }
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "BSK_Full_Backup_" + new Date().toISOString().slice(0, 10) + ".json";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    bskDownloadBlob(blob, "BSK_Full_Backup_" + new Date().toISOString().slice(0, 10) + ".json");
     message("adminMessage", "Complete backup downloaded.");
   } catch (error) {
     message("adminMessage", "Backup failed: " + error.message, true);
@@ -1662,8 +1684,8 @@ $("downloadDailyReports")?.addEventListener("click", () => {
   const esc = xmlEscape;
   const table = rows.map(row=>"<Row>"+row.map(v=>"<Cell><Data ss:Type=\"String\">"+esc(v)+"</Data></Cell>").join("")+"</Row>").join("");
   const xml = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Daily Reports"><Table>'+table+'</Table></Worksheet></Workbook>';
-  const blob=new Blob([xml],{type:"application/vnd.ms-excel"}), url=URL.createObjectURL(blob), link=document.createElement("a");
-  link.href=url; link.download="BSK_Daily_Feeder_Reports.xls"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1500);
+  const blob = new Blob([xml], {type:"application/vnd.ms-excel"});
+  bskDownloadBlob(blob, "BSK_Daily_Feeder_Reports.xls");
 });
 
 onAuthStateChanged(auth, async user => {
