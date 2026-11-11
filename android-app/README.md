@@ -29,7 +29,7 @@ Copy these files into the existing project paths:
 
 - `android-app/app/src/main/java/com/bsk/powerhouselog/MainActivity.kt`
 - `android-app/app/src/main/java/com/bsk/powerhouselog/BskAssetBundleManager.kt`
-- `android-app/app/src/main/AndroidManifest.xml`
+- Merge `android-app/app/src/main/AndroidManifest.xml` into the existing manifest: keep the current launcher icon, round icon, and `@style/Theme.BSK`; ensure INTERNET permission, exported launcher activity, and `adjustResize` are present.
 
 In the existing app module's `build.gradle.kts`, add the source set below if the Android project is kept inside this repository at `android-app/`:
 
@@ -41,7 +41,7 @@ sourceSets {
 }
 ```
 
-If the Android Studio project is stored elsewhere, copy the generated `public/` files into `app/src/main/assets/` and remove the source-set override. Keep package/application ID `com.bsk.powerhouselog`.
+If the Android Studio project is stored elsewhere, copy the generated `public/` files into `app/src/main/assets/` and remove the source-set override. Keep package/application ID `com.bsk.powerhouselog`. Do not replace the existing BSK theme or launcher icons.
 
 ## Important release limitations
 
