@@ -1,12 +1,8 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
 
 import loginHandler from "./handlers/login.mjs";
 import adminHandler from "./handlers/admin.mjs";
-import createAdminHandler from "./handlers/create-admin.mjs";
 import recordsHandler from "./handlers/records.mjs";
-
-const ADMIN_SETUP_KEY = defineSecret("ADMIN_SETUP_KEY");
 
 function toWebRequest(req) {
   return {
@@ -54,9 +50,5 @@ export const login = onRequest(common, expose(loginHandler));
 export const admin = onRequest(common, expose(adminHandler));
 export const records = onRequest(common, expose(recordsHandler));
 
-// One-time bootstrap endpoint remains disabled until ADMIN_SETUP_KEY is set.
-// Existing Admin accounts do not need to be recreated during migration.
-export const createAdmin = onRequest(
-  { ...common, secrets: [ADMIN_SETUP_KEY] },
-  expose(createAdminHandler)
-);
+// The one-time create-admin bootstrap endpoint is deliberately not exported.
+// Existing Admin accounts in the live Firebase project must be preserved.
