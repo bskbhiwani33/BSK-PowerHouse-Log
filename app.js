@@ -1649,7 +1649,7 @@ function bskAlert(englishText) {
   alert(translated);
 }
 
-if ("serviceWorker" in navigator && location.protocol === "https:") {
+if ("serviceWorker" in navigator && location.protocol === "https:" && !window.BSK_DISABLE_SERVICE_WORKER) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(error => console.warn("BSK offline cache unavailable:", error));
   });
