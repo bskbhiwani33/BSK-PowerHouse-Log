@@ -1,3 +1,13 @@
+> **2026-11-11 decision — keep BSK on Firebase Spark ($0)**
+>
+> The owner has explicitly declined a Blaze upgrade. Do not run `firebase deploy --only functions`, do not change Firebase billing, and do not switch the client to Firebase HTTPS Functions.
+>
+> **Current Spark-compatible production architecture:** the web app calls the existing Netlify Functions at `/.netlify/functions/login`, `/.netlify/functions/admin`, and `/.netlify/functions/records`. Those server-side Netlify Functions use the existing `FIREBASE_SERVICE_ACCOUNT` environment variable to access Firebase Authentication and Firestore. Keep `api-config.js` in `mode: "netlify"`. Do not expose the service-account JSON in the browser, repository, or APK.
+>
+> The `functions/` directory and the Firebase Functions workflow below are an optional future migration scaffold only; they are **not required** for the current Netlify-backed app and must remain undeployed while the project stays on Spark. A future Firebase Functions migration requires a separate explicit billing decision and live security testing. This does not prevent the existing Netlify-backed app from using Firebase Auth and Firestore.
+>
+> The Netlify Functions still require the Netlify site's server-side `FIREBASE_SERVICE_ACCOUNT` environment variable and appropriate Firebase IAM permissions. Verify these through the existing Netlify deployment/runtime checks; never ask the owner to paste credentials into chat.
+
 # BSK Firebase Backend Migration Runbook
 
 This is a preparation document only. No command below has been run against the live Firebase project.
