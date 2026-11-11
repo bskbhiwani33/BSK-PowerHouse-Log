@@ -69,8 +69,8 @@ if (!read("bsk-config.js").includes("bskLocal") || !read("bsk-config.js").includ
 if (!androidUpdater.includes("MessageDigest.getInstance(\"SHA-256\")") || !androidUpdater.includes("renameTo(installed)") || !androidUpdater.includes("TRUSTED_HOST")) throw new Error("Android asset updater safety checks are incomplete");
 if (!androidActivity.includes("ServiceWorkerController") || !androidActivity.includes("getRegistrations()") || !androidActivity.includes("caches.delete")) throw new Error("Android migration does not retire the old PWA cache safely");
 if (!androidManifest.includes("android.permission.INTERNET")) throw new Error("Android manifest is missing internet permission");
-const nativeVersion = Number(androidUpdater.match(/NATIVE_VERSION\\s*=\\s*(\\d+)L/)?.[1]);
-const apkVersion = Number(androidGradle.match(/versionCode\\s*=\\s*(\\d+)/)?.[1]);
+const nativeVersion = Number(androidUpdater.match(/NATIVE_VERSION\s*=\s*(\d+)L/)?.[1]);
+const apkVersion = Number(androidGradle.match(/versionCode\s*=\s*(\d+)/)?.[1]);
 if (!nativeVersion || nativeVersion !== apkVersion || Number(updateManifest.minNativeVersion) !== nativeVersion || Number(releaseConfig.minNativeVersion) !== nativeVersion) {
   throw new Error("APK, native updater, and remote bundle minimum versions do not match");
 }
