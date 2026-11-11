@@ -20,7 +20,7 @@ The original Netlify handlers continue to use `FIREBASE_SERVICE_ACCOUNT` when th
 Set the first-admin setup secret only if that endpoint is still needed:
 
 ```sh
-firebase functions:secrets:set ADMIN_SETUP_KEY --project testing-app-8af35
+firebase functions:secrets:set ADMIN_SETUP_KEY --project <staging-project-id>
 ```
 
 The runtime service identity must have the minimum Firebase Authentication and Firestore permissions required by these handlers. Do not publish broader Firestore client rules to compensate for missing server permissions.
