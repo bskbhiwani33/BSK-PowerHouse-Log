@@ -869,9 +869,39 @@ $("adminRecordsList")?.addEventListener("click", async event => {
   const fields=["breakdowns","shutdowns"].includes(collection)?[["date","Date"],["startTime","Start time"],...(collection==="breakdowns"?[["ptwTakenOnTime","PTW Taken on Time"]]:[]),["reason","Reason"]]
     :collection==="daily_reports"?[["reportDate","Report date"],["breakerStatus","Breaker status"],["faultDetails","Fault details"],["duration","Duration"],["restorationTime","Restoration time"],["remarks","Remarks"]]
     :collection==="trippings"?[["date","Date"],["trippingCount","Tripping count"],["feederCount","Feeder count"]]
-    :[["date","Date"],["apFeeder","AP Feeder"],["ruralDomestic","Rural Domestic"],["urban","Urban"],["industrial","Industrial"],["independent","Independent"]];
+    :collection==="consumption_readings"?[["date","Date"],["apFeeder","AP Feeder"],["ruralDomestic","Rural Domestic"],["urban","Urban"],["industrial","Industrial"],["independent","Independent"]]
+    :[];
   const changes={};
   for(const [key,label] of fields){const value=window.prompt(label+" (blank = unchanged)",item[key]??"");if(value===null)return;if(value!=="")changes[key]=value;}
+  if(collection==="supply_positions"){
+    const date=window.prompt("Supply Position date:",item.date||"");
+    if(date===null)return;
+    if(date!==item.date)changes.date=date;
+    const feeders=[];
+    for(const feeder of (item.feeders||[])){
+      const currentStatus=feeder.status==="Direct Shutdown"?"Shutdown":feeder.status;
+      const status=window.prompt("Feeder: "+feeder.feederName+"\nStatus: Running / Breakdown / Shutdown",currentStatus);
+      if(status===null)return;
+      const normalized=status.trim().toLowerCase();
+      if(!["running","breakdown","shutdown"].includes(normalized)){message("adminMessage","Status Running, Breakdown ya Shutdown hona chahiye.",true);return;}
+      const row={feederId:feeder.feederId,status:normalized==="running"?"Running":normalized==="breakdown"?"Breakdown":"Shutdown"};
+      if(row.status==="Breakdown"){
+        const startTime=window.prompt(feeder.feederName+" — Breakdown Time:",feeder.startTime||"");
+        if(startTime===null)return;
+        const ptwTakenOnTime=window.prompt(feeder.feederName+" — PTW Taken on Time:",feeder.ptwTakenOnTime||"");
+        if(ptwTakenOnTime===null)return;
+        row.startTime=startTime;row.ptwTakenOnTime=ptwTakenOnTime;
+      } else if(row.status==="Shutdown"){
+        const ptwTakenOnTime=window.prompt(feeder.feederName+" — PTW Taken on Time:",feeder.ptwTakenOnTime||"");
+        if(ptwTakenOnTime===null)return;
+        const reason=window.prompt(feeder.feederName+" — Shutdown Reason:",feeder.reason||"");
+        if(reason===null)return;
+        row.ptwTakenOnTime=ptwTakenOnTime;row.reason=reason;
+      }
+      feeders.push(row);
+    }
+    changes.feeders=feeders;
+  }
   if(!Object.keys(changes).length)return;
   try{
     await recordsRequest("updateRecord",{recordCollection:collection,id,changes});
@@ -922,7 +952,7 @@ function renderRecordHistory() {
       const status = f.status === "Direct Shutdown" ? "Shutdown" : f.status;
       return `<p><strong>${safe(f.feederName)}</strong> — ${safe(status)}${status === "Breakdown" ? " · Breakdown Time: "+safe(f.startTime)+" · PTW Taken on Time: "+safe(f.ptwTakenOnTime||"—") : status === "Shutdown" ? " · PTW Taken on Time: "+safe(f.ptwTakenOnTime||"—")+" · Reason: "+safe(f.reason||"—") : ""}</p>`;
     }).join("") : "";
-    return `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Feeder-wise Supply Position" : ""))}</p>${supplyDetails}${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" && x.kind!=="Supply Position" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`;
+    return `<article class="report-item"><strong>${safe(x.kind)} · ${safe(x.date)}</strong><p>${safe(x.feederName || x.houseName || "")}</p><p>${safe(x.reason || (x.kind==="Tripping" ? "Trippings: "+x.trippingCount+" · Feeders: "+x.feederCount : x.kind==="Consumption" ? "Total: "+x.total : x.kind==="Supply Position" ? "Feeder-wise Supply Position" : ""))}</p>${supplyDetails}${x.kind==="Breakdown" ? "<p>PTW Taken on Time: "+safe(x.ptwTakenOnTime || "—")+"</p>" : ""}<p>Status: ${safe(x.status || "Saved")} ${durationFor(x) ? "· Duration: "+durationFor(x) : ""}</p><p>Staff: ${safe(x.createdByUserId || "")}</p>${currentProfile?.role==="admin" ? `<button type="button" class="secondary" data-edit-record="${safe(x.id)}" data-record-collection="${safe(x.collection || x.kind.toLowerCase())}">Edit Record</button>` : ""}</article>`;
   }).join("") : "<p>No records in selected date range.</p>";
   if ($("recordsInsights")) {
     const outageRows = [...operational.breakdowns.map(x=>({...x,kind:"Breakdown"})),...operational.shutdowns.map(x=>({...x,kind:"Shutdown"}))].filter(inside);
