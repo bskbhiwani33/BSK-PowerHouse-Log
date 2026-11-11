@@ -63,7 +63,8 @@ if (!androidUpdater.includes("MessageDigest.getInstance(\"SHA-256\")") || !andro
 if (!androidActivity.includes("ServiceWorkerController") || !androidActivity.includes("getRegistrations()") || !androidActivity.includes("caches.delete")) throw new Error("Android migration does not retire the old PWA cache safely");
 if (!androidManifest.includes("android.permission.INTERNET")) throw new Error("Android manifest is missing internet permission");
 if (!app.includes("function bskDownloadBlob") || !app.includes("window.BSKAndroidBridge")) throw new Error("Web export helper is not connected to Android downloads");
-if (!androidActivity.includes("BskDownloadBridge(this)") || !androidDownloadBridge.includes("@JavascriptInterface") || !androidDownloadBridge.includes("MediaStore.Downloads.EXTERNAL_CONTENT_URI")) throw new Error("Android export bridge is incomplete");
+if (!app.includes("window.BSKAndroidBridge.printHtml")) throw new Error("Android PDF/print bridge is not connected");
+if (!androidActivity.includes("BskDownloadBridge(this)") || !androidDownloadBridge.includes("@JavascriptInterface") || !androidDownloadBridge.includes("MediaStore.Downloads.EXTERNAL_CONTENT_URI") || !androidDownloadBridge.includes("fun printHtml") || !androidActivity.includes("PrintManager")) throw new Error("Android export bridge is incomplete");
 for (const collection of ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"]) {
   if (!records.includes(`"${collection}"`)) throw new Error("Records collection missing: " + collection);
 }
