@@ -11,6 +11,7 @@ This Android module replaces the Netlify URL WebView with a local asset shell.
 - The last installed version and the APK-bundled assets remain available if an update fails.
 - Login and operational APIs go directly to Firebase HTTPS Functions from the Android asset origin. Netlify is not used by this Android shell.
 - The native shell removes the old PWA service worker and CacheStorage once, then reloads from local files. It deliberately preserves localStorage and IndexedDB, so the existing login session and offline queue are not cleared.
+- Excel-compatible report exports and JSON backups use a narrow native bridge to save into Downloads/BSK on Android 10+, or the app-specific Downloads folder on older Android versions. No broad storage permission is requested.
 
 ## Build prerequisites
 
