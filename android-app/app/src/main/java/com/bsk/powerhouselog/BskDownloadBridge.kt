@@ -19,7 +19,10 @@ import java.io.FileOutputStream
  * Files are written to Downloads/BSK on Android 10+, or the app-specific Downloads
  * directory on older Android versions. No broad storage permission is requested.
  */
-internal class BskDownloadBridge(private val context: Context) {
+internal class BskDownloadBridge(
+    private val context: Context,
+    private val printHandler: (String, String) -> Unit
+) {
     companion object {
         private const val TAG = "BSKDownload"
         private const val MAX_FILE_BYTES = 15 * 1024 * 1024
@@ -61,6 +64,16 @@ internal class BskDownloadBridge(private val context: Context) {
             Log.e(TAG, "Could not save export", error)
             showMessage("Export could not be saved: ${error.message ?: "unknown error"}")
         }
+    }
+
+    @JavascriptInterface
+    fun printHtml(title: String, html: String) {
+        if (html.length > 2 * 1024 * 1024) {
+            showMessage("Report is too large to print.")
+            return
+        }
+        val safeTitle = title.replace(Regex("[^A-Za-z0-9 _-]"), "").take(80).ifBlank { "BSK Report" }
+        printHandler(safeTitle, html)
     }
 
     private fun saveWithMediaStore(fileName: String, mimeType: String, bytes: ByteArray) {
