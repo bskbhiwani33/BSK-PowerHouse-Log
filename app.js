@@ -84,12 +84,21 @@ function setToday() {
   }
 }
 
+// Runtime-selectable API endpoint. Browser/PWA keeps the existing same-origin
+// Netlify routes by default; the standalone Android/Firebase-hosted build can
+// set window.BSK_FUNCTIONS_BASE before app.js loads.
+function bskFunctionUrl(name) {
+  const configured = typeof window.BSK_FUNCTIONS_BASE === "string"
+    ? window.BSK_FUNCTIONS_BASE.trim().replace(/\\/$/, "") : "";
+  return configured ? `${configured}/${name}` : `/.netlify/functions/${name}`;
+}
+
 async function adminRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
 
   const token = await auth.currentUser.getIdToken();
 
-  const response = await fetch("/.netlify/functions/admin", {
+  const response = await fetch(bskFunctionUrl("admin"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -117,7 +126,7 @@ $("loginForm")?.addEventListener("submit", async event => {
   const pin = $("pin").value.trim();
 
   try {
-    const response = await fetch("/.netlify/functions/login", {
+    const response = await fetch(bskFunctionUrl("login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, pin })
@@ -604,7 +613,7 @@ const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_
 async function recordsRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
   const token = await auth.currentUser.getIdToken();
-  const response = await fetch("/.netlify/functions/records", {
+  const response = await fetch(bskFunctionUrl("records"), {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify({ action, ...data })
