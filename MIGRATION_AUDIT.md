@@ -61,6 +61,17 @@ Operational records, audit history, feeder status, and notifications are written
 - Shutdown form currently has no PTW field; no new requirement was added to that separate form. The Daily Supply Position flow separately validates Breakdown time + PTW time and Shutdown PTW time + reason.
 - This is a source-level correction only. The GitHub Actions status for this new commit has not yet been returned; do not treat it as tested or production-ready.
 
+## Firebase Functions migration scaffold added
+
+- Added `functions/package.json` for Node.js 22 with Firebase Admin SDK and Firebase Functions v2 HTTPS support.
+- Added `functions/index.js` exporting `login`, `admin`, `records`, and one-time `createAdmin` HTTPS endpoints in `asia-south1`.
+- Added a small HTTP adapter so the existing validated request handlers can be reused with Firebase Functions without changing their business logic or request payload contract.
+- Added mirrored handlers under `functions/handlers/`. These use Application Default Credentials when `FIREBASE_SERVICE_ACCOUNT` is absent, so deployed Firebase Functions can use their attached runtime service account; Netlify's original files remain unchanged and continue to use the existing environment variable.
+- Added Firebase Functions source/runtime and emulator configuration to `firebase.json`.
+- Added a GitHub Actions workflow to syntax-check all new function entrypoints and install the function dependencies on pushes to the preparation branch.
+- The frontend still calls the existing Netlify endpoints. No client cutover has been made. The new Firebase endpoints have not been deployed or runtime-tested against the live Firebase project.
+- Before deployment, the Firebase runtime service account must receive only the IAM permissions needed for Auth token creation/verification and Firestore Admin operations. The `ADMIN_SETUP_KEY` secret must only be set if the one-time create-admin endpoint is intentionally required; existing Admin accounts should be preserved and not recreated.
+
 ## Required migration design
 
 - Keep Firebase as the system of record and preserve existing collection names/document shapes.
