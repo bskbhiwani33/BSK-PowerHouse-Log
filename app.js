@@ -89,7 +89,7 @@ function setToday() {
 // set window.BSK_FUNCTIONS_BASE before app.js loads.
 function bskFunctionUrl(name) {
   const configured = typeof window.BSK_FUNCTIONS_BASE === "string"
-    ? window.BSK_FUNCTIONS_BASE.trim().replace(/\\/$/, "") : "";
+    ? window.BSK_FUNCTIONS_BASE.trim().replace(/\/$/, "") : "";
   return configured ? `${configured}/${name}` : `/.netlify/functions/${name}`;
 }
 
