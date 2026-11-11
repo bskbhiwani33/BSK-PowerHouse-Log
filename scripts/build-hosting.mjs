@@ -58,6 +58,13 @@ const manifest = {
   releaseNotes: String(release.releaseNotes || "BSK app update")
 };
 await writeFile(resolve(updateDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+const androidAssets = resolve(root, "android-app/app/src/main/assets");
+await rm(androidAssets, { recursive: true, force: true });
+await mkdir(androidAssets, { recursive: true });
+for (const file of bundleFiles) {
+  await copyFile(resolve(output, file), resolve(androidAssets, file));
+}
+
 
 const builtHtml = await readFile(resolve(output, "index.html"), "utf8");
 const builtApp = await readFile(resolve(output, "app.js"), "utf8");
