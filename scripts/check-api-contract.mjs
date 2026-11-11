@@ -15,6 +15,7 @@ const hostedHtml = read("public/index.html");
 const apkFallbackApp = read("android-app/app/src/main/assets/app.js");
 const apkFallbackHtml = read("android-app/app/src/main/assets/index.html");
 const apkFallbackConfig = read("android-app/app/src/main/assets/bsk-config.js");
+const apkFallbackRelease = JSON.parse(read("android-app/app/src/main/assets/bsk-release.json"));
 const updateManifest = JSON.parse(read("public/bsk-updates/manifest.json"));
 const updateBundle = readFileSync(resolve(root, "public/bsk-updates", updateManifest.bundleUrl.split("/").pop()));
 const firebaseConfig = JSON.parse(read("firebase.json"));
@@ -60,7 +61,7 @@ for (const route of ["/.netlify/functions/login", "/.netlify/functions/admin", "
 }
 if (!hostedHtml.includes("/bsk-config.js") || !hostedHtml.includes("/app.js")) throw new Error("Generated Firebase Hosting HTML is incomplete");
 if (hostedApp.includes("https://www.gstatic.com/firebasejs/13.2.0/firebase-")) throw new Error("Generated app bundle still depends on remote Firebase SDK imports");
-if (apkFallbackApp.includes("https://www.gstatic.com/firebasejs/13.2.0/firebase-") || !apkFallbackHtml.includes("/app.js") || !apkFallbackConfig.includes("bskLocal")) throw new Error("Generated Android fallback assets are incomplete");
+if (apkFallbackApp.includes("https://www.gstatic.com/firebasejs/13.2.0/firebase-") || !apkFallbackHtml.includes("/app.js") || !apkFallbackConfig.includes("bskLocal") || Number(apkFallbackRelease.version) !== Number(releaseConfig.version)) throw new Error("Generated Android fallback assets are incomplete");
 if (!Number.isSafeInteger(updateManifest.version) || !updateManifest.bundleUrl.startsWith("https://testing-app-8af35.web.app/bsk-updates/")) throw new Error("Update manifest URL/version is invalid");
 const actualHash = createHash("sha256").update(updateBundle).digest("hex");
 if (actualHash !== updateManifest.sha256) throw new Error("Update bundle SHA-256 does not match manifest");
