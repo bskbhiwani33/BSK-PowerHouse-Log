@@ -56,7 +56,8 @@ if (hostedApp.includes("https://www.gstatic.com/firebasejs/13.2.0/firebase-")) t
 if (!Number.isSafeInteger(updateManifest.version) || !updateManifest.bundleUrl.startsWith("https://testing-app-8af35.web.app/bsk-updates/")) throw new Error("Update manifest URL/version is invalid");
 const actualHash = createHash("sha256").update(updateBundle).digest("hex");
 if (actualHash !== updateManifest.sha256) throw new Error("Update bundle SHA-256 does not match manifest");
-if (!androidActivity.includes("appassets.androidplatform.net") || androidActivity.includes("bsk-powerhouse-log-bhiwani.netlify.app")) throw new Error("Android app is not isolated from Netlify");
+if (!androidActivity.includes("bsk-powerhouse-log-bhiwani.netlify.app") || !androidActivity.includes("bskLocal=1") || !androidActivity.includes("assetBundles.openAsset")) throw new Error("Android local virtual-origin interception is missing");
+if (!read("bsk-config.js").includes("bskLocal") || !read("bsk-config.js").includes("asia-south1-testing-app-8af35.cloudfunctions.net")) throw new Error("Android Firebase API runtime config is missing");
 if (!androidUpdater.includes("MessageDigest.getInstance(\"SHA-256\")") || !androidUpdater.includes("renameTo(installed)") || !androidUpdater.includes("TRUSTED_HOST")) throw new Error("Android asset updater safety checks are incomplete");
 if (!androidManifest.includes("android.permission.INTERNET")) throw new Error("Android manifest is missing internet permission");
 for (const collection of ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"]) {
