@@ -239,3 +239,13 @@ Known scope limits (not to be mistaken for completed runtime checks):
 - Moved Breakdown Excel, Shutdown Excel, Consumption Excel and All Records Excel actions into the Live Outage Dashboard in four clearly labelled export panels; removed duplicate buttons from the lower records/history panel.
 - Existing export handlers and complete-history guard are retained; the All Records workbook still requires the full history to be loaded before export.
 - Source-only change. Production has not been deployed; Firebase/Netlify live interactive testing remains outstanding.
+
+
+## Admin correction for operational records (2026-11-11)
+- Admin record history now exposes **Edit Record** for Breakdown, Shutdown, Tripping, Consumption and Supply Position entries. The existing edit controls for legacy Daily Feeder Reports remain available.
+- Supply Position edits allow correction of report date and each feeder's status. Breakdown rows require Breakdown Time and PTW Taken on Time; Shutdown rows require PTW Taken on Time and Reason; Running rows clear outage-only details.
+- The records API now validates Supply Position edits, verifies every supplied feeder belongs to the original Power House, rejects duplicate/missing feeder rows, recalculates Running/Breakdown/Shutdown counts, and records before/after snapshots in `entry_history`.
+- Existing Breakdown/Shutdown end-time changes remain restricted to the Resolve workflow so live feeder status cannot be silently desynchronized. Existing Consumption totals are recalculated from corrected component readings.
+- This is an Admin-only correction workflow; it does not hard-delete records or alter original creation attribution. Verify with real Preview/Firebase data before Production release.
+- Incremented the Service Worker shell cache to v9 so the updated correction UI is fetched by hosted WebView/PWA clients. Device-level update verification remains pending.
+- No Production deployment, Firestore Rules publication, main-branch update, or APK build was performed.
