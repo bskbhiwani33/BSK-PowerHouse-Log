@@ -15,6 +15,9 @@ const hostedHtml = read("public/index.html");
 const updateManifest = JSON.parse(read("public/bsk-updates/manifest.json"));
 const updateBundle = readFileSync(resolve(root, "public/bsk-updates", updateManifest.bundleUrl.split("/").pop()));
 const firebaseConfig = JSON.parse(read("firebase.json"));
+const androidActivity = read("android-app/app/src/main/java/com/bsk/powerhouselog/MainActivity.kt");
+const androidUpdater = read("android-app/app/src/main/java/com/bsk/powerhouselog/BskAssetBundleManager.kt");
+const androidManifest = read("android-app/app/src/main/AndroidManifest.xml");
 
 const expectedAdmin = [
   "getDashboardData", "updateHouse", "setHouseActive", "updateFeeder",
@@ -53,6 +56,9 @@ if (hostedApp.includes("https://www.gstatic.com/firebasejs/13.2.0/firebase-")) t
 if (!Number.isSafeInteger(updateManifest.version) || !updateManifest.bundleUrl.startsWith("https://testing-app-8af35.web.app/bsk-updates/")) throw new Error("Update manifest URL/version is invalid");
 const actualHash = createHash("sha256").update(updateBundle).digest("hex");
 if (actualHash !== updateManifest.sha256) throw new Error("Update bundle SHA-256 does not match manifest");
+if (!androidActivity.includes("appassets.androidplatform.net") || androidActivity.includes("bsk-powerhouse-log-bhiwani.netlify.app")) throw new Error("Android app is not isolated from Netlify");
+if (!androidUpdater.includes("MessageDigest.getInstance(\"SHA-256\")") || !androidUpdater.includes("renameTo(installed)") || !androidUpdater.includes("TRUSTED_HOST")) throw new Error("Android asset updater safety checks are incomplete");
+if (!androidManifest.includes("android.permission.INTERNET")) throw new Error("Android manifest is missing internet permission");
 for (const collection of ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"]) {
   if (!records.includes(`"${collection}"`)) throw new Error("Records collection missing: " + collection);
 }
