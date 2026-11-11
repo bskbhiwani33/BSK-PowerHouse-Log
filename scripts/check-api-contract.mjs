@@ -9,6 +9,8 @@ const html = read("index.html");
 const admin = read("functions/handlers/admin.mjs");
 const records = read("functions/handlers/records.mjs");
 const functionsIndex = read("functions/index.js");
+const hostedApp = read("public/app.js");
+const hostedHtml = read("public/index.html");
 const firebaseConfig = JSON.parse(read("firebase.json"));
 
 const expectedAdmin = [
@@ -43,6 +45,8 @@ if (firebaseConfig.hosting?.public !== ".") throw new Error("Firebase Hosting pu
 for (const route of ["/.netlify/functions/login", "/.netlify/functions/admin", "/.netlify/functions/records"]) {
   if (!firebaseConfig.hosting.rewrites?.some(x => x.source === route)) throw new Error("Firebase Hosting rewrite missing: " + route);
 }
+if (!hostedHtml.includes("/bsk-config.js") || !hostedHtml.includes("/app.js")) throw new Error("Generated Firebase Hosting HTML is incomplete");
+if (hostedApp.includes("https://www.gstatic.com/firebasejs/13.2.0/firebase-")) throw new Error("Generated app bundle still depends on remote Firebase SDK imports");
 for (const collection of ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"]) {
   if (!records.includes(`"${collection}"`)) throw new Error("Records collection missing: " + collection);
 }
