@@ -4,6 +4,8 @@ This directory contains a Firebase Functions v2 HTTPS adapter around the existin
 
 ## Runtime behavior
 
+Firebase Hosting is configured to serve the existing web assets from the repository root and rewrite the three existing `/.netlify/functions/...` API paths to the Firebase HTTPS Functions. This keeps the frontend request contract unchanged when hosted on Firebase. Netlify remains the current live host until a tested cutover is performed.
+
 - Functions are deployed in `asia-south1`.
 - The web app continues to use same-origin Netlify Functions by default.
 - A separately packaged Android/Firebase-hosted asset bundle can set `window.BSK_FUNCTIONS_BASE` in `bsk-config.js` to:
