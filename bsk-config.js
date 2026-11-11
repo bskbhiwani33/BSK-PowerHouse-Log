@@ -1,8 +1,9 @@
 // Shared browser and Android runtime configuration.
-// The Android WebView serves local assets from this HTTPS-style app origin;
-// it calls the Firebase HTTPS Functions directly and does not depend on Netlify.
-const isBskStandaloneAndroid = location.hostname === "appassets.androidplatform.net";
-window.BSK_FUNCTIONS_BASE = window.BSK_FUNCTIONS_BASE || (isBskStandaloneAndroid
+// The Android shell keeps the previous WebView origin only as a local virtual
+// origin so existing localStorage / Firebase Auth IndexedDB remain available.
+// MainActivity intercepts every app asset request and serves it from local files.
+const standaloneFlag = new URLSearchParams(location.search).get("bskLocal") === "1";
+window.BSK_FUNCTIONS_BASE = window.BSK_FUNCTIONS_BASE || (standaloneFlag
   ? "https://asia-south1-testing-app-8af35.cloudfunctions.net"
   : "");
-window.BSK_DISABLE_SERVICE_WORKER = isBskStandaloneAndroid;
+window.BSK_DISABLE_SERVICE_WORKER = standaloneFlag;
