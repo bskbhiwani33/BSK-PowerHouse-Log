@@ -68,6 +68,21 @@ class MainActivity : Activity() {
                 return super.shouldInterceptRequest(view, request)
             }
 
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: android.webkit.WebResourceError?
+            ) {
+                super.onReceivedError(view, request, error)
+                val uri = request?.url
+                if (request?.isForMainFrame == true &&
+                    uri?.scheme == "https" && uri.host == ASSET_HOST &&
+                    assetBundles.rollbackToPrevious()
+                ) {
+                    view?.post { view.loadUrl(APP_URL) }
+                }
+            }
+
             override fun shouldOverrideUrlLoading(
                 view: WebView?,
                 request: WebResourceRequest?
