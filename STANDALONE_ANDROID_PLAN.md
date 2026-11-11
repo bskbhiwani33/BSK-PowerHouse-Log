@@ -63,3 +63,6 @@ Status: implementation staged on branch `bsk-firebase-functions-prep`; not deplo
 4. Build the Android module in Android Studio and test on a physical device: fresh install, sign-in, asset update, failed download, wrong checksum, ZIP path traversal, rollback, offline launch, offline queue sync, session persistence, Excel/JSON downloads, and print-to-PDF.
 5. Add cryptographic signature verification for update manifests before broad rollout.
 6. Only after the staging tests pass, prepare one controlled production cutover. Keep the current Netlify site available until Firebase Hosting and the Android APK are confirmed.
+
+
+Deployment requirement: Firebase Cloud Functions requires the Blaze billing plan. Use local emulators before production and configure budget alerts/spend caps.
