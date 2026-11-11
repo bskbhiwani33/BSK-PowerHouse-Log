@@ -33,17 +33,7 @@ Copy these files into the existing project paths:
 - `android-app/app/src/main/java/com/bsk/powerhouselog/BskDownloadBridge.kt`
 - Merge `android-app/app/src/main/AndroidManifest.xml` into the existing manifest: keep the current launcher icon, round icon, and `@style/Theme.BSK`; ensure INTERNET permission, exported launcher activity, and `adjustResize` are present.
 
-In the existing app module's `build.gradle.kts`, add the source set below if the Android project is kept inside this repository at `android-app/`:
-
-```kotlin
-sourceSets {
-    getByName("main") {
-        assets.srcDir("../../public")
-    }
-}
-```
-
-If the Android Studio project is stored elsewhere, copy the generated `public/` files into `app/src/main/assets/` and remove the source-set override. Keep package/application ID `com.bsk.powerhouselog`. Do not replace the existing BSK theme or launcher icons. If release shrinking/optimization is enabled, merge `android-app/app/proguard-rules.pro` into the app's R8 rules so the `@JavascriptInterface` bridge methods remain callable.
+The build script generates the lean APK fallback files in `android-app/app/src/main/assets/` (it excludes the downloadable update ZIP). The Android module in this repository uses that standard assets folder directly. If your existing Android Studio project is stored elsewhere, copy the generated files from this folder into its `app/src/main/assets/`. Keep package/application ID `com.bsk.powerhouselog`. Do not replace the existing BSK theme or launcher icons. If release shrinking/optimization is enabled, merge `android-app/app/proguard-rules.pro` into the app's R8 rules so the `@JavascriptInterface` bridge methods remain callable.
 
 ## Important release limitations
 
