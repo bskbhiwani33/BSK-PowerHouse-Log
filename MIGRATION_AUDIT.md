@@ -54,6 +54,13 @@ Operational records, audit history, feeder status, and notifications are written
 6. The existing PWA service worker is not a replacement for an Android update system. The current WebView Activity loads the Netlify URL and clears WebView cache on startup; that is not a local, integrity-checked remote-bundle architecture.
 7. The repository snapshot does not contain the Android Studio project source. Native Android work must be completed against the user's existing Android project files; it cannot be built or device-tested from this repository alone.
 
+## Validation correction made on this branch
+
+- The Breakdown form marks PTW Taken on Time as required and sends `ptwTakenOnTime`, but the Records API previously accepted a missing PTW time if a caller bypassed browser form validation.
+- Updated `netlify/functions/records.mjs` so a Breakdown create request must contain a valid PTW time at the server boundary too. This keeps backend validation aligned with the current form.
+- Shutdown form currently has no PTW field; no new requirement was added to that separate form. The Daily Supply Position flow separately validates Breakdown time + PTW time and Shutdown PTW time + reason.
+- This is a source-level correction only. The GitHub Actions status for this new commit has not yet been returned; do not treat it as tested or production-ready.
+
 ## Required migration design
 
 - Keep Firebase as the system of record and preserve existing collection names/document shapes.
