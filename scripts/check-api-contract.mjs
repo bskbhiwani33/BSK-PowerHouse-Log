@@ -50,7 +50,7 @@ for (const route of ["/.netlify/functions/login", "/.netlify/functions/admin", "
 }
 if (!hostedHtml.includes("/bsk-config.js") || !hostedHtml.includes("/app.js")) throw new Error("Generated Firebase Hosting HTML is incomplete");
 if (hostedApp.includes("https://www.gstatic.com/firebasejs/13.2.0/firebase-")) throw new Error("Generated app bundle still depends on remote Firebase SDK imports");
-if (!Number.isSafeInteger(updateManifest.version) || !/^https:\/\/testing-app-8af35\\.web\\.app\/bsk-updates\//.test(updateManifest.bundleUrl)) throw new Error("Update manifest URL/version is invalid");
+if (!Number.isSafeInteger(updateManifest.version) || !updateManifest.bundleUrl.startsWith("https://testing-app-8af35.web.app/bsk-updates/")) throw new Error("Update manifest URL/version is invalid");
 const actualHash = createHash("sha256").update(updateBundle).digest("hex");
 if (actualHash !== updateManifest.sha256) throw new Error("Update bundle SHA-256 does not match manifest");
 for (const collection of ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"]) {
