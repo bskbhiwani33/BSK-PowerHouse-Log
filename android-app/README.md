@@ -5,7 +5,7 @@ This Android module replaces the Netlify URL WebView with a local asset shell.
 ## How it works
 
 - The APK contains the generated files from the repository's `public/` folder.
-- WebView opens `https://appassets.androidplatform.net/assets/index.html`, served from local APK/app-private files by `MainActivity`.
+- WebView keeps the existing `https://bsk-powerhouse-log-bhiwani.netlify.app` origin (with a private `bskLocal=1` marker) only to preserve the current device's localStorage and Firebase Auth IndexedDB. `MainActivity` intercepts the page and every asset request and serves them from local APK/app-private files; it does not fetch the Netlify website.
 - On app start, `BskAssetBundleManager` checks the Firebase Hosting update manifest.
 - It downloads only from the fixed Firebase Hosting host, checks the SHA-256 digest, rejects unsafe ZIP paths, extracts to a staging folder, validates required files, then atomically activates the new version.
 - The last installed version and the APK-bundled assets remain available if an update fails.
