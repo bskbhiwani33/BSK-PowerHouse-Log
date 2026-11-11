@@ -17,6 +17,7 @@ android {
     sourceSets {
         getByName("main") {
             assets.srcDir("../../public")
+            assets.exclude("bsk-updates/**")
         }
     }
 
