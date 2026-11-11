@@ -10,7 +10,7 @@ This Android module replaces the Netlify URL WebView with a local asset shell.
 - It downloads only from the fixed Firebase Hosting host, checks the SHA-256 digest, rejects unsafe ZIP paths, extracts to a staging folder, validates required files, then atomically activates the new version.
 - The last installed version and the APK-bundled assets remain available if an update fails.
 - Login and operational APIs go directly to Firebase HTTPS Functions from the Android asset origin. Netlify is not used by this Android shell.
-- The native updater does not clear WebView DOM storage, so the existing login session and local offline queue are not deliberately erased.
+- The native shell removes the old PWA service worker and CacheStorage once, then reloads from local files. It deliberately preserves localStorage and IndexedDB, so the existing login session and offline queue are not cleared.
 
 ## Build prerequisites
 
