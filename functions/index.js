@@ -1,4 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
+
+const adminSetupKey = defineSecret("ADMIN_SETUP_KEY");
 import loginHandler from "./handlers/login.mjs";
 import adminHandler from "./handlers/admin.mjs";
 import createAdminHandler from "./handlers/create-admin.mjs";
@@ -24,9 +27,9 @@ function adaptRequest(req) {
   };
 }
 
-function expose(handler) {
+function expose(handler, extraOptions = {}) {
   return onRequest(
-    { region: "asia-south1", cors: true, maxInstances: 10 },
+    { region: "asia-south1", cors: true, maxInstances: 10, ...extraOptions },
     async (req, res) => {
       try {
         const result = await handler(adaptRequest(req));
@@ -43,5 +46,5 @@ function expose(handler) {
 
 export const login = expose(loginHandler);
 export const admin = expose(adminHandler);
-export const createAdmin = expose(createAdminHandler);
+export const createAdmin = expose(createAdminHandler, { secrets: [adminSetupKey] });
 export const records = expose(recordsHandler);
