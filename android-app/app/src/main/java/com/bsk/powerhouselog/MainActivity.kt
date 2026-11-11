@@ -4,9 +4,12 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.webkit.WebChromeClient
+import android.webkit.ServiceWorkerClient
+import android.webkit.ServiceWorkerController
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -18,6 +21,7 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var assetBundles: BskAssetBundleManager
     private var lastAssetCheckAt = 0L
+    private var serviceWorkerCleanupStarted = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,7 +47,39 @@ class MainActivity : Activity() {
             }
         }
 
+        // Intercept service-worker fetches too. Older BSK builds may already
+        // have a PWA service worker registered on the legacy origin.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            ServiceWorkerController.getInstance().setServiceWorkerClient(object : ServiceWorkerClient() {
+                override fun shouldInterceptRequest(request: WebResourceRequest?): WebResourceResponse? {
+                    val uri = request?.url ?: return null
+                    return interceptLocalAsset(uri)
+                }
+            })
+        }
+
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                if (url?.startsWith(APP_URL) == true && !serviceWorkerCleanupStarted) {
+                    serviceWorkerCleanupStarted = true
+                    // Remove only the old PWA worker/cache. Do not touch localStorage
+                    // or IndexedDB, which contain the existing login and offline queue.
+                    view?.evaluateJavascript(
+                        "(async()=>{let changed=false;" +
+                            "if(navigator.serviceWorker){const regs=await navigator.serviceWorker.getRegistrations();" +
+                            "if(regs.length){await Promise.all(regs.map(r=>r.unregister()));changed=true;}}" +
+                            "if(window.caches){const keys=await caches.keys();" +
+                            "if(keys.length){await Promise.all(keys.map(k=>caches.delete(k)));changed=true;}}" +
+                            "return changed;})()"
+                    ) { result ->
+                        if (result == "true" && !isFinishing && !isDestroyed) {
+                            view?.post { view.reload() }
+                        }
+                    }
+                }
+            }
+
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 if (url?.startsWith(APP_URL) == true) checkAssetUpdatesIfDue()
@@ -54,26 +90,7 @@ class MainActivity : Activity() {
                 request: WebResourceRequest?
             ): WebResourceResponse? {
                 val uri = request?.url ?: return null
-                if (uri.scheme == "https" && uri.host == ASSET_HOST) {
-                    val path = uri.path.orEmpty().removePrefix("/").ifBlank { "index.html" }
-                    val stream = assetBundles.openAsset(path)
-                    if (stream != null) {
-                        val mime = mimeType(path)
-                        val encoding = if (mime.startsWith("text/") ||
-                            mime.contains("javascript") || mime.contains("json")
-                        ) "UTF-8" else null
-                        return WebResourceResponse(mime, encoding, stream)
-                    }
-                    return WebResourceResponse(
-                        "text/plain",
-                        "UTF-8",
-                        404,
-                        "Not Found",
-                        mapOf("Cache-Control" to "no-store"),
-                        ByteArrayInputStream("BSK asset not found".toByteArray())
-                    )
-                }
-                return super.shouldInterceptRequest(view, request)
+                return interceptLocalAsset(uri) ?: super.shouldInterceptRequest(view, request)
             }
 
             override fun onReceivedError(
@@ -125,6 +142,27 @@ class MainActivity : Activity() {
 
         // The first page load checks for updates; subsequent page refreshes
         // recheck at most once per minute without interrupting active entry work.
+    }
+
+    private fun interceptLocalAsset(uri: Uri): WebResourceResponse? {
+        if (uri.scheme != "https" || uri.host != ASSET_HOST) return null
+        val path = uri.path.orEmpty().removePrefix("/").ifBlank { "index.html" }
+        val stream = assetBundles.openAsset(path)
+        if (stream == null) {
+            return WebResourceResponse(
+                "text/plain",
+                "UTF-8",
+                404,
+                "Not Found",
+                mapOf("Cache-Control" to "no-store"),
+                ByteArrayInputStream("BSK asset not found".toByteArray())
+            )
+        }
+        val mime = mimeType(path)
+        val encoding = if (mime.startsWith("text/") ||
+            mime.contains("javascript") || mime.contains("json")
+        ) "UTF-8" else null
+        return WebResourceResponse(mime, encoding, stream)
     }
 
     private fun checkAssetUpdatesIfDue() {
