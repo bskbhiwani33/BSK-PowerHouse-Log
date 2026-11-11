@@ -1,62 +1,64 @@
 # BSK Standalone Android App and Automatic Update Plan
 
-Status: architecture plan only; not a production change.
+Status: implementation staged on branch `bsk-firebase-functions-prep`; not deployed to the live Firebase project or Netlify site.
 
 ## Goals
-- Preserve all 30 agreed BSK feature areas and every currently working workflow.
-- Remove runtime dependency on the Netlify website and Netlify Functions.
+
+- Preserve all agreed BSK feature areas, existing working workflows, and live Firestore records.
+- Remove the Android app's runtime dependency on the Netlify website and Netlify Functions.
 - Keep Firebase as the system of record for authentication and operational data.
-- Let staff receive routine UI, form, report, and business-logic updates without manually installing a new APK.
-- Keep an offline-capable app shell and protect queued entries and user data during updates.
+- Deliver routine UI, form, report, and workflow changes without staff manually reinstalling an APK.
+- Keep an offline-capable app shell and protect login persistence and queued entries during asset updates.
 - Keep one carefully tested final production release; no premature production deployment.
 
-## Recommended architecture
+## Staged implementation now present
 
-### 1. Android container
-Use the existing Android application as a local-first container. Bundle a known-good BSK shell in the APK so the app can open even if the network is unavailable. The app should not simply load the Netlify URL.
+### Firebase backend
 
-### 2. Remotely delivered web layer
-Host versioned BSK web asset bundles (HTML, CSS, JavaScript, images and other UI assets) on Firebase Hosting or Firebase Storage behind HTTPS. The Android container checks a small update manifest when the app starts and periodically while foregrounded.
+- Added Firebase HTTPS Functions v2 adapters for login, admin, first-admin setup, and records.
+- Reused the existing validated handlers and Firestore document formats rather than rewriting record logic.
+- Added Application Default Credentials for Firebase Functions while retaining the existing Netlify service-account environment path.
+- Bound the first-admin setup key through Firebase Secret Manager.
+- Kept the browser app on same-origin Netlify routes by default; no live endpoint has been switched.
 
-The manifest should include:
-- monotonically increasing version/build number;
-- minimum compatible Android container version;
-- asset bundle URL;
-- SHA-256 digest;
-- release notes and mandatory/optional flag;
-- rollback/previous-known-good version metadata.
+### Firebase Hosting and asset build
 
-Download into app-private storage, verify the digest, unpack into a new version directory, then atomically switch the active bundle. Keep the previous known-good bundle for rollback. Never overwrite the active bundle in place. If download, verification, or activation fails, keep using the last known-good bundle. Do not clear Firestore data, login state, or offline queues during an asset update.
+- Configured Firebase Hosting to serve generated assets from `public/`.
+- Added Hosting rewrites for the existing API paths to Firebase HTTPS Functions.
+- Added a build that bundles the Firebase Web SDK locally into the app JavaScript, so Android does not need to load Firebase modules from a third-party CDN.
+- Added a versioned ZIP asset bundle and SHA-256 manifest. Increase `bsk-release.json`'s version for every routine asset release.
+- Added no-cache headers for the update manifest and immutable caching for versioned bundles.
 
-Only trusted HTTPS endpoints and verified manifests/bundles should be accepted. Do not execute arbitrary code or accept unsigned update instructions.
+### Android shell
 
-### 3. Firebase backend migration
-Replace Netlify Functions with Firebase Cloud Functions or another Firebase-managed HTTPS backend:
-- user ID + PIN login and custom-token issuance;
-- admin operations and staff/house assignment;
-- record create/update/resolve operations;
-- exports and other privileged server-side operations.
+- Added a local-asset WebView shell. It opens the APK/app-private asset origin instead of the Netlify URL.
+- Added a Firebase Hosting update downloader that checks the trusted HTTPS host, verifies SHA-256, rejects ZIP path traversal, extracts into a staging directory, validates required files, and atomically activates the new version.
+- Retains the previous bundle and APK-bundled fallback if an update fails.
+- Android runtime configuration routes API calls directly to Firebase HTTPS Functions and disables the PWA service worker in the native shell.
+- Routine web asset changes can update without an APK reinstall. Native Android code, permissions, SDK or library changes still require a new APK.
 
-Keep Firebase Admin SDK credentials server-side only. Never put service-account credentials in the Android app or browser bundle. Preserve role checks, house scoping, validation, audit history, and existing Firestore document formats. Test migration against a separate Firebase test project/database before touching the live project.
+### Automated checks
 
-### 4. Direct Firebase data access
-Where the existing client already uses Firebase Auth and Firestore safely, retain direct Firebase access subject to strict Firestore Rules. Privileged operations must go through authenticated Cloud Functions. Do not weaken rules to make the Android app work.
+- GitHub Actions installs the web and Functions dependencies.
+- Builds the Firebase Hosting asset bundle.
+- Checks JavaScript syntax and compares frontend API actions with backend actions.
+- Checks Hosting rewrites, update-manifest URL, bundle checksum, and Android source safety markers.
 
-### 5. Native Android updates
-Remote web-asset updates can deliver most routine UI, form, report, and workflow changes without staff action. Changes to native Android code, permissions, SDKs, or embedded libraries still require an APK update. For those, evaluate managed Google Play/private distribution or another approved enterprise distribution channel with automatic update policy. Do not implement an unsafe self-updater that silently installs arbitrary APKs.
+## Security and deployment constraints
 
-## Migration and test phases
-1. Inventory the current Android wrapper, app assets, Firebase config, Netlify Functions, collections, rules, offline queue, and all 30 feature areas.
-2. Build the Firebase Cloud Functions equivalents in a separate prep branch and test project.
-3. Add versioned asset delivery, manifest validation, checksum verification, atomic activation, rollback, and offline fallback.
-4. Build a new Android container that loads the local/verified asset bundle rather than a Netlify URL.
-5. Run automated syntax, dependency, backend, Firestore Rules emulator, and migration tests.
-6. Test on physical Android devices: fresh install, login, routine asset update without APK, interrupted download, bad checksum, rollback, offline start, queued entry sync, and native-version incompatibility.
-7. Compare every feature and data flow with the existing BSK app; verify existing live data is unchanged.
-8. Only after explicit release approval, prepare one final production release and one controlled deployment.
+- The current update manifest uses HTTPS plus SHA-256 integrity verification. It is not yet cryptographically signed. Firebase Hosting deployment permissions must remain tightly restricted; add asymmetric manifest signing before broad managed distribution.
+- Firebase Functions use the runtime service identity. Verify its minimum required Authentication and Firestore permissions.
+- Cloud Functions deployment requires an eligible Firebase billing plan. Confirm billing and Firestore region before staging deployment.
+- Configure the `ADMIN_SETUP_KEY` secret before deploying the first-admin setup endpoint, or omit that one-time endpoint if it is no longer needed.
+- Never put Firebase service-account JSON/private keys in the Android app, browser bundle, or Git repository.
+- Do not loosen Firestore Rules to make the app work. Privileged writes continue through authenticated server handlers.
+- Netlify remains the current live host until Firebase Hosting, Functions, data compatibility, and Android behavior pass end-to-end tests.
 
-## Current evidence and limitations
-- The current prep branch contains a PWA service worker with network-first asset refresh and cache fallback.
-- The current repository tree contains the web app and Netlify Functions; no Android project source is present in this repository snapshot. The existing Android Studio project/wrapper source must be located or supplied before native container work can be implemented.
-- The current prep-branch CI passed JavaScript/config syntax, dependency installation, production dependency audit, Netlify function bundling, and Firestore Rules emulator tests.
-- No production deployment, live Firestore Rules publication, Netlify removal, or APK build is authorized or performed by this plan.
+## Remaining validation before release
+
+1. Deploy to a separate Firebase staging project and verify Authentication, Firestore, Functions IAM, Hosting rewrites, and the first-admin secret.
+2. Test all login/admin/record API actions against staging, including staff house scoping, duplicate staff prevention, audit history, ongoing outages, exports, and backup paging.
+3. Compare all agreed BSK features and every operational collection with the current live app; verify live Firestore data remains unchanged.
+4. Build the Android module in Android Studio and test on a physical device: fresh install, sign-in, asset update, failed download, wrong checksum, ZIP path traversal, rollback, offline launch, offline queue sync, and session persistence.
+5. Add cryptographic signature verification for update manifests before broad rollout.
+6. Only after the staging tests pass, prepare one controlled production cutover. Keep the current Netlify site available until Firebase Hosting and the Android APK are confirmed.
