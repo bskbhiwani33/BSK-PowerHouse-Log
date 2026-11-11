@@ -1,0 +1,16 @@
+{
+  "name": "bsk-firebase-functions",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^13.5.0",
+    "firebase-functions": "^6.4.0"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check handlers/login.mjs && node --check handlers/admin.mjs && node --check handlers/create-admin.mjs && node --check handlers/records.mjs && node --input-type=module -e \"await import('./index.js')\""
+  }
+}

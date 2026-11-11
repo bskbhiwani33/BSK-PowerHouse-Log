@@ -84,12 +84,21 @@ function setToday() {
   }
 }
 
+// Runtime-selectable API endpoint. Browser/PWA keeps the existing same-origin
+// Netlify routes by default; the standalone Android/Firebase-hosted build can
+// set window.BSK_FUNCTIONS_BASE before app.js loads.
+function bskFunctionUrl(name) {
+  const configured = typeof window.BSK_FUNCTIONS_BASE === "string"
+    ? window.BSK_FUNCTIONS_BASE.trim().replace(/\/$/, "") : "";
+  return configured ? `${configured}/${name}` : `/.netlify/functions/${name}`;
+}
+
 async function adminRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
 
   const token = await auth.currentUser.getIdToken();
 
-  const response = await fetch("/.netlify/functions/admin", {
+  const response = await fetch(bskFunctionUrl("admin"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -117,7 +126,7 @@ $("loginForm")?.addEventListener("submit", async event => {
   const pin = $("pin").value.trim();
 
   try {
-    const response = await fetch("/.netlify/functions/login", {
+    const response = await fetch(bskFunctionUrl("login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, pin })
@@ -604,7 +613,7 @@ const recordCollections = ["breakdowns", "shutdowns", "trippings", "consumption_
 async function recordsRequest(action, data = {}) {
   if (!auth.currentUser) throw new Error("Please login again.");
   const token = await auth.currentUser.getIdToken();
-  const response = await fetch("/.netlify/functions/records", {
+  const response = await fetch(bskFunctionUrl("records"), {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify({ action, ...data })
@@ -1481,8 +1490,7 @@ const hindiWords = {
   "Resolve Ongoing Event":"चालू घटना समाप्त करें","Ongoing Breakdown / Shutdown":"चालू ब्रेकडाउन / शटडाउन",
   "Long-running alert (24+ hours)":"लंबे समय से चालू अलर्ट (24+ घंटे)",
   "Records Overview":"रिकॉर्ड सारांश","Monthly Activity":"मासिक गतिविधि",
-  "Power House Filter":"पावर हाउस फ़िल्टर","Report Date Filter":"रिपोर्ट दिनांक फ़िल्टर",
-  "Submit report":"रिपोर्ट जमा करें","Save":"सेव करें","No matching feeder found.":"कोई मेल खाता फीडर नहीं मिला।",
+  "Save":"सेव करें","No matching feeder found.":"कोई मेल खाता फीडर नहीं मिला।",
   "New Entry Notifications · Unread:":"नई एंट्री सूचनाएँ · अपठित:","Recent Edit History (who / when)":"हाल का बदलाव इतिहास (किसने / कब)",
   "Repeat Breakdown / Feeder-wise Report":"दोहराए गए ब्रेकडाउन / फीडर-वार रिपोर्ट",
   "Daily Entry Summary":"दैनिक एंट्री सारांश","Monthly Entry Summary":"मासिक एंट्री सारांश",
@@ -1496,7 +1504,6 @@ const hindiWords = {
   "Ongoing Breakdown Alert (24+ hours)":"चालू ब्रेकडाउन अलर्ट (24+ घंटे)",
   "Ongoing Shutdown Alert (24+ hours)":"चालू शटडाउन अलर्ट (24+ घंटे)",
   "Repeat Breakdown Report":"दोहराए गए ब्रेकडाउन की रिपोर्ट","Feeder-wise Report":"फीडर-वार रिपोर्ट",
-  "Daily Entry Summary":"दैनिक एंट्री सारांश","Monthly Entry Summary":"मासिक एंट्री सारांश",
   "My Entry History":"मेरी एंट्री का इतिहास","Search a feeder to see its current status and history.":"स्थिति और इतिहास देखने के लिए फीडर खोजें।",
   "None crossed the 24-hour threshold.":"कोई भी 24 घंटे की सीमा पार नहीं हुआ।",
   "Signing in...":"लॉगिन हो रहा है...","Loading dashboard...":"डैशबोर्ड लोड हो रहा है...",
@@ -1602,7 +1609,7 @@ Object.assign(hindiWords, {
   "Trippings:":"ट्रिपिंग:",
   "Feeders:":"फीडर:",
   "Total:":"कुल:",
-  "PTW Taken on Time":"PTW लेने का समय","Supply Position":"सप्लाई पोजीशन","Daily Supply Position":"दैनिक सप्लाई पोजीशन","Consumption Data":"कंजम्प्शन डेटा","1st Supply Position":"पहली सप्लाई पोजीशन","2nd Supply Position":"दूसरी सप्लाई पोजीशन","3rd Supply Position":"तीसरी सप्लाई पोजीशन","Running":"चालू","Direct Shutdown":"शटडाउन","Shutdown":"शटडाउन","Closed":"बंद","Opened":"खुला","Save Supply Position":"सप्लाई पोजीशन सेव करें","Supply Position History":"सप्लाई पोजीशन हिस्ट्री","Report Time":"रिपोर्ट का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
+  "PTW Taken on Time":"PTW लेने का समय","Supply Position":"सप्लाई पोजीशन","Daily Supply Position":"दैनिक सप्लाई पोजीशन","Consumption Data":"कंजम्प्शन डेटा","1st Supply Position":"पहली सप्लाई पोजीशन","2nd Supply Position":"दूसरी सप्लाई पोजीशन","3rd Supply Position":"तीसरी सप्लाई पोजीशन","Running":"चालू","Direct Shutdown":"शटडाउन","Closed":"बंद","Opened":"खुला","Save Supply Position":"सप्लाई पोजीशन सेव करें","Supply Position History":"सप्लाई पोजीशन हिस्ट्री","Report Time":"रिपोर्ट का समय","BSK · Power House Feeder Log":"BSK · पावर हाउस फीडर लॉग"
 });
  
 const hindiPlaceholders = {
@@ -1640,7 +1647,7 @@ function bskAlert(englishText) {
   alert(translated);
 }
 
-if ("serviceWorker" in navigator && location.protocol === "https:") {
+if ("serviceWorker" in navigator && location.protocol === "https:" && !window.BSK_DISABLE_SERVICE_WORKER) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(error => console.warn("BSK offline cache unavailable:", error));
   });
