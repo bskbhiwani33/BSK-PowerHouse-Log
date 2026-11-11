@@ -21,6 +21,7 @@ on:
       - bsk-firebase-functions-prep
     paths:
       - "functions/**"
+      - "bsk-release.json"
       - "firebase.json"
       - "scripts/**"
       - "package.json"
