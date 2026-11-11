@@ -1411,7 +1411,7 @@ $("backupRecords")?.addEventListener("click", async () => {
     }
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     bskDownloadBlob(blob, "BSK_Full_Backup_" + new Date().toISOString().slice(0, 10) + ".json");
-    message("adminMessage", "Complete backup downloaded.");
+    message("adminMessage", "Backup download started.");
   } catch (error) {
     message("adminMessage", "Backup failed: " + error.message, true);
   } finally {
