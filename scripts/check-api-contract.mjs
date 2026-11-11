@@ -41,7 +41,7 @@ if (!(html.indexOf("/bsk-config.js") < html.indexOf('/app.js'))) {
   throw new Error("Runtime config must load before app.js");
 }
 if (firebaseConfig.functions?.source !== "functions") throw new Error("Firebase Functions source is not configured");
-if (firebaseConfig.hosting?.public !== ".") throw new Error("Firebase Hosting public root is not configured");
+if (firebaseConfig.hosting?.public !== "public") throw new Error("Firebase Hosting public root is not configured");
 for (const route of ["/.netlify/functions/login", "/.netlify/functions/admin", "/.netlify/functions/records"]) {
   if (!firebaseConfig.hosting.rewrites?.some(x => x.source === route)) throw new Error("Firebase Hosting rewrite missing: " + route);
 }
