@@ -872,8 +872,9 @@ function openRecordEditor(collection,id,item) {
     fields = input("date","Date",item.date,"date") +
       input("startTime","Start Time",item.startTime,"time") +
       (collection==="breakdowns" ? input("ptwTakenOnTime","PTW Taken on Time",item.ptwTakenOnTime,"time") : "") +
-      input("endTime","End Time (blank if ongoing)",item.endTime,"time") +
       `<label>Reason</label><textarea name="reason" required maxlength="1000">${safe(item.reason)}</textarea>`;
+  } else if (collection==="daily_reports") {
+    fields = input("reportDate","Report Date",item.reportDate,"date")+input("breakerStatus","Breaker Status",item.breakerStatus)+input("faultDetails","Fault Details",item.faultDetails)+input("duration","Duration",item.duration)+input("restorationTime","Restoration Time",item.restorationTime,"time")+`<label>Remarks</label><textarea name="remarks" maxlength="1000">${safe(item.remarks||"")}</textarea>`;
   } else if (collection==="trippings") {
     fields = input("date","Date",item.date,"date")+input("trippingCount","Tripping Count",item.trippingCount,"number")+input("feederCount","Feeder Count",item.feederCount,"number");
   } else if (collection==="consumption_readings") {
@@ -894,7 +895,7 @@ function openRecordEditor(collection,id,item) {
   $("recordEditForm")?.addEventListener("submit",async event=>{
     event.preventDefault();
     const form=event.currentTarget, data=new FormData(form), changes={};
-    for(const key of ["date","startTime","ptwTakenOnTime","endTime","reason","trippingCount","feederCount","apFeeder","ruralDomestic","urban","industrial","independent"]) {
+    for(const key of ["date","reportDate","breakerStatus","faultDetails","duration","restorationTime","remarks","startTime","ptwTakenOnTime","reason","trippingCount","feederCount","apFeeder","ruralDomestic","urban","industrial","independent"]) {
       if(data.has(key)) changes[key]=data.get(key);
     }
     if(collection==="supply_positions") {
