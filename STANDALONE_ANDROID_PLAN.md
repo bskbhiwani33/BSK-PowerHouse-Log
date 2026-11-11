@@ -31,10 +31,10 @@ Status: implementation staged on branch `bsk-firebase-functions-prep`; not deplo
 
 ### Android shell
 
-- Added a local-asset WebView shell. It opens the APK/app-private asset origin instead of the Netlify URL.
+- Added a local-asset WebView shell. It intercepts the existing Netlify hostname and serves all app files locally, retaining that hostname only as a virtual WebView origin so existing localStorage and Firebase Auth IndexedDB are not stranded during migration.
 - Added a Firebase Hosting update downloader that checks the trusted HTTPS host, verifies SHA-256, rejects ZIP path traversal, extracts into a staging directory, validates required files, and atomically activates the new version.
 - Retains the previous bundle and APK-bundled fallback if an update fails.
-- Android runtime configuration routes API calls directly to Firebase HTTPS Functions and disables the PWA service worker in the native shell.
+- A `bskLocal=1` runtime marker routes API calls directly to Firebase HTTPS Functions and disables the PWA service worker in the native shell. The normal browser Netlify site remains unchanged.
 - Routine web asset changes can update without an APK reinstall. Native Android code, permissions, SDK or library changes still require a new APK.
 
 ### Automated checks
