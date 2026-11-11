@@ -1216,9 +1216,14 @@ $("downloadAllRecords")?.addEventListener("click",()=>{
 $("downloadPdf")?.addEventListener("click",()=>{
   if (!requireCompleteHistoryForExport()) return;
   const content = ($("recordsInsights")?.innerHTML || "") + ($("recordsChart")?.innerHTML || "") + ($("adminRecordsList")?.innerHTML || "") + ($("reportList")?.innerHTML || "");
+  const html = "<html><head><title>BSK Report</title><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{font:14px Arial,sans-serif;padding:24px;color:#172536}h1,h2,h3{break-after:avoid}article,.report-item{border-bottom:1px solid #ccc;padding:10px 0;break-inside:avoid}button{display:none!important}@page{margin:16mm}@media print{body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h1>BSK Power House Report</h1>"+content+"</body></html>";
+  if (window.BSKAndroidBridge && typeof window.BSKAndroidBridge.printHtml === "function") {
+    window.BSKAndroidBridge.printHtml("BSK Report", html);
+    return;
+  }
   const w=window.open("","_blank");
   if (!w) { bskAlert("Please allow pop-ups to create PDF."); return; }
-  w.document.write("<html><head><title>BSK Report</title><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{font:14px Arial,sans-serif;padding:24px;color:#172536}h1,h2,h3{break-after:avoid}article,.report-item{border-bottom:1px solid #ccc;padding:10px 0;break-inside:avoid}button{display:none!important}@page{margin:16mm}@media print{body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h1>BSK Power House Report</h1>"+content+"</body></html>");
+  w.document.write(html);
   w.document.close();
   setTimeout(() => { if (!w.closed) { w.focus(); w.print(); } }, 250);
 });
