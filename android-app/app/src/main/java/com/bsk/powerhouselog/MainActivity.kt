@@ -203,7 +203,14 @@ class MainActivity : Activity() {
         val encoding = if (mime.startsWith("text/") ||
             mime.contains("javascript") || mime.contains("json")
         ) "UTF-8" else null
-        return WebResourceResponse(mime, encoding, stream)
+        return WebResourceResponse(
+            mime,
+            encoding,
+            200,
+            "OK",
+            mapOf("Cache-Control" to "no-store", "Pragma" to "no-cache"),
+            stream
+        )
     }
 
     private fun checkAssetUpdatesIfDue() {
