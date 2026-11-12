@@ -308,6 +308,11 @@ private fun NativeDashboard(
             item { InfoCard("Tripping entries", data.trippings.size.toString(), "Records returned by secure Records API") }
             item { InfoCard("Consumption entries", data.consumption.size.toString(), "Records returned by secure Records API") }
             item { InfoCard("Supply Position entries", data.supplyPositions.size.toString(), "Records returned by secure Records API") }
+            item { Text("Your Entry History", fontWeight = FontWeight.SemiBold) }
+            items(data.history.take(30)) { row ->
+                InfoCard(row.optString("recordCollection"), row.optString("action"),
+                    "${row.optString("recordId")} • ${row.optString("actorUserId")}")
+            }
         }
         item {
             Text("Data is synchronized with the secure BSK backend. Resolve ongoing events here using the actual restoration time.",
