@@ -438,7 +438,7 @@ private fun NativeEntryForms(
                 onSubmit(action, p)
             }, enabled = !loading && date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && when (form) {
                 "Breakdown", "Shutdown" -> feederId.isNotBlank() && start.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) &&
-                    (form == "Shutdown" || ptw.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) ) && reason.isNotBlank() &&
+                    ptw.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d") ) && reason.isNotBlank() &&
                     (end.isBlank() || end.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")))
                 "Tripping" -> trips.toIntOrNull() != null && feederCount.toIntOrNull() != null
                 "Consumption" -> listOf(ap, rural, urban, industrial, independent).all { it.toDoubleOrNull() != null && (it.toDoubleOrNull() ?: -1.0) >= 0 }
