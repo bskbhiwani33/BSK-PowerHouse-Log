@@ -16,7 +16,7 @@ This is a standalone Jetpack Compose Android application. It does not load the B
 - Admin and staff audit-history views.
 - Admin notification inbox for new Breakdown/Shutdown entries, with unread count and mark-as-read action.
 - Separate paginated, Excel-compatible CSV exports for Breakdown, Shutdown and Consumption.
-- Admin full JSON backup export across the supported BSK collections; PIN hashes and salts are removed server-side from user records.
+- Admin full JSON backup export across supported BSK collections; PIN hashes and salts are removed server-side, and internal authorization/guard collections are excluded.
 
 ## Backend and security
 
