@@ -129,6 +129,19 @@ private fun BSKApp() {
                         loading = false
                     }
                 },
+                onSubmitEntry = { action, payload ->
+                    scope.launch {
+                        loading = true
+                        try {
+                            val token = FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token
+                                ?: error("Please sign in again.")
+                            postJson(RECORDS_API, payload.put("action", action), token)
+                            dashboard = loadDashboard(profile!!)
+                        } catch (e: Exception) {
+                            dashboard = dashboard.copy(error = e.message ?: "Entry save failed")
+                        } finally { loading = false }
+                    }
+                },
                 onSignOut = {
                     FirebaseAuth.getInstance().signOut()
                     profile = null; dashboard = DashboardData(); pin = ""
@@ -144,6 +157,7 @@ private fun NativeDashboard(
     data: DashboardData,
     loading: Boolean,
     onRefresh: () -> Unit,
+    onSubmitEntry: (String, JSONObject) -> Unit,
     onSignOut: () -> Unit
 ) {
     val ongoingBreakdowns = data.breakdowns.filter { it.optString("status") == "ongoing" }
@@ -185,6 +199,9 @@ private fun NativeDashboard(
         if (ongoingShutdowns.isEmpty()) item { EmptyLine("No ongoing Shutdown") }
         items(ongoingShutdowns) { OutageRow(it, "Shutdown") }
 
+        if (profile.role == "staff") {
+            item { NativeEntryForms(feeders = data.feeders, loading = loading, onSubmit = onSubmitEntry) }
+        }
         if (profile.role == "admin") {
             item { Text("Administration Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
             item {
@@ -216,6 +233,98 @@ private fun NativeDashboard(
         item {
             Text("Data shown here is fetched from the existing secured BSK backend. Entry forms and management actions are still under development.",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun NativeEntryForms(
+    feeders: List<JSONObject>,
+    loading: Boolean,
+    onSubmit: (String, JSONObject) -> Unit
+) {
+    var form by remember { mutableStateOf("Breakdown") }
+    var date by remember { mutableStateOf("") }
+    var feederId by remember { mutableStateOf("") }
+    var start by remember { mutableStateOf("") }
+    var end by remember { mutableStateOf("") }
+    var ptw by remember { mutableStateOf("") }
+    var reason by remember { mutableStateOf("") }
+    var trips by remember { mutableStateOf("") }
+    var feederCount by remember { mutableStateOf("") }
+    var ap by remember { mutableStateOf("") }
+    var rural by remember { mutableStateOf("") }
+    var urban by remember { mutableStateOf("") }
+    var industrial by remember { mutableStateOf("") }
+    var independent by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    val selected = feeders.firstOrNull { it.optString("id") == feederId }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Text("New Entry", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                listOf("Breakdown", "Shutdown", "Tripping", "Consumption").forEach {
+                    FilterChip(selected = form == it, onClick = { form = it }, label = { Text(it) })
+                }
+            }
+            OutlinedTextField(date, { date = it }, Modifier.fillMaxWidth(), label = { Text("Date (YYYY-MM-DD)") }, singleLine = true)
+            if (form == "Breakdown" || form == "Shutdown") {
+                Box {
+                    OutlinedButton(onClick = { expanded = true }, Modifier.fillMaxWidth()) {
+                        Text(selected?.optString("name") ?: "Select Feeder")
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        feeders.forEach { f ->
+                            DropdownMenuItem(text = { Text(f.optString("name")) }, onClick = {
+                                feederId = f.optString("id"); expanded = false
+                            })
+                        }
+                    }
+                }
+                OutlinedTextField(start, { start = it }, Modifier.fillMaxWidth(), label = { Text("Start Time (HH:MM)") }, singleLine = true)
+                OutlinedTextField(ptw, { ptw = it }, Modifier.fillMaxWidth(), label = { Text("PTW Taken on Time (HH:MM)") }, singleLine = true)
+                OutlinedTextField(reason, { reason = it }, Modifier.fillMaxWidth(), label = { Text("Reason") }, minLines = 2)
+                OutlinedTextField(end, { end = it }, Modifier.fillMaxWidth(), label = { Text("End Time (HH:MM) — blank if ongoing") }, singleLine = true)
+                Text("End Time khali chhodne par entry Ongoing save hogi.", fontSize = 12.sp)
+            } else if (form == "Tripping") {
+                OutlinedTextField(trips, { trips = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("How many Trippings?") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(feederCount, { feederCount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("On how many Feeders?") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            } else {
+                OutlinedTextField(ap, { ap = it }, Modifier.fillMaxWidth(), label = { Text("AP Feeder") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(rural, { rural = it }, Modifier.fillMaxWidth(), label = { Text("Rural Domestic") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(urban, { urban = it }, Modifier.fillMaxWidth(), label = { Text("Urban") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(industrial, { industrial = it }, Modifier.fillMaxWidth(), label = { Text("Industrial") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(independent, { independent = it }, Modifier.fillMaxWidth(), label = { Text("Independent") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                val total = listOf(ap, rural, urban, industrial, independent).sumOf { it.toDoubleOrNull() ?: 0.0 }
+                Text("Total Reading: $total", fontWeight = FontWeight.SemiBold)
+            }
+            Button(onClick = {
+                val p = JSONObject().put("date", date.trim())
+                val action = when (form) {
+                    "Breakdown", "Shutdown" -> {
+                        p.put("feederId", feederId).put("startTime", start.trim()).put("endTime", end.trim())
+                            .put("ptwTakenOnTime", ptw.trim()).put("reason", reason.trim())
+                        if (form == "Breakdown") "createBreakdown" else "createShutdown"
+                    }
+                    "Tripping" -> { p.put("trippingCount", trips.toIntOrNull()).put("feederCount", feederCount.toIntOrNull()); "createTripping" }
+                    else -> {
+                        p.put("apFeeder", ap.toDoubleOrNull()).put("ruralDomestic", rural.toDoubleOrNull())
+                            .put("urban", urban.toDoubleOrNull()).put("industrial", industrial.toDoubleOrNull())
+                            .put("independent", independent.toDoubleOrNull())
+                        "createConsumption"
+                    }
+                }
+                onSubmit(action, p)
+            }, enabled = !loading && date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && when (form) {
+                "Breakdown", "Shutdown" -> feederId.isNotBlank() && start.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) &&
+                    ptw.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) && reason.isNotBlank() &&
+                    (end.isBlank() || end.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")))
+                "Tripping" -> trips.toIntOrNull() != null && feederCount.toIntOrNull() != null
+                else -> listOf(ap, rural, urban, industrial, independent).all { it.toDoubleOrNull() != null && (it.toDoubleOrNull() ?: -1.0) >= 0 }
+            }, modifier = Modifier.fillMaxWidth()) {
+                if (loading) CircularProgressIndicator(Modifier.size(18.dp)) else Text("SAVE ENTRY")
+            }
+            Text("Entry backend par seedhi save hoti hai; approval ki zaroorat nahi.", fontSize = 12.sp)
         }
     }
 }
@@ -280,6 +389,7 @@ private suspend fun loadDashboard(profile: BSKProfile): DashboardData {
     val supply = jsonArray(records.optJSONArray("supply_positions"))
     if (profile.role == "staff") {
         return DashboardData(
+            feeders = jsonArray(records.optJSONArray("feeders")),
             breakdowns = breakdowns, shutdowns = shutdowns, trippings = trippings,
             consumption = consumption, supplyPositions = supply
         )
