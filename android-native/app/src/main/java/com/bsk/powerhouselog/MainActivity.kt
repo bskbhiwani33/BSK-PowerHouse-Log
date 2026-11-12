@@ -288,6 +288,11 @@ private fun NativeEntryForms(
                         FilterChip(selected = form == it, onClick = { form = it }, label = { Text(it) })
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf("Supply Position", "Daily Report").forEach {
+                        FilterChip(selected = form == it, onClick = { form = it }, label = { Text(it) })
+                    }
+                }
             }
             OutlinedTextField(date, { date = it }, Modifier.fillMaxWidth(), label = { Text("Date (YYYY-MM-DD)") }, singleLine = true)
             if (form == "Breakdown" || form == "Shutdown") {
@@ -311,7 +316,7 @@ private fun NativeEntryForms(
             } else if (form == "Tripping") {
                 OutlinedTextField(trips, { trips = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("How many Trippings?") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 OutlinedTextField(feederCount, { feederCount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("On how many Feeders?") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            } else {
+            } else if (form == "Consumption") {
                 OutlinedTextField(ap, { ap = it }, Modifier.fillMaxWidth(), label = { Text("AP Feeder") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 OutlinedTextField(rural, { rural = it }, Modifier.fillMaxWidth(), label = { Text("Rural Domestic") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 OutlinedTextField(urban, { urban = it }, Modifier.fillMaxWidth(), label = { Text("Urban") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
@@ -319,6 +324,10 @@ private fun NativeEntryForms(
                 OutlinedTextField(independent, { independent = it }, Modifier.fillMaxWidth(), label = { Text("Independent") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 val total = listOf(ap, rural, urban, industrial, independent).sumOf { it.toDoubleOrNull() ?: 0.0 }
                 Text("Total Reading: $total", fontWeight = FontWeight.SemiBold)
+            } else if (form == "Supply Position") {
+                SupplyPositionFields(date, feeders, loading, onSubmit)
+            } else {
+                DailyReportFields(date, feeders, loading, onSubmit)
             }
             Button(onClick = {
                 val p = JSONObject().put("date", date.trim())
@@ -329,12 +338,13 @@ private fun NativeEntryForms(
                         if (form == "Breakdown") "createBreakdown" else "createShutdown"
                     }
                     "Tripping" -> { p.put("trippingCount", trips.toIntOrNull()).put("feederCount", feederCount.toIntOrNull()); "createTripping" }
-                    else -> {
+                    "Consumption" -> {
                         p.put("apFeeder", ap.toDoubleOrNull()).put("ruralDomestic", rural.toDoubleOrNull())
                             .put("urban", urban.toDoubleOrNull()).put("industrial", industrial.toDoubleOrNull())
                             .put("independent", independent.toDoubleOrNull())
                         "createConsumption"
                     }
+                    else -> return@Button
                 }
                 onSubmit(action, p)
             }, enabled = !loading && date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && when (form) {
@@ -342,12 +352,122 @@ private fun NativeEntryForms(
                     ptw.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) && reason.isNotBlank() &&
                     (end.isBlank() || end.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")))
                 "Tripping" -> trips.toIntOrNull() != null && feederCount.toIntOrNull() != null
-                else -> listOf(ap, rural, urban, industrial, independent).all { it.toDoubleOrNull() != null && (it.toDoubleOrNull() ?: -1.0) >= 0 }
+                "Consumption" -> listOf(ap, rural, urban, industrial, independent).all { it.toDoubleOrNull() != null && (it.toDoubleOrNull() ?: -1.0) >= 0 }
+                else -> false
             }, modifier = Modifier.fillMaxWidth()) {
                 if (loading) CircularProgressIndicator(Modifier.size(18.dp)) else Text("SAVE ENTRY")
             }
             Text("Entry backend par seedhi save hoti hai; approval ki zaroorat nahi.", fontSize = 12.sp)
         }
+    }
+}
+
+@Composable
+private fun SupplyPositionFields(
+    date: String,
+    feeders: List<JSONObject>,
+    loading: Boolean,
+    onSubmit: (String, JSONObject) -> Unit
+) {
+    val statuses = remember(feeders) { mutableStateMapOf<String, String>() }
+    val starts = remember(feeders) { mutableStateMapOf<String, String>() }
+    val ptws = remember(feeders) { mutableStateMapOf<String, String>() }
+    val reasons = remember(feeders) { mutableStateMapOf<String, String>() }
+    var menu by remember { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Supply Position — Select status for every active feeder", fontWeight = FontWeight.SemiBold)
+        feeders.forEach { feeder ->
+            val id = feeder.optString("id")
+            val status = statuses[id].orEmpty()
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(feeder.optString("name"), fontWeight = FontWeight.SemiBold)
+                    Box {
+                        OutlinedButton(onClick = { menu = id }, Modifier.fillMaxWidth()) { Text(status.ifBlank { "Select Closed / Opened status" }) }
+                        DropdownMenu(expanded = menu == id, onDismissRequest = { menu = "" }) {
+                            listOf("Running", "Breakdown", "Shutdown").forEach { option ->
+                                DropdownMenuItem(text = { Text(if (option == "Running") "Closed — Running" else "Opened — $option") },
+                                    onClick = { statuses[id] = option; menu = "" })
+                            }
+                        }
+                    }
+                    if (status == "Breakdown") {
+                        OutlinedTextField(starts[id].orEmpty(), { starts[id] = it }, Modifier.fillMaxWidth(), label = { Text("Breakdown Time (HH:MM)") }, singleLine = true)
+                        OutlinedTextField(ptws[id].orEmpty(), { ptws[id] = it }, Modifier.fillMaxWidth(), label = { Text("PTW Taken on Time (HH:MM)") }, singleLine = true)
+                    } else if (status == "Shutdown") {
+                        OutlinedTextField(ptws[id].orEmpty(), { ptws[id] = it }, Modifier.fillMaxWidth(), label = { Text("PTW Taken on Time (HH:MM)") }, singleLine = true)
+                        OutlinedTextField(reasons[id].orEmpty(), { reasons[id] = it }, Modifier.fillMaxWidth(), label = { Text("Shutdown Reason") }, minLines = 2)
+                    }
+                }
+            }
+        }
+        Button(onClick = {
+            val rows = JSONArray()
+            feeders.forEach { f ->
+                val id = f.optString("id")
+                val row = JSONObject().put("feederId", id).put("status", statuses[id])
+                if (statuses[id] == "Breakdown") row.put("startTime", starts[id]).put("ptwTakenOnTime", ptws[id])
+                if (statuses[id] == "Shutdown") row.put("ptwTakenOnTime", ptws[id]).put("reason", reasons[id])
+                rows.put(row)
+            }
+            onSubmit("createSupplyPosition", JSONObject().put("date", date).put("feeders", rows))
+        }, enabled = !loading && feeders.isNotEmpty() && feeders.all { f ->
+            val id=f.optString("id")
+            when(statuses[id]) {
+                "Running" -> true
+                "Breakdown" -> starts[id].orEmpty().matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) && ptws[id].orEmpty().matches(Regex("([01]\\d|2[0-3]):[0-5]\\d"))
+                "Shutdown" -> ptws[id].orEmpty().matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) && reasons[id].orEmpty().isNotBlank()
+                else -> false
+            }
+        }, modifier = Modifier.fillMaxWidth()) { Text("SAVE SUPPLY POSITION") }
+    }
+}
+
+@Composable
+private fun DailyReportFields(
+    date: String,
+    feeders: List<JSONObject>,
+    loading: Boolean,
+    onSubmit: (String, JSONObject) -> Unit
+) {
+    var feederId by remember { mutableStateOf("") }
+    var breaker by remember { mutableStateOf("ON") }
+    var fault by remember { mutableStateOf("") }
+    var duration by remember { mutableStateOf("") }
+    var restoration by remember { mutableStateOf("") }
+    var remarks by remember { mutableStateOf("") }
+    var menu by remember { mutableStateOf(false) }
+    var breakerMenu by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Daily Feeder Report", fontWeight = FontWeight.SemiBold)
+        Box {
+            OutlinedButton(onClick = { menu = true }, Modifier.fillMaxWidth()) {
+                Text(feeders.firstOrNull { it.optString("id") == feederId }?.optString("name") ?: "Select Feeder")
+            }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                feeders.forEach { f -> DropdownMenuItem(text = { Text(f.optString("name")) }, onClick = { feederId=f.optString("id"); menu=false }) }
+            }
+        }
+        Box {
+            OutlinedButton(onClick = { breakerMenu = true }, Modifier.fillMaxWidth()) { Text("Breaker Status: $breaker") }
+            DropdownMenu(expanded = breakerMenu, onDismissRequest = { breakerMenu = false }) {
+                listOf("ON", "OFF", "TRIPPED", "UNDER MAINTENANCE").forEach { v ->
+                    DropdownMenuItem(text = { Text(v) }, onClick = { breaker=v; breakerMenu=false })
+                }
+            }
+        }
+        OutlinedTextField(fault, { fault=it }, Modifier.fillMaxWidth(), label = { Text("Fault Details") }, minLines = 2)
+        OutlinedTextField(duration, { duration=it }, Modifier.fillMaxWidth(), label = { Text("Duration") }, singleLine = true)
+        OutlinedTextField(restoration, { restoration=it }, Modifier.fillMaxWidth(), label = { Text("Restoration Time (HH:MM, optional)") }, singleLine = true)
+        OutlinedTextField(remarks, { remarks=it }, Modifier.fillMaxWidth(), label = { Text("Remarks") }, minLines = 2)
+        Button(onClick = {
+            val payload=JSONObject().put("reportDate",date).put("feederId",feederId).put("breakerStatus",breaker)
+                .put("eventType","Normal").put("faultDetails",fault).put("duration",duration)
+                .put("restorationTime",restoration).put("remarks",remarks)
+            onSubmit("createDailyReport",payload)
+        }, enabled = !loading && feederId.isNotBlank() &&
+            (restoration.isBlank() || restoration.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d"))),
+            modifier = Modifier.fillMaxWidth()) { Text("SAVE DAILY REPORT") }
     }
 }
 
