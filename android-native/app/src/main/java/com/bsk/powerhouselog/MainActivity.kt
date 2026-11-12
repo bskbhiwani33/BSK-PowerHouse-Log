@@ -262,9 +262,16 @@ private fun NativeEntryForms(
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Text("New Entry", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                listOf("Breakdown", "Shutdown", "Tripping", "Consumption").forEach {
-                    FilterChip(selected = form == it, onClick = { form = it }, label = { Text(it) })
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf("Breakdown", "Shutdown").forEach {
+                        FilterChip(selected = form == it, onClick = { form = it }, label = { Text(it) })
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf("Tripping", "Consumption").forEach {
+                        FilterChip(selected = form == it, onClick = { form = it }, label = { Text(it) })
+                    }
                 }
             }
             OutlinedTextField(date, { date = it }, Modifier.fillMaxWidth(), label = { Text("Date (YYYY-MM-DD)") }, singleLine = true)
