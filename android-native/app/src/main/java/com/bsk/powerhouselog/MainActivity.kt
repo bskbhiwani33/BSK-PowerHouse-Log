@@ -1,7 +1,6 @@
 package com.bsk.powerhouselog
 
 import android.os.Bundle
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -455,7 +454,7 @@ private fun SupplyPositionFields(
                 rows.put(row)
             }
             onSubmit("createSupplyPosition", JSONObject().put("date", date).put("feeders", rows))
-        }, enabled = !loading && feeders.isNotEmpty() && feeders.all { f ->
+        }, enabled = !loading && date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && feeders.isNotEmpty() && feeders.all { f ->
             val id=f.optString("id")
             when(statuses[id]) {
                 "Running" -> true
@@ -509,7 +508,7 @@ private fun DailyReportFields(
                 .put("eventType","Normal").put("faultDetails",fault).put("duration",duration)
                 .put("restorationTime",restoration).put("remarks",remarks)
             onSubmit("createDailyReport",payload)
-        }, enabled = !loading && feederId.isNotBlank() &&
+        }, enabled = !loading && date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && feederId.isNotBlank() &&
             (restoration.isBlank() || restoration.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d"))),
             modifier = Modifier.fillMaxWidth()) { Text("SAVE DAILY REPORT") }
     }
