@@ -4,6 +4,9 @@ on:
     branches:
       - native-android-dev
   workflow_dispatch:
+concurrency:
+  group: native-android-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   android-compile:
     runs-on: ubuntu-latest
