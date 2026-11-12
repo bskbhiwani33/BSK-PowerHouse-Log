@@ -142,6 +142,19 @@ private fun BSKApp() {
                         } finally { loading = false }
                     }
                 },
+                onAdminAction = { payload ->
+                    scope.launch {
+                        loading = true
+                        try {
+                            val token = FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token
+                                ?: error("Please sign in again.")
+                            postJson(ADMIN_API, payload, token)
+                            dashboard = loadDashboard(profile!!)
+                        } catch (e: Exception) {
+                            dashboard = dashboard.copy(error = e.message ?: "Admin action failed")
+                        } finally { loading = false }
+                    }
+                },
                 onSignOut = {
                     FirebaseAuth.getInstance().signOut()
                     profile = null; dashboard = DashboardData(); pin = ""
@@ -158,6 +171,7 @@ private fun NativeDashboard(
     loading: Boolean,
     onRefresh: () -> Unit,
     onSubmitEntry: (String, JSONObject) -> Unit,
+    onAdminAction: (JSONObject) -> Unit,
     onSignOut: () -> Unit
 ) {
     val ongoingBreakdowns = data.breakdowns.filter { it.optString("status") == "ongoing" }
@@ -203,6 +217,7 @@ private fun NativeDashboard(
             item { NativeEntryForms(feeders = data.feeders, loading = loading, onSubmit = onSubmitEntry) }
         }
         if (profile.role == "admin") {
+            item { AdminManagementForms(data = data, loading = loading, onAction = onAdminAction) }
             item { Text("Administration Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -332,6 +347,63 @@ private fun NativeEntryForms(
                 if (loading) CircularProgressIndicator(Modifier.size(18.dp)) else Text("SAVE ENTRY")
             }
             Text("Entry backend par seedhi save hoti hai; approval ki zaroorat nahi.", fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+private fun AdminManagementForms(
+    data: DashboardData,
+    loading: Boolean,
+    onAction: (JSONObject) -> Unit
+) {
+    var houseName by remember { mutableStateOf("") }
+    var feederName by remember { mutableStateOf("") }
+    var staffId by remember { mutableStateOf("") }
+    var staffPin by remember { mutableStateOf("") }
+    var houseId by remember { mutableStateOf("") }
+    var feederHouseId by remember { mutableStateOf("") }
+    var staffHouseId by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf("") }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Admin Management", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            OutlinedTextField(houseName, { houseName = it }, Modifier.fillMaxWidth(), label = { Text("New Power House Name") }, singleLine = true)
+            Button(onClick = { onAction(JSONObject().put("action", "createHouse").put("houseName", houseName.trim())); houseName = "" },
+                enabled = !loading && houseName.trim().length >= 2, modifier = Modifier.fillMaxWidth()) { Text("ADD POWER HOUSE") }
+            Text("Add Feeder", fontWeight = FontWeight.SemiBold)
+            Box {
+                OutlinedButton(onClick = { expanded = "feederHouse" }, Modifier.fillMaxWidth()) {
+                    Text(data.houses.firstOrNull { it.optString("id") == feederHouseId }?.optString("name") ?: "Select Power House for Feeder")
+                }
+                DropdownMenu(expanded = expanded == "feederHouse", onDismissRequest = { expanded = "" }) {
+                    data.houses.filter { it.optBoolean("active", true) }.forEach { h ->
+                        DropdownMenuItem(text = { Text(h.optString("name")) }, onClick = { feederHouseId = h.optString("id"); expanded = "" })
+                    }
+                }
+            }
+            OutlinedTextField(feederName, { feederName = it }, Modifier.fillMaxWidth(), label = { Text("Feeder Name") }, singleLine = true)
+            Button(onClick = { onAction(JSONObject().put("action", "createFeeder").put("houseId", feederHouseId).put("feederName", feederName.trim())); feederName = "" },
+                enabled = !loading && feederHouseId.isNotBlank() && feederName.trim().length >= 2, modifier = Modifier.fillMaxWidth()) { Text("ADD FEEDER") }
+            Divider()
+            Text("Create Staff Login", fontWeight = FontWeight.SemiBold)
+            Box {
+                OutlinedButton(onClick = { expanded = "staffHouse" }, Modifier.fillMaxWidth()) {
+                    Text(data.houses.firstOrNull { it.optString("id") == staffHouseId }?.optString("name") ?: "Select Staff Power House")
+                }
+                DropdownMenu(expanded = expanded == "staffHouse", onDismissRequest = { expanded = "" }) {
+                    data.houses.filter { it.optBoolean("active", true) }.forEach { h ->
+                        DropdownMenuItem(text = { Text(h.optString("name")) }, onClick = { staffHouseId = h.optString("id"); expanded = "" })
+                    }
+                }
+            }
+            OutlinedTextField(staffId, { staffId = it }, Modifier.fillMaxWidth(), label = { Text("Staff User ID") }, singleLine = true)
+            OutlinedTextField(staffPin, { if (it.length <= 4 && it.all(Char::isDigit)) staffPin = it },
+                Modifier.fillMaxWidth(), label = { Text("4-digit Staff PIN") }, singleLine = true,
+                visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+            Button(onClick = { onAction(JSONObject().put("action", "createStaff").put("houseId", staffHouseId).put("userId", staffId.trim()).put("pin", staffPin)); staffId = ""; staffPin = "" },
+                enabled = !loading && staffHouseId.isNotBlank() && staffId.matches(Regex("[A-Za-z0-9_-]{3,40}")) && staffPin.matches(Regex("[0-9]{4}")),
+                modifier = Modifier.fillMaxWidth()) { Text("CREATE STAFF ACCOUNT") }
         }
     }
 }
