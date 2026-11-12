@@ -576,7 +576,7 @@ private fun AdminManagementForms(
             OutlinedTextField(feederName, { feederName = it }, Modifier.fillMaxWidth(), label = { Text("Feeder Name") }, singleLine = true)
             Button(onClick = { onAction(JSONObject().put("action", "createFeeder").put("houseId", feederHouseId).put("feederName", feederName.trim())); feederName = "" },
                 enabled = !loading && feederHouseId.isNotBlank() && feederName.trim().length >= 2, modifier = Modifier.fillMaxWidth()) { Text("ADD FEEDER") }
-            Divider()
+            HorizontalDivider()
             Text("Power House Status", fontWeight = FontWeight.SemiBold)
             data.houses.forEach { house ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -605,7 +605,7 @@ private fun AdminManagementForms(
                     }
                 }
             }
-            Divider()
+            HorizontalDivider()
             Text("Create Staff Login", fontWeight = FontWeight.SemiBold)
             Box {
                 OutlinedButton(onClick = { expanded = "staffHouse" }, Modifier.fillMaxWidth()) {
