@@ -340,7 +340,8 @@ private fun NativeDashboard(
             items(data.reports.take(20)) { report ->
                 InfoCard(
                     report.optString("feederName", "Feeder"),
-                    "${report.optString("houseName")} • ${report.optString("reportDate")}\nBreaker: ${report.optString("breakerStatus")} • ${report.optString("remarks")}"
+                    "${report.optString("houseName")} • ${report.optString("reportDate")}",
+                    "Breaker: ${report.optString("breakerStatus")} • ${report.optString("remarks")}"
                 )
             }
         } else {
