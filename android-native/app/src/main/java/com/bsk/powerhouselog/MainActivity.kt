@@ -1,6 +1,11 @@
 package com.bsk.powerhouselog
 
 import android.os.Bundle
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -174,6 +179,13 @@ private fun NativeDashboard(
     onAdminAction: (JSONObject) -> Unit,
     onSignOut: () -> Unit
 ) {
+    val context = LocalContext.current
+    var exportContent by remember { mutableStateOf("") }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
+        if (uri != null) runCatching {
+            context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(exportContent) }
+        }
+    }
     val ongoingBreakdowns = data.breakdowns.filter { it.optString("status") == "ongoing" }
     val ongoingShutdowns = data.shutdowns.filter { it.optString("status") == "ongoing" }
     LazyColumn(
@@ -224,6 +236,26 @@ private fun NativeDashboard(
                     MetricCard("Power Houses", data.houses.size.toString(), Modifier.weight(1f))
                     MetricCard("Feeders", data.feeders.size.toString(), Modifier.weight(1f))
                     MetricCard("Staff", data.users.count { it.optString("role") == "staff" && it.optBoolean("active") }.toString(), Modifier.weight(1f))
+                }
+            }
+            item {
+                Text("Download Excel-compatible CSV", fontWeight = FontWeight.SemiBold)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(onClick = {
+                        exportContent = csvDocument(listOf("Date","Power House","Feeder","Start Time","End Time","PTW Time","Reason","Status"),
+                            data.breakdowns.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("feederName"),it.optString("startTime"),it.optString("endTime"),it.optString("ptwTakenOnTime"),it.optString("reason"),it.optString("status")) })
+                        exportLauncher.launch("BSK_Breakdown.csv")
+                    }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT BREAKDOWN CSV") }
+                    Button(onClick = {
+                        exportContent = csvDocument(listOf("Date","Power House","Feeder","Start Time","End Time","PTW Time","Reason","Status"),
+                            data.shutdowns.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("feederName"),it.optString("startTime"),it.optString("endTime"),it.optString("ptwTakenOnTime"),it.optString("reason"),it.optString("status")) })
+                        exportLauncher.launch("BSK_Shutdown.csv")
+                    }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT SHUTDOWN CSV") }
+                    Button(onClick = {
+                        exportContent = csvDocument(listOf("Date","Power House","AP Feeder","Rural Domestic","Urban","Industrial","Independent","Total"),
+                            data.consumption.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("apFeeder"),it.optString("ruralDomestic"),it.optString("urban"),it.optString("industrial"),it.optString("independent"),it.optString("total")) })
+                        exportLauncher.launch("BSK_Consumption.csv")
+                    }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT CONSUMPTION CSV") }
                 }
             }
             item { Text("Recent Feeder Reports (${data.reports.size})", fontWeight = FontWeight.SemiBold) }
@@ -564,6 +596,11 @@ private fun OutageRow(record: JSONObject, type: String) {
         "${record.optString("houseName")} • ${record.optString("date")} • ${record.optString("startTime")}",
         "${type} • ${record.optString("reason")}"
     )
+}
+
+private fun csvDocument(headers: List<String>, rows: List<List<String>>): String {
+    fun cell(value: String) = "\"" + value.replace("\"", "\"\"") + "\""
+    return (listOf(headers) + rows).joinToString("\r\n") { row -> row.joinToString(",") { cell(it) } }
 }
 
 private suspend fun authenticate(userId: String, pin: String): BSKProfile {
