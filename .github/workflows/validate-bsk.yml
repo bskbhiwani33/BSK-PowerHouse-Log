@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - bsk-complete-update-prep
+      - native-android-dev
   workflow_dispatch:
 jobs:
   syntax:
