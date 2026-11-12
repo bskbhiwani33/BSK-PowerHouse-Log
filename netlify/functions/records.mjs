@@ -58,11 +58,10 @@ async function createOutage(db, actor, body, type) {
   if (!validDate(body.date) || !validTime(body.startTime) || !validText(body.reason, 1000)) {
     throw Object.assign(new Error("Date, start time aur reason zaroori hain"), { status: 400 });
   }
-  // Breakdown entry form requires PTW time; enforce it server-side as well as in HTML.
-  if (type === "Breakdown" && !validTime(body.ptwTakenOnTime)) {
-    throw Object.assign(new Error("Breakdown ke liye PTW Taken on Time zaroori hai"), { status: 400 });
+  // Both Breakdown and Shutdown entry forms require PTW time.
+  if (!validTime(body.ptwTakenOnTime)) {
+    throw Object.assign(new Error("PTW Taken on Time zaroori hai"), { status: 400 });
   }
-  if (body.ptwTakenOnTime && !validTime(body.ptwTakenOnTime)) throw Object.assign(new Error("PTW taken time sahi nahi hai"), { status: 400 });
   if (body.endTime && !validTime(body.endTime)) throw Object.assign(new Error("End time sahi nahi hai"), { status: 400 });
   const feeder = await validateFeeder(db, actor, body.feederId);
   const collectionName = type === "Breakdown" ? "breakdowns" : "shutdowns";
