@@ -61,6 +61,7 @@ private data class DashboardData(
     val consumption: List<JSONObject> = emptyList(),
     val supplyPositions: List<JSONObject> = emptyList(),
     val history: List<JSONObject> = emptyList(),
+    val notifications: List<JSONObject> = emptyList(),
     val error: String = ""
 )
 
@@ -283,6 +284,24 @@ private fun NativeDashboard(
                             exporting = false
                         }
                     }, enabled = !exporting, modifier = Modifier.fillMaxWidth()) { Text("EXPORT CONSUMPTION CSV") }
+                }
+            }
+            item {
+                val unread = data.notifications.count { !it.optBoolean("read") }
+                Text("Admin Inbox ($unread unread)", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+            if (data.notifications.isEmpty()) item { EmptyLine("No new-entry notifications") }
+            items(data.notifications.take(30)) { notification ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(notification.optString("title", "New entry"), fontWeight = FontWeight.SemiBold)
+                        Text(notification.optString("message"))
+                        Text("${notification.optString("recordCollection")} • ${notification.optString("recordId")}", fontSize = 12.sp)
+                        if (!notification.optBoolean("read")) {
+                            Button(onClick = { onSubmitEntry("markNotificationRead", JSONObject().put("id", notification.optString("id"))) },
+                                enabled = !loading, modifier = Modifier.fillMaxWidth()) { Text("MARK AS READ") }
+                        } else Text("Read", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             item { Text("Recent Audit History", fontWeight = FontWeight.SemiBold) }
@@ -745,7 +764,8 @@ private suspend fun loadDashboard(profile: BSKProfile): DashboardData {
         reports = jsonArray(admin.optJSONArray("reports")),
         breakdowns = breakdowns, shutdowns = shutdowns, trippings = trippings,
         consumption = consumption, supplyPositions = supply,
-        history = jsonArray(records.optJSONArray("entry_history"))
+        history = jsonArray(records.optJSONArray("entry_history")),
+        notifications = jsonArray(records.optJSONArray("notifications"))
     )
 }
 
