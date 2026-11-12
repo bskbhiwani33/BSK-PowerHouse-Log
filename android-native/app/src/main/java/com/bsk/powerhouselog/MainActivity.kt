@@ -701,7 +701,7 @@ private fun csvDocument(headers: List<String>, rows: List<List<String>>): String
         val trimmed = value.trimStart()
         val safe = if (trimmed.startsWith("=") || trimmed.startsWith("+") ||
             trimmed.startsWith("-") || trimmed.startsWith("@") ||
-            trimmed.startsWith("\\t") || trimmed.startsWith("\\r")) "'$value" else value
+            trimmed.startsWith("\t") || trimmed.startsWith("\r")) "'$value" else value
         return "\"" + safe.replace("\"", "\"\"") + "\""
     }
     return (listOf(headers) + rows).joinToString("\r\n") { row -> row.joinToString(",") { cell(it) } }
