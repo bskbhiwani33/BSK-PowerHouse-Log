@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.bsk.powerhouselog"
-    compileSdk { version = release(37) }
+    compileSdk { version = release(36) }
 
     defaultConfig {
         applicationId = "com.bsk.powerhouselog"
         minSdk = 23
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 2
         versionName = "2.0-native"
     }
