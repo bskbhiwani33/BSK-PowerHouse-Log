@@ -11,10 +11,12 @@ This is a standalone Jetpack Compose Android application. It does not load the B
 - Ongoing Breakdown and Shutdown counters and feeder lists.
 - Resolve controls for ongoing events using the actual restoration time.
 - Staff forms: Breakdown, Shutdown, Tripping, Consumption, Supply Position and Daily Feeder Report.
-- Supply Position requires a status for every active feeder; Breakdown asks Breakdown Time and PTW time; Shutdown asks PTW time and reason.
+- Supply Position requires a status for every active feeder; Breakdown asks Breakdown Time and PTW time; Shutdown asks PTW time and reason. Both standalone Breakdown and Shutdown entries require PTW time.
 - Admin actions: create Power Houses, create Feeders, create Staff logins, deactivate/restore Power Houses and Feeders.
 - Admin and staff audit-history views.
+- Admin notification inbox for new Breakdown/Shutdown entries, with unread count and mark-as-read action.
 - Separate paginated, Excel-compatible CSV exports for Breakdown, Shutdown and Consumption.
+- Admin full JSON backup export across the supported BSK collections; PIN hashes and salts are removed server-side from user records.
 
 ## Backend and security
 
