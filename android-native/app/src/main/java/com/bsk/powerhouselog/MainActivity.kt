@@ -61,6 +61,7 @@ private data class DashboardData(
     val trippings: List<JSONObject> = emptyList(),
     val consumption: List<JSONObject> = emptyList(),
     val supplyPositions: List<JSONObject> = emptyList(),
+    val history: List<JSONObject> = emptyList(),
     val error: String = ""
 )
 
@@ -257,6 +258,11 @@ private fun NativeDashboard(
                         exportLauncher.launch("BSK_Consumption.csv")
                     }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT CONSUMPTION CSV") }
                 }
+            }
+            item { Text("Recent Audit History", fontWeight = FontWeight.SemiBold) }
+            items(data.history.take(30)) { row ->
+                InfoCard(row.optString("recordCollection"), "${row.optString("action")} • ${row.optString("recordId")}",
+                    "${row.optString("actorUserId")} • ${row.optString("actorRole")}")
             }
             item { Text("Recent Feeder Reports (${data.reports.size})", fontWeight = FontWeight.SemiBold) }
             items(data.reports.take(20)) { report ->
@@ -540,6 +546,35 @@ private fun AdminManagementForms(
             Button(onClick = { onAction(JSONObject().put("action", "createFeeder").put("houseId", feederHouseId).put("feederName", feederName.trim())); feederName = "" },
                 enabled = !loading && feederHouseId.isNotBlank() && feederName.trim().length >= 2, modifier = Modifier.fillMaxWidth()) { Text("ADD FEEDER") }
             Divider()
+            Text("Power House Status", fontWeight = FontWeight.SemiBold)
+            data.houses.forEach { house ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(house.optString("name"), fontWeight = FontWeight.Medium)
+                        Text(if (house.optBoolean("active", true)) "Active" else "Inactive", fontSize = 12.sp)
+                    }
+                    Button(onClick = { onAction(JSONObject().put("action", "setHouseActive").put("houseId", house.optString("id")).put("active", !house.optBoolean("active", true))) },
+                        enabled = !loading,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                        Text(if (house.optBoolean("active", true)) "DEACTIVATE" else "RESTORE")
+                    }
+                }
+            }
+            Text("Feeder Status", fontWeight = FontWeight.SemiBold)
+            data.feeders.forEach { feeder ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(feeder.optString("name"), fontWeight = FontWeight.Medium)
+                        Text(feeder.optString("houseName"), fontSize = 12.sp)
+                    }
+                    Button(onClick = { onAction(JSONObject().put("action", "setFeederActive").put("feederId", feeder.optString("id")).put("active", !feeder.optBoolean("active", true))) },
+                        enabled = !loading,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                        Text(if (feeder.optBoolean("active", true)) "DEACTIVATE" else "RESTORE")
+                    }
+                }
+            }
+            Divider()
             Text("Create Staff Login", fontWeight = FontWeight.SemiBold)
             Box {
                 OutlinedButton(onClick = { expanded = "staffHouse" }, Modifier.fillMaxWidth()) {
@@ -629,7 +664,8 @@ private suspend fun loadDashboard(profile: BSKProfile): DashboardData {
         return DashboardData(
             feeders = jsonArray(records.optJSONArray("feeders")),
             breakdowns = breakdowns, shutdowns = shutdowns, trippings = trippings,
-            consumption = consumption, supplyPositions = supply
+            consumption = consumption, supplyPositions = supply,
+            history = jsonArray(records.optJSONArray("entry_history"))
         )
     }
     val admin = postJson(ADMIN_API, JSONObject().put("action", "getDashboardData"), token)
@@ -639,7 +675,8 @@ private suspend fun loadDashboard(profile: BSKProfile): DashboardData {
         users = jsonArray(admin.optJSONArray("users")),
         reports = jsonArray(admin.optJSONArray("reports")),
         breakdowns = breakdowns, shutdowns = shutdowns, trippings = trippings,
-        consumption = consumption, supplyPositions = supply
+        consumption = consumption, supplyPositions = supply,
+        history = jsonArray(records.optJSONArray("entry_history"))
     )
 }
 
