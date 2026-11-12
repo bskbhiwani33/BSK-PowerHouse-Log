@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "871710608561",
+    "project_id": "testing-app-8af35",
+    "storage_bucket": "testing-app-8af35.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:871710608561:android:4d2b7b995182e8894ee690",
+        "android_client_info": {
+          "package_name": "com.bsk.powerhouselog"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJqFeDRbgjHw79Pt8eApttRsJ5sGeeuLo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
