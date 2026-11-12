@@ -329,6 +329,7 @@ private fun NativeEntryForms(
             } else {
                 DailyReportFields(date, feeders, loading, onSubmit)
             }
+            if (form != "Supply Position" && form != "Daily Report") {
             Button(onClick = {
                 val p = JSONObject().put("date", date.trim())
                 val action = when (form) {
@@ -349,13 +350,14 @@ private fun NativeEntryForms(
                 onSubmit(action, p)
             }, enabled = !loading && date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && when (form) {
                 "Breakdown", "Shutdown" -> feederId.isNotBlank() && start.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) &&
-                    ptw.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) && reason.isNotBlank() &&
+                    (form == "Shutdown" || ptw.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) ) && reason.isNotBlank() &&
                     (end.isBlank() || end.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")))
                 "Tripping" -> trips.toIntOrNull() != null && feederCount.toIntOrNull() != null
                 "Consumption" -> listOf(ap, rural, urban, industrial, independent).all { it.toDoubleOrNull() != null && (it.toDoubleOrNull() ?: -1.0) >= 0 }
                 else -> false
             }, modifier = Modifier.fillMaxWidth()) {
                 if (loading) CircularProgressIndicator(Modifier.size(18.dp)) else Text("SAVE ENTRY")
+            }
             }
             Text("Entry backend par seedhi save hoti hai; approval ki zaroorat nahi.", fontSize = 12.sp)
         }
