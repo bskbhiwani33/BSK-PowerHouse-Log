@@ -184,6 +184,12 @@ private fun NativeDashboard(
     val exportScope = rememberCoroutineScope()
     var exporting by remember { mutableStateOf(false) }
     var exportContent by remember { mutableStateOf("") }
+    var backupContent by remember { mutableStateOf("") }
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        if (uri != null) runCatching {
+            context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(backupContent) }
+        }
+    }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(exportContent) }
@@ -248,6 +254,18 @@ private fun NativeDashboard(
             item {
                 Text("Download Excel-compatible CSV", fontWeight = FontWeight.SemiBold)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(onClick = {
+                        exportScope.launch {
+                            exporting = true
+                            runCatching {
+                                backupContent = loadFullBackup()
+                                backupLauncher.launch("BSK_Full_Backup.json")
+                            }.onFailure { dashboardError -> }
+                            exporting = false
+                        }
+                    }, enabled = !exporting, modifier = Modifier.fillMaxWidth()) {
+                        Text("DOWNLOAD FULL JSON BACKUP")
+                    }
                     Button(onClick = {
                         exportScope.launch {
                             exporting = true
@@ -713,6 +731,40 @@ private suspend fun loadAllRecords(collection: String): List<JSONObject> {
         check(pages < 1000) { "Export page limit reached. Narrow the export period and retry." }
     } while (cursor != null)
     return output.values.toList()
+}
+
+private suspend fun loadFullBackup(): String {
+    val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
+    val token = user.getIdToken(false).await().token ?: error("Could not refresh secure session.")
+    val names = listOf(
+        "powerhouses", "feeders", "users", "staff_house_assignments",
+        "staff_user_id_claims", "admin_setup_guard", "breakdowns", "shutdowns",
+        "trippings", "consumption_readings", "supply_positions", "daily_reports",
+        "feeder_status", "notifications", "entry_history"
+    )
+    val collections = JSONObject()
+    for (name in names) {
+        val rows = JSONArray()
+        var cursor: String? = null
+        var pages = 0
+        do {
+            val request = JSONObject().put("action", "exportBackupPage").put("collection", name)
+            if (cursor != null) request.put("cursor", cursor)
+            val response = postJson(RECORDS_API, request, token)
+            jsonArray(response.optJSONArray("rows")).forEach { rows.put(it) }
+            val next = response.optString("nextCursor")
+            cursor = next.takeIf { it.isNotBlank() && it != "null" }
+            pages++
+            check(pages < 1000) { "Backup page limit reached for $name." }
+        } while (cursor != null)
+        collections.put(name, rows)
+    }
+    return JSONObject()
+        .put("format", "BSK_FULL_BACKUP")
+        .put("version", 1)
+        .put("exportedAtEpochMs", System.currentTimeMillis())
+        .put("collections", collections)
+        .toString(2)
 }
 
 private fun csvDocument(headers: List<String>, rows: List<List<String>>): String {
