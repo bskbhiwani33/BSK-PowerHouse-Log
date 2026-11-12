@@ -185,6 +185,7 @@ private fun NativeDashboard(
     var exporting by remember { mutableStateOf(false) }
     var exportContent by remember { mutableStateOf("") }
     var backupContent by remember { mutableStateOf("") }
+    var backupError by remember { mutableStateOf("") }
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(backupContent) }
@@ -257,15 +258,17 @@ private fun NativeDashboard(
                     Button(onClick = {
                         exportScope.launch {
                             exporting = true
+                            backupError = ""
                             runCatching {
                                 backupContent = loadFullBackup()
                                 backupLauncher.launch("BSK_Full_Backup.json")
-                            }.onFailure { dashboardError -> }
+                            }.onFailure { backupError = it.message ?: "Backup failed. Please try again." }
                             exporting = false
                         }
                     }, enabled = !exporting, modifier = Modifier.fillMaxWidth()) {
                         Text("DOWNLOAD FULL JSON BACKUP")
                     }
+                    if (backupError.isNotBlank()) Text(backupError, color = MaterialTheme.colorScheme.error)
                     Button(onClick = {
                         exportScope.launch {
                             exporting = true
