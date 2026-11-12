@@ -13,27 +13,21 @@ This is a standalone Jetpack Compose Android application. It does not load the B
 - Staff forms: Breakdown, Shutdown, Tripping, Consumption, Supply Position and Daily Feeder Report.
 - Supply Position requires a status for every active feeder; Breakdown asks Breakdown Time and PTW time; Shutdown asks PTW time and reason.
 - Admin actions: create Power Houses, create Feeders, create Staff logins, deactivate/restore Power Houses and Feeders.
-- Admin audit-history view.
-- Separate Excel-compatible CSV exports for Breakdown, Shutdown and Consumption.
+- Admin and staff audit-history views.
+- Separate paginated, Excel-compatible CSV exports for Breakdown, Shutdown and Consumption.
 
 ## Backend and security
 
-The app calls the existing Netlify Functions endpoints over HTTPS. PIN verification and Firebase custom-token creation remain server-side. The Firebase service-account private key is never included in the Android app. The backend must remain configured with its existing server-side Firebase Admin credential.
+The app calls the existing Netlify Functions endpoints over HTTPS. PIN verification and Firebase custom-token creation remain server-side. The Firebase service-account private key is never included in the Android app.
 
-The app uses the existing Firebase project and remains compatible with the Firebase Spark plan; this native project does not deploy Firebase Cloud Functions or require a Blaze upgrade.
+The Android client config in `app/google-services.json` belongs to Firebase project `testing-app-8af35` and package `com.bsk.powerhouselog`. This is a Firebase client configuration file, not an Admin SDK service-account credential.
 
-## Firebase Android client configuration
-
-A real distributable APK requires the Firebase Android client configuration file at:
-
-`app/google-services.json`
-
-Register the Android package name `com.bsk.powerhouselog` in the existing Firebase project and place its generated `google-services.json` in that location. This file is different from a Firebase service-account private key. Never commit any service-account JSON or private key.
-
-The GitHub Actions compile-check workflow creates a **dummy compile-only** Google Services config so that source compilation can be tested without exposing project credentials. Its APK artifact is not a working release and must not be installed for production use.
+The app remains compatible with the Firebase Spark plan; this native project does not deploy Firebase Cloud Functions or require a Blaze upgrade.
 
 ## Build and release
 
-Open this `android-native` directory in Android Studio and use a compatible Android Gradle Plugin / Gradle installation. Compile SDK and target SDK are 36. A real release build must use the actual Firebase Android client configuration, then be tested on a physical Android device before distribution.
+Open this `android-native` directory in Android Studio. Compile SDK and target SDK are 36. GitHub Actions runs a native debug build using the actual project Firebase client config and stores a short-lived debug APK artifact.
 
-Native UI and feature updates require a new APK release. Cloud data refreshes automatically through the backend when the app refreshes; native code changes do not silently update an already-installed APK.
+A debug APK is not a production release. A production update requires a release signing key that matches the app already installed on the devices. Keep that private key outside the repository and protect it with a secure signing process.
+
+Native UI and feature updates require a new APK release. Cloud data refreshes through the backend when the app refreshes; native code changes do not silently update an already-installed APK.
