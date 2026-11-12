@@ -34,6 +34,6 @@ The GitHub Actions compile-check workflow creates a **dummy compile-only** Googl
 
 ## Build and release
 
-Open this `android-native` directory in Android Studio and use a compatible Android Gradle Plugin / Gradle installation. Compile SDK is 37. A real release build must use the actual Firebase Android client configuration, then be tested on a physical Android device before distribution.
+Open this `android-native` directory in Android Studio and use a compatible Android Gradle Plugin / Gradle installation. Compile SDK and target SDK are 36. A real release build must use the actual Firebase Android client configuration, then be tested on a physical Android device before distribution.
 
 Native UI and feature updates require a new APK release. Cloud data refreshes automatically through the backend when the app refreshes; native code changes do not silently update an already-installed APK.
