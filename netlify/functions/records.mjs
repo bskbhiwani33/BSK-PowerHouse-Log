@@ -388,6 +388,10 @@ export default async req => {
         const houseId = actor.role === "admin" ? requestedHouse : actor.houseId;
         const names = ["breakdowns", "shutdowns", "trippings", "consumption_readings", "supply_positions", "daily_reports", "feeder_status", "notifications", "entry_history"];
         const output = {};
+        const activeFeedersSnap = await db.collection("feeders").where("active", "==", true).get();
+        output.feeders = activeFeedersSnap.docs
+          .filter(d => !houseId || d.data().houseId === houseId)
+          .map(d => ({ id: d.id, name: d.data().name, houseId: d.data().houseId, houseName: d.data().houseName || "" }));
         const pageSize = 100;
         const nextCursors = {};
         await Promise.all(names.map(async name => {
