@@ -221,10 +221,14 @@ private fun NativeDashboard(
         }
         item { Text("Ongoing Breakdown Feeders", fontWeight = FontWeight.SemiBold) }
         if (ongoingBreakdowns.isEmpty()) item { EmptyLine("No ongoing Breakdown") }
-        items(ongoingBreakdowns) { OutageRow(it, "Breakdown") }
+        items(ongoingBreakdowns) { row -> OutageRow(row, "Breakdown") { endTime ->
+            onSubmitEntry("resolveBreakdown", JSONObject().put("id", row.optString("id")).put("endTime", endTime))
+        } }
         item { Text("Ongoing Shutdown Feeders", fontWeight = FontWeight.SemiBold) }
         if (ongoingShutdowns.isEmpty()) item { EmptyLine("No ongoing Shutdown") }
-        items(ongoingShutdowns) { OutageRow(it, "Shutdown") }
+        items(ongoingShutdowns) { row -> OutageRow(row, "Shutdown") { endTime ->
+            onSubmitEntry("resolveShutdown", JSONObject().put("id", row.optString("id")).put("endTime", endTime))
+        } }
 
         if (profile.role == "staff") {
             item { NativeEntryForms(feeders = data.feeders, loading = loading, onSubmit = onSubmitEntry) }
@@ -284,7 +288,7 @@ private fun NativeDashboard(
             item { InfoCard("Supply Position entries", data.supplyPositions.size.toString(), "Records returned by secure Records API") }
         }
         item {
-            Text("Data shown here is fetched from the existing secured BSK backend. Entry forms and management actions are still under development.",
+            Text("Data is synchronized with the secure BSK backend. Resolve ongoing events here using the actual restoration time.",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -625,12 +629,21 @@ private fun EmptyLine(message: String) {
 }
 
 @Composable
-private fun OutageRow(record: JSONObject, type: String) {
-    InfoCard(
-        record.optString("feederName", "Feeder"),
-        "${record.optString("houseName")} • ${record.optString("date")} • ${record.optString("startTime")}",
-        "${type} • ${record.optString("reason")}"
-    )
+private fun OutageRow(record: JSONObject, type: String, onResolve: (String) -> Unit) {
+    var endTime by remember(record.optString("id")) { mutableStateOf("") }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(record.optString("feederName", "Feeder"), fontWeight = FontWeight.SemiBold)
+            Text("${record.optString("houseName")} • ${record.optString("date")} • ${record.optString("startTime")}")
+            Text("${type} • ${record.optString("reason")}")
+            OutlinedTextField(endTime, { endTime = it }, Modifier.fillMaxWidth(),
+                label = { Text("Restoration / End Time (HH:MM)") }, singleLine = true)
+            Button(onClick = { onResolve(endTime) },
+                enabled = endTime.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.fillMaxWidth()) { Text("RESOLVE ${type.uppercase()}") }
+        }
+    }
 }
 
 private fun csvDocument(headers: List<String>, rows: List<List<String>>): String {
