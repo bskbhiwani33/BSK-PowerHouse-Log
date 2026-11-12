@@ -180,6 +180,8 @@ private fun NativeDashboard(
     onSignOut: () -> Unit
 ) {
     val context = LocalContext.current
+    val exportScope = rememberCoroutineScope()
+    var exporting by remember { mutableStateOf(false) }
     var exportContent by remember { mutableStateOf("") }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri != null) runCatching {
@@ -246,20 +248,41 @@ private fun NativeDashboard(
                 Text("Download Excel-compatible CSV", fontWeight = FontWeight.SemiBold)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(onClick = {
-                        exportContent = csvDocument(listOf("Date","Power House","Feeder","Start Time","End Time","PTW Time","Reason","Status"),
-                            data.breakdowns.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("feederName"),it.optString("startTime"),it.optString("endTime"),it.optString("ptwTakenOnTime"),it.optString("reason"),it.optString("status")) })
-                        exportLauncher.launch("BSK_Breakdown.csv")
-                    }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT BREAKDOWN CSV") }
+                        exportScope.launch {
+                            exporting = true
+                            runCatching {
+                                val rows = loadAllRecords("breakdowns")
+                                exportContent = csvDocument(listOf("Date","Power House","Feeder","Start Time","End Time","PTW Time","Reason","Status"),
+                                    rows.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("feederName"),it.optString("startTime"),it.optString("endTime"),it.optString("ptwTakenOnTime"),it.optString("reason"),it.optString("status")) })
+                                exportLauncher.launch("BSK_Breakdown.csv")
+                            }.onFailure { }
+                            exporting = false
+                        }
+                    }, enabled = !exporting, modifier = Modifier.fillMaxWidth()) { Text("EXPORT BREAKDOWN CSV") }
                     Button(onClick = {
-                        exportContent = csvDocument(listOf("Date","Power House","Feeder","Start Time","End Time","PTW Time","Reason","Status"),
-                            data.shutdowns.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("feederName"),it.optString("startTime"),it.optString("endTime"),it.optString("ptwTakenOnTime"),it.optString("reason"),it.optString("status")) })
-                        exportLauncher.launch("BSK_Shutdown.csv")
-                    }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT SHUTDOWN CSV") }
+                        exportScope.launch {
+                            exporting = true
+                            runCatching {
+                                val rows = loadAllRecords("shutdowns")
+                                exportContent = csvDocument(listOf("Date","Power House","Feeder","Start Time","End Time","PTW Time","Reason","Status"),
+                                    rows.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("feederName"),it.optString("startTime"),it.optString("endTime"),it.optString("ptwTakenOnTime"),it.optString("reason"),it.optString("status")) })
+                                exportLauncher.launch("BSK_Shutdown.csv")
+                            }.onFailure { }
+                            exporting = false
+                        }
+                    }, enabled = !exporting, modifier = Modifier.fillMaxWidth()) { Text("EXPORT SHUTDOWN CSV") }
                     Button(onClick = {
-                        exportContent = csvDocument(listOf("Date","Power House","AP Feeder","Rural Domestic","Urban","Industrial","Independent","Total"),
-                            data.consumption.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("apFeeder"),it.optString("ruralDomestic"),it.optString("urban"),it.optString("industrial"),it.optString("independent"),it.optString("total")) })
-                        exportLauncher.launch("BSK_Consumption.csv")
-                    }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT CONSUMPTION CSV") }
+                        exportScope.launch {
+                            exporting = true
+                            runCatching {
+                                val rows = loadAllRecords("consumption_readings")
+                                exportContent = csvDocument(listOf("Date","Power House","AP Feeder","Rural Domestic","Urban","Industrial","Independent","Total"),
+                                    rows.map { listOf(it.optString("date"),it.optString("houseName"),it.optString("apFeeder"),it.optString("ruralDomestic"),it.optString("urban"),it.optString("industrial"),it.optString("independent"),it.optString("total")) })
+                                exportLauncher.launch("BSK_Consumption.csv")
+                            }.onFailure { }
+                            exporting = false
+                        }
+                    }, enabled = !exporting, modifier = Modifier.fillMaxWidth()) { Text("EXPORT CONSUMPTION CSV") }
                 }
             }
             item { Text("Recent Audit History", fontWeight = FontWeight.SemiBold) }
@@ -643,6 +666,29 @@ private fun OutageRow(record: JSONObject, type: String, onResolve: (String) -> U
                 modifier = Modifier.fillMaxWidth()) { Text("RESOLVE ${type.uppercase()}") }
         }
     }
+}
+
+private suspend fun loadAllRecords(collection: String): List<JSONObject> {
+    require(collection in setOf("breakdowns", "shutdowns", "consumption_readings"))
+    val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
+    val token = user.getIdToken(false).await().token ?: error("Could not refresh secure session.")
+    val output = linkedMapOf<String, JSONObject>()
+    var cursor: String? = null
+    var pages = 0
+    do {
+        val cursors = JSONObject()
+        if (cursor != null) cursors.put(collection, cursor)
+        val response = postJson(RECORDS_API, JSONObject().put("action", "getRecords").put("cursors", cursors), token)
+        jsonArray(response.optJSONArray(collection)).forEach { row ->
+            val id = row.optString("id")
+            if (id.isNotBlank()) output[id] = row
+        }
+        val next = response.optJSONObject("nextCursors")?.optString(collection).orEmpty()
+        cursor = next.takeIf { it.isNotBlank() && it != "null" }
+        pages++
+        check(pages < 1000) { "Export page limit reached. Narrow the export period and retry." }
+    } while (cursor != null)
+    return output.values.toList()
 }
 
 private fun csvDocument(headers: List<String>, rows: List<List<String>>): String {
