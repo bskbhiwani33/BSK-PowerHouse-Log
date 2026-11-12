@@ -748,7 +748,7 @@ private suspend fun loadFullBackup(): String {
     val token = user.getIdToken(false).await().token ?: error("Could not refresh secure session.")
     val names = listOf(
         "powerhouses", "feeders", "users", "staff_house_assignments",
-        "staff_user_id_claims", "admin_setup_guard", "breakdowns", "shutdowns",
+        "breakdowns", "shutdowns",
         "trippings", "consumption_readings", "supply_positions", "daily_reports",
         "feeder_status", "notifications", "entry_history"
     )
