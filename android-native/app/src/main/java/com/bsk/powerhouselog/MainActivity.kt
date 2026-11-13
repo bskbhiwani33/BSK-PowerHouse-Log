@@ -536,7 +536,7 @@ private fun AdminCorrectionForm(
                                 it.toDoubleOrNull() != null && (it.toDoubleOrNull() ?: -1.0) >= 0
                             }
                             else -> breakerStatus in setOf("ON", "OFF", "TRIPPED", "UNDER MAINTENANCE") &&
-                                (restorationTime.isBlank() || restorationTime.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d"))
+                                (restorationTime.isBlank() || restorationTime.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")))
                         },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth()
