@@ -248,6 +248,7 @@ private fun NativeDashboard(
         }
         if (profile.role == "admin") {
             item { AdminManagementForms(data = data, loading = loading, onAction = onAdminAction) }
+            item { AdminCorrectionForm(data = data, loading = loading, onSave = onSubmitEntry) }
             item { Text("Administration Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -364,6 +365,183 @@ private fun NativeDashboard(
         item {
             Text("Data is synchronized with the secure BSK backend. Resolve ongoing events here using the actual restoration time.",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AdminCorrectionForm(
+    data: DashboardData,
+    loading: Boolean,
+    onSave: (String, JSONObject) -> Unit
+) {
+    var collection by remember { mutableStateOf("breakdowns") }
+    var recordId by remember { mutableStateOf("") }
+    var menu by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf("") }
+    var startTime by remember { mutableStateOf("") }
+    var ptwTime by remember { mutableStateOf("") }
+    var reason by remember { mutableStateOf("") }
+    var trippingCount by remember { mutableStateOf("") }
+    var feederCount by remember { mutableStateOf("") }
+    var ap by remember { mutableStateOf("") }
+    var rural by remember { mutableStateOf("") }
+    var urban by remember { mutableStateOf("") }
+    var industrial by remember { mutableStateOf("") }
+    var independent by remember { mutableStateOf("") }
+    var breakerStatus by remember { mutableStateOf("ON") }
+    var faultDetails by remember { mutableStateOf("") }
+    var duration by remember { mutableStateOf("") }
+    var restorationTime by remember { mutableStateOf("") }
+    var remarks by remember { mutableStateOf("") }
+
+    val records = when (collection) {
+        "breakdowns" -> data.breakdowns
+        "shutdowns" -> data.shutdowns
+        "trippings" -> data.trippings
+        "consumption_readings" -> data.consumption
+        else -> data.reports
+    }
+    val selected = records.firstOrNull { it.optString("id") == recordId }
+    LaunchedEffect(collection, recordId) {
+        selected?.let { row ->
+            date = row.optString(if (collection == "daily_reports") "reportDate" else "date")
+            startTime = row.optString("startTime")
+            ptwTime = row.optString("ptwTakenOnTime")
+            reason = row.optString("reason")
+            trippingCount = row.optString("trippingCount")
+            feederCount = row.optString("feederCount")
+            ap = row.optString("apFeeder")
+            rural = row.optString("ruralDomestic")
+            urban = row.optString("urban")
+            industrial = row.optString("industrial")
+            independent = row.optString("independent")
+            breakerStatus = row.optString("breakerStatus", "ON")
+            faultDetails = row.optString("faultDetails")
+            duration = row.optString("duration")
+            restorationTime = row.optString("restorationTime")
+            remarks = row.optString("remarks")
+        } ?: run {
+            date = ""; startTime = ""; ptwTime = ""; reason = ""
+            trippingCount = ""; feederCount = ""; ap = ""; rural = ""
+            urban = ""; industrial = ""; independent = ""
+            faultDetails = ""; duration = ""; restorationTime = ""; remarks = ""
+        }
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Correct Saved Entry", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text("Admin-only correction. Original and corrected values are recorded in audit history.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box {
+                OutlinedButton(onClick = { menu = "collection" }, Modifier.fillMaxWidth()) {
+                    Text(when (collection) {
+                        "breakdowns" -> "Breakdown Records"
+                        "shutdowns" -> "Shutdown Records"
+                        "trippings" -> "Tripping Records"
+                        "consumption_readings" -> "Consumption Records"
+                        else -> "Daily Feeder Reports"
+                    })
+                }
+                DropdownMenu(expanded = menu == "collection", onDismissRequest = { menu = "" }) {
+                    listOf(
+                        "breakdowns" to "Breakdown Records",
+                        "shutdowns" to "Shutdown Records",
+                        "trippings" to "Tripping Records",
+                        "consumption_readings" to "Consumption Records",
+                        "daily_reports" to "Daily Feeder Reports"
+                    ).forEach { (key, label) ->
+                        DropdownMenuItem(text = { Text(label) }, onClick = {
+                            collection = key
+                            recordId = ""
+                            menu = ""
+                        })
+                    }
+                }
+            }
+            Box {
+                OutlinedButton(onClick = { menu = "record" }, Modifier.fillMaxWidth(),
+                    enabled = records.isNotEmpty()) {
+                    Text(selected?.let {
+                        "${it.optString("feederName", it.optString("houseName", it.optString("date")))} • ${it.optString("date", it.optString("reportDate"))} • ${it.optString("id").take(8)}"
+                    } ?: if (records.isEmpty()) "No records available" else "Select record to correct")
+                }
+                DropdownMenu(expanded = menu == "record", onDismissRequest = { menu = "" }) {
+                    records.take(100).forEach { row ->
+                        DropdownMenuItem(
+                            text = { Text("${row.optString("feederName", row.optString("houseName", collection))} • ${row.optString("date", row.optString("reportDate"))} • ${row.optString("id").take(8)}") },
+                            onClick = { recordId = row.optString("id"); menu = "" }
+                        )
+                    }
+                }
+            }
+            if (selected != null) {
+                OutlinedTextField(date, { date = it }, Modifier.fillMaxWidth(),
+                    label = { Text(if (collection == "daily_reports") "Report Date (YYYY-MM-DD)" else "Date (YYYY-MM-DD)") }, singleLine = true)
+                when (collection) {
+                    "breakdowns", "shutdowns" -> {
+                        OutlinedTextField(startTime, { startTime = it }, Modifier.fillMaxWidth(), label = { Text("Start Time (HH:MM)") }, singleLine = true)
+                        OutlinedTextField(ptwTime, { ptwTime = it }, Modifier.fillMaxWidth(), label = { Text("PTW Taken Time (HH:MM)") }, singleLine = true)
+                        OutlinedTextField(reason, { reason = it }, Modifier.fillMaxWidth(), label = { Text("Reason") }, minLines = 2)
+                        Text("End time/status ko yahan edit nahi kiya ja sakta. Ongoing event ko Resolve control se close karein.",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    "trippings" -> {
+                        OutlinedTextField(trippingCount, { trippingCount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("How many Trippings?") })
+                        OutlinedTextField(feederCount, { feederCount = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), label = { Text("On how many Feeders?") })
+                    }
+                    "consumption_readings" -> {
+                        OutlinedTextField(ap, { ap = it }, Modifier.fillMaxWidth(), label = { Text("AP Feeder") })
+                        OutlinedTextField(rural, { rural = it }, Modifier.fillMaxWidth(), label = { Text("Rural Domestic") })
+                        OutlinedTextField(urban, { urban = it }, Modifier.fillMaxWidth(), label = { Text("Urban") })
+                        OutlinedTextField(industrial, { industrial = it }, Modifier.fillMaxWidth(), label = { Text("Industrial") })
+                        OutlinedTextField(independent, { independent = it }, Modifier.fillMaxWidth(), label = { Text("Independent") })
+                        Text("Total is recalculated automatically when saved.", fontSize = 12.sp)
+                    }
+                    else -> {
+                        OutlinedTextField(breakerStatus, { breakerStatus = it.uppercase() }, Modifier.fillMaxWidth(), label = { Text("Breaker Status (ON/OFF/TRIPPED/UNDER MAINTENANCE)") })
+                        OutlinedTextField(faultDetails, { faultDetails = it }, Modifier.fillMaxWidth(), label = { Text("Fault Details") }, minLines = 2)
+                        OutlinedTextField(duration, { duration = it }, Modifier.fillMaxWidth(), label = { Text("Duration") })
+                        OutlinedTextField(restorationTime, { restorationTime = it }, Modifier.fillMaxWidth(), label = { Text("Restoration Time (HH:MM)") })
+                        OutlinedTextField(remarks, { remarks = it }, Modifier.fillMaxWidth(), label = { Text("Remarks") }, minLines = 2)
+                    }
+                }
+                Button(
+                    onClick = {
+                        val changes = JSONObject()
+                        if (collection == "daily_reports") changes.put("reportDate", date.trim())
+                        else changes.put("date", date.trim())
+                        when (collection) {
+                            "breakdowns", "shutdowns" -> changes.put("startTime", startTime.trim())
+                                .put("ptwTakenOnTime", ptwTime.trim()).put("reason", reason.trim())
+                            "trippings" -> changes.put("trippingCount", trippingCount.toIntOrNull())
+                                .put("feederCount", feederCount.toIntOrNull())
+                            "consumption_readings" -> changes.put("apFeeder", ap.toDoubleOrNull())
+                                .put("ruralDomestic", rural.toDoubleOrNull()).put("urban", urban.toDoubleOrNull())
+                                .put("industrial", industrial.toDoubleOrNull()).put("independent", independent.toDoubleOrNull())
+                            else -> changes.put("breakerStatus", breakerStatus.trim())
+                                .put("faultDetails", faultDetails.trim()).put("duration", duration.trim())
+                                .put("restorationTime", restorationTime.trim()).put("remarks", remarks.trim())
+                        }
+                        onSave("updateRecord", JSONObject().put("recordCollection", collection)
+                            .put("id", recordId).put("changes", changes))
+                    },
+                    enabled = !loading && date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) &&
+                        when (collection) {
+                            "breakdowns", "shutdowns" -> startTime.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) &&
+                                ptwTime.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d")) && reason.isNotBlank()
+                            "trippings" -> trippingCount.toIntOrNull() != null && feederCount.toIntOrNull() != null
+                            "consumption_readings" -> listOf(ap, rural, urban, industrial, independent).all {
+                                it.toDoubleOrNull() != null && (it.toDoubleOrNull() ?: -1.0) >= 0
+                            }
+                            else -> breakerStatus in setOf("ON", "OFF", "TRIPPED", "UNDER MAINTENANCE") &&
+                                (restorationTime.isBlank() || restorationTime.matches(Regex("([01]\\d|2[0-3]):[0-5]\\d"))
+                        },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("SAVE CORRECTION") }
+            }
         }
     }
 }
